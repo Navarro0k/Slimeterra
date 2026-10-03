@@ -1,0 +1,42 @@
+[gd_scene format=3 uid="uid://ckg85fsv6f1hf"]
+
+[ext_resource type="Script" uid="uid://c38th0qpckur" path="res://Scripts/slingshoot.gd" id="1_f3jow"]
+[ext_resource type="Texture2D" uid="uid://bg2p1w4ues4un" path="res://icon.svg" id="2_mtrd6"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wn07x"]
+
+[node name="Slingshoot" type="Node2D" unique_id=280816846]
+script = ExtResource("1_f3jow")
+
+[node name="AnchorLeft" type="Marker2D" parent="." unique_id=1485998265]
+position = Vector2(-30, -50)
+
+[node name="AnchorRight" type="Marker2D" parent="." unique_id=2134032617]
+position = Vector2(30, -50)
+
+[node name="CenterMarker" type="Marker2D" parent="." unique_id=1954378645]
+position = Vector2(0, -20)
+
+[node name="BandLeft" type="Line2D" parent="." unique_id=36126466]
+points = PackedVector2Array(0, 0, 0, 0)
+width = 8.0
+default_color = Color(0.5372549, 0.31764707, 0.16078432, 1)
+
+[node name="BandRight" type="Line2D" parent="." unique_id=353078990]
+points = PackedVector2Array(0, 0, 0, 0)
+width = 8.0
+default_color = Color(0.5372549, 0.31764707, 0.16078432, 1)
+
+[node name="Holder" type="Area2D" parent="." unique_id=820629918]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Holder" unique_id=1866680568]
+shape = SubResource("CircleShape2D_wn07x")
+
+[node name="Sprite2D" type="Sprite2D" parent="Holder" unique_id=1713362262]
+scale = Vector2(0.2, 0.2)
+texture = ExtResource("2_mtrd6")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1780070757]
+zoom = Vector2(2, 2)
+
+[connection signal="input_event" from="Holder" to="." method="_on_holder_input_event"]
