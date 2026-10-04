@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://bpkujnev46v12"]
+
+[ext_resource type="Texture2D" uid="uid://c13gpah2oakxm" path="res://Assets/pngs/Angry-Birds-Red-example.png" id="1_jokqx"]
+[ext_resource type="Script" uid="uid://phqojg0jfj1h" path="res://Scripts/slime.gd" id="1_swwnm"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wn07x"]
+radius = 2.236068
+
+[node name="Slime" type="RigidBody2D" unique_id=1874400018]
+script = ExtResource("1_swwnm")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=511180151]
+scale = Vector2(0.002, 0.002)
+texture = ExtResource("1_jokqx")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=996152424]
+shape = SubResource("CircleShape2D_wn07x")
