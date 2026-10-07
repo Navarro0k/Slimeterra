@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://bnj0cfmgy03m"
-path="res://.godot/imported/pixel drop.png-1366221da926d9238024822f70fb72b4.ctex"
+path="res://.godot/imported/pixel drop.png-5f34a93937fc0f71dfaf9ada2f8b599c.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Assets/Libresprite prints/pixel drop.png"
-dest_files=["res://.godot/imported/pixel drop.png-1366221da926d9238024822f70fb72b4.ctex"]
+source_file="res://Assets/pngs/pixel drop.png"
+dest_files=["res://.godot/imported/pixel drop.png-5f34a93937fc0f71dfaf9ada2f8b599c.ctex"]
 
 [params]
 

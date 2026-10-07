@@ -1,8 +1,8 @@
 [gd_scene format=3 uid="uid://bpkujnev46v12"]
 
 [ext_resource type="Script" uid="uid://phqojg0jfj1h" path="res://Scripts/slime.gd" id="1_swwnm"]
-[ext_resource type="Texture2D" uid="uid://dwjocvnyecne1" path="res://Assets/Libresprite prints/slime-base.png" id="2_swwnm"]
-[ext_resource type="Texture2D" uid="uid://bnj0cfmgy03m" path="res://Assets/Libresprite prints/pixel drop.png" id="3_aiwxb"]
+[ext_resource type="Texture2D" uid="uid://dwjocvnyecne1" path="res://Assets/pngs/slime-base.png" id="2_swwnm"]
+[ext_resource type="Texture2D" uid="uid://bnj0cfmgy03m" path="res://Assets/pngs/pixel drop.png" id="3_aiwxb"]
 
 [sub_resource type="Gradient" id="Gradient_wn07x"]
 
