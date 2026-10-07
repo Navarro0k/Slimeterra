@@ -48,14 +48,14 @@ func _draw():
 		if vector_disparo.length() > 5.0:
 			var velocidad_inicial = vector_disparo * multiplicador_fuerza
 			var gravedad = ProjectSettings.get_setting("physics/2d/default_gravity")
+			var k = ProjectSettings.get_setting("physics/2d/default_linear_damp")
 			
-			for i in range(1, puntos_trayectoria + 1):
-				var t = i * paso_tiempo
-				var desp_x = velocidad_inicial.x * t
-				var desp_y = (velocidad_inicial.y * t) + (0.5 * gravedad * t * t)
-				var pos_punto = holder.position + Vector2(desp_x, desp_y)
-				
-				draw_rect(Rect2(pos_punto - Vector2(1, 1), Vector2(2, 2)), Color(1.0, 1.0, 1.0, 0.6))
+			var puntos = SolverNumerico.trayectoria(
+				holder.position, velocidad_inicial, gravedad, k,
+				paso_tiempo, puntos_trayectoria, SolverNumerico.Metodo.RK4
+			)
+			for p in puntos:
+				draw_rect(Rect2(p - Vector2(1, 1), Vector2(2, 2)), Color(1.0, 1.0, 1.0, 0.6))
 
 func _on_holder_input_event(_viewport, event, _shape_idx):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
