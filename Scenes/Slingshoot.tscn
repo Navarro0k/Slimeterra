@@ -48,6 +48,5 @@ shape = SubResource("CircleShape2D_wn07x")
 texture = ExtResource("3_6d2l2")
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=1780070757]
-zoom = Vector2(7, 7)
 
 [connection signal="input_event" from="Holder" to="." method="_on_holder_input_event"]
