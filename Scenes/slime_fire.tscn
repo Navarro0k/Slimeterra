@@ -1,0 +1,34 @@
+[gd_scene format=3 uid="uid://c8r44f0avesth"]
+
+[ext_resource type="Script" uid="uid://phqojg0jfj1h" path="res://Scripts/slime.gd" id="1_vkoh2"]
+[ext_resource type="Texture2D" uid="uid://bjap0mpkq3bo7" path="res://Assets/pngs/slime_fuego.png" id="2_vkoh2"]
+[ext_resource type="Texture2D" uid="uid://cqhbnr02o5lph" path="res://Assets/pngs/fuego drop.png" id="3_l24vj"]
+
+[sub_resource type="Gradient" id="Gradient_wn07x"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_wn07x"]
+radius = 6.8108597
+
+[node name="Slime" type="RigidBody2D" unique_id=1874400018]
+script = ExtResource("1_vkoh2")
+tipo_slime = "fuego"
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=511180151]
+scale = Vector2(0.6, 0.6)
+texture = ExtResource("2_vkoh2")
+
+[node name="CPUParticles2D" type="CPUParticles2D" parent="." unique_id=223003550]
+show_behind_parent = true
+z_index = -1
+emitting = false
+texture = ExtResource("3_l24vj")
+lifetime = 0.8
+gravity = Vector2(0, 0)
+scale_amount_min = 0.6
+scale_amount_max = 0.6
+color_ramp = SubResource("Gradient_wn07x")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=996152424]
+position = Vector2(0, 0.9999999)
+scale = Vector2(0.85332835, 0.7234592)
+shape = SubResource("CircleShape2D_wn07x")
