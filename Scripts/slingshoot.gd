@@ -1,6 +1,6 @@
 extends Node2D
 
-@export var slime_scene: PackedScene 
+@export var slimes_disponibles: Array[PackedScene] 
 @export var multiplicador_fuerza: float = 15.0 
 @export var max_stretch: float = 30.0
 @export var grosor_reposo: float = 2.0 
@@ -63,11 +63,14 @@ func _on_holder_input_event(_viewport, event, _shape_idx):
 			is_dragging = true
 
 func cargar_nuevo_slime():
-	if slime_scene != null:
-		slime_actual = slime_scene.instantiate()
+	if slimes_disponibles.size() > 0:
+		var siguiente_slime = slimes_disponibles.pop_front()
+		slime_actual = siguiente_slime.instantiate()
 		holder.add_child(slime_actual)
 		slime_actual.position = Vector2.ZERO
 		slime_actual.freeze = true
+	else:
+		print("¡Te quedaste sin munición de slimes!")
 
 func actualizar_cuerdas(pos: Vector2):
 	holder.position = pos
@@ -114,8 +117,20 @@ func soltar_resortera():
 		slime_actual.reparent(get_tree().current_scene)
 		slime_actual.freeze = false
 		
+		# Conectamos la resortera al destino y destino del slime
+		if slime_actual.has_signal("slime_pegado"):
+			slime_actual.slime_pegado.connect(_al_slime_pegarse)
+		if slime_actual.has_signal("turno_terminado"):
+			slime_actual.turno_terminado.connect(_al_terminar_turno)
+		
 		if slime_actual.has_method("lanzar"):
 			slime_actual.lanzar(vector_disparo * multiplicador_fuerza)
 			
 		slime_actual = null
-		get_tree().create_timer(1.5).timeout.connect(cargar_nuevo_slime)
+
+func _al_slime_pegarse(nueva_posicion: Vector2):
+	global_position = nueva_posicion
+	cargar_nuevo_slime()
+
+func _al_terminar_turno():
+	cargar_nuevo_slime()

@@ -4,12 +4,13 @@
 [ext_resource type="Texture2D" uid="uid://ds4og3yfsm21f" path="res://Assets/pngs/Honda madera.png" id="2_6d2l2"]
 [ext_resource type="PackedScene" uid="uid://bpkujnev46v12" path="res://Scenes/slime.tscn" id="2_xyiwr"]
 [ext_resource type="Texture2D" uid="uid://cn2yjeturx25r" path="res://Assets/pngs/parche honda.png" id="3_6d2l2"]
+[ext_resource type="PackedScene" uid="uid://c8r44f0avesth" path="res://Scenes/slime_fire.tscn" id="3_ghotg"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_wn07x"]
 
 [node name="Slingshoot" type="Node2D" unique_id=280816846]
 script = ExtResource("1_f3jow")
-slime_scene = ExtResource("2_xyiwr")
+slimes_disponibles = Array[PackedScene]([ExtResource("2_xyiwr"), ExtResource("3_ghotg"), ExtResource("2_xyiwr")])
 
 [node name="SlingshotSprite" type="Sprite2D" parent="." unique_id=1805601218]
 z_index = 1
