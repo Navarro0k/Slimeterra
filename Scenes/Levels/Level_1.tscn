@@ -3070,6 +3070,7 @@ sources/0 = SubResource("TileSetAtlasSource_ducwx")
 sources/1 = SubResource("TileSetAtlasSource_hs11j")
 
 [node name="Level1" type="Node2D" unique_id=539677101]
+metadata/_edit_horizontal_guides_ = [-289.0]
 
 [node name="Fondo" type="TileMapLayer" parent="." unique_id=2134146970]
 texture_filter = 1
