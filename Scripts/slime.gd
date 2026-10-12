@@ -10,7 +10,8 @@ extends RigidBody2D
 @onready var forma_colision: CollisionShape2D = $CollisionShape2D
 
 # Señales arquitectónicas para comunicarse de vuelta con la honda
-signal slime_pegado(nueva_posicion)
+## plataforma es null si se pegó a un tile; si no, es el nodo móvil al que se pegó.
+signal slime_pegado(nueva_posicion, plataforma)
 signal turno_terminado
 
 var arrastre: float
@@ -21,11 +22,6 @@ var ya_choco: bool = false
 var _tiempo_vuelo: float = 0.0
 
 # --- Colisiones y área de respeto -------------------------------------------
-# Mientras el slime está en la resortera (cargado / estirándose) no colisiona.
-# Al lanzarlo entra en "respeto": sigue sin colisionar SOLO mientras su forma
-# se solape con algo sólido (nació dentro de una plataforma, por ejemplo).
-# En cuanto queda libre se reactivan las colisiones. Si tras un tiempo máximo
-# sigue atrapado, se descarta para no bloquear el turno.
 var _capa_original: int
 var _mascara_original: int
 var _en_respeto: bool = false
@@ -96,8 +92,6 @@ func _descartar():
 	queue_free()
 
 func lanzar(velocidad_inicial: Vector2, tiempo_respeto: float = 1.5):
-	# Colisiones apagadas hasta que _physics_process confirme que está libre
-	# (si nació en espacio abierto se reactivan antes del primer paso de física).
 	_en_respeto = true
 	_tiempo_respeto = tiempo_respeto
 
@@ -126,22 +120,20 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 func _on_body_entered(body):
 	if ya_choco or _en_respeto: return
 
+	# -------------------------------------------------------------
+	# CASO 1: Colisión con un TileMap
+	# -------------------------------------------------------------
 	if body.has_method("local_to_map"):
 		var direccion = v_motor.normalized()
 		if direccion == Vector2.ZERO:
 			direccion = linear_velocity.normalized()
 
-		# 1. Proyectamos con mayor profundidad (24 px en lugar de 14)
 		var punto_impacto = global_position + (direccion * 24.0)
 		var cell_pos = body.local_to_map(body.to_local(punto_impacto))
 		var tile_data = body.get_cell_tile_data(cell_pos)
 
-		# 2. EL ESCÁNER INFALIBLE: Si el tiro proyectado cae en un borde vacío,
-		# revisamos las celdas inmediatamente pegadas al slime.
 		if tile_data == null:
 			var celda_central = body.local_to_map(body.to_local(global_position))
-
-			# Coordenadas de las 8 celdas alrededor del slime
 			var vecinos = [
 				celda_central + Vector2i(0, 1), celda_central + Vector2i(0, -1),
 				celda_central + Vector2i(1, 0), celda_central + Vector2i(-1, 0),
@@ -152,16 +144,14 @@ func _on_body_entered(body):
 			for vecino in vecinos:
 				var data_vecino = body.get_cell_tile_data(vecino)
 				if data_vecino:
-					# Si un vecino existe y tiene la propiedad que buscamos, ¡es ese!
-					var es_pegajoso = data_vecino.get_custom_data("es_pegajoso")
+					var es_tile_pegajoso = data_vecino.get_custom_data("es_pegajoso")
 					var es_rompible = data_vecino.get_custom_data("rompible_por_fuego")
 
-					if (tipo_slime == "fuego" and es_rompible) or (tipo_slime == "base" and es_pegajoso):
+					if (tipo_slime == "fuego" and es_rompible) or (tipo_slime == "base" and es_tile_pegajoso):
 						cell_pos = vecino
 						tile_data = data_vecino
 						break
 
-		# 3. Aplicamos la lógica según el tile encontrado
 		if tile_data:
 			if tipo_slime == "fuego" and tile_data.get_custom_data("rompible_por_fuego"):
 				body.erase_cell(cell_pos)
@@ -173,7 +163,35 @@ func _on_body_entered(body):
 			elif tipo_slime == "base" and tile_data.get_custom_data("es_pegajoso"):
 				ya_choco = true
 				volando = false
-				# Dentro de un callback de colisión no se puede cambiar el modo del cuerpo.
 				set_deferred("freeze", true)
-				slime_pegado.emit(global_position)
+				slime_pegado.emit(global_position, null)
 				queue_free()
+
+	# -------------------------------------------------------------
+	# CASO 2: Colisión con una Escena Independiente (Ej. Plataforma Móvil)
+	# -------------------------------------------------------------
+	else:
+		if tipo_slime != "base":
+			return
+		var superficie := _buscar_superficie_pegajosa(body)
+		if superficie == null:
+			return
+
+		ya_choco = true
+		volando = false
+		set_deferred("freeze", true)
+		# UNA sola señal (igual que los tiles). La honda se encarga de moverse
+		# a la plataforma y cargar el siguiente slime.
+		slime_pegado.emit(global_position, superficie)
+		queue_free()
+
+
+## Sube por la jerarquía buscando el nodo que tenga la variable o el grupo,
+## por si el cuerpo que colisiona es hijo de la raíz de la escena.
+func _buscar_superficie_pegajosa(nodo: Node) -> Node:
+	var actual: Node = nodo
+	while actual != null and actual != get_tree().root:
+		if actual.get("es_pegajoso") == true or actual.is_in_group("plataforma_pegajosa"):
+			return actual
+		actual = actual.get_parent()
+	return null
