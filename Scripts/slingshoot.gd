@@ -18,6 +18,8 @@ var is_dragging: bool = false
 var current_drag_position: Vector2
 var slime_actual: RigidBody2D
 var _municion: Array[PackedScene] = []
+## Padre original de la honda: a él vuelve cuando el slime se pega a un tile.
+var _padre_original: Node
 
 @onready var anchor_left = $AnchorLeft
 @onready var anchor_right = $AnchorRight
@@ -27,6 +29,7 @@ var _municion: Array[PackedScene] = []
 @onready var holder = $Holder
 
 func _ready():
+	_padre_original = get_parent()
 	# Copia: no consumir el array exportado de la escena.
 	_municion = slimes_disponibles.duplicate()
 	current_drag_position = center_marker.position
@@ -85,6 +88,9 @@ func _on_holder_input_event(_viewport, event, _shape_idx):
 			is_dragging = true
 
 func cargar_nuevo_slime():
+	# Guarda anti-duplicados: si ya hay un slime cargado, no crear otro.
+	if slime_actual != null and is_instance_valid(slime_actual):
+		return
 	if _municion.size() > 0:
 		var siguiente_slime = _municion.pop_front()
 		slime_actual = siguiente_slime.instantiate()
@@ -157,14 +163,30 @@ func soltar_resortera():
 
 		slime_actual = null
 
-func _al_slime_pegarse(nueva_posicion: Vector2):
+func _al_slime_pegarse(nueva_posicion: Vector2, plataforma: Node):
 	# Estas señales salen de un callback de colisión: no se puede modificar el
 	# árbol de física ahí, así que todo se difiere al final del frame.
-	_mover_y_recargar.call_deferred(nueva_posicion)
+	# Si es una plataforma móvil, guardamos el punto en SU espacio local para
+	# no perder el desfase por lo que se mueve entre el impacto y el diferido.
+	var punto_local := Vector2.ZERO
+	if plataforma != null:
+		punto_local = plataforma.to_local(nueva_posicion)
+	_mover_y_recargar.call_deferred(nueva_posicion, plataforma, punto_local)
 
 func _al_terminar_turno():
 	cargar_nuevo_slime.call_deferred()
 
-func _mover_y_recargar(nueva_posicion: Vector2):
-	global_position = nueva_posicion
+func _mover_y_recargar(nueva_posicion: Vector2, plataforma: Node, punto_local: Vector2):
+	var destino: Vector2 = nueva_posicion
+
+	if plataforma != null and is_instance_valid(plataforma):
+		# La honda pasa a ser hija de la plataforma para viajar con ella.
+		if get_parent() != plataforma:
+			reparent(plataforma, true)
+		destino = plataforma.to_global(punto_local)
+	elif get_parent() != _padre_original and is_instance_valid(_padre_original):
+		# Se pegó a un tile: la honda vuelve a la escena normal.
+		reparent(_padre_original, true)
+
+	global_position = destino
 	cargar_nuevo_slime()

@@ -1,0 +1,17 @@
+[gd_scene format=3 uid="uid://db2i0ydt32t44"]
+
+[ext_resource type="Texture2D" uid="uid://wju0m8w3x6en" path="res://Assets/pngs/plattaform ice.png" id="1_1xu65"]
+[ext_resource type="Script" uid="uid://cphrx1jfpdfpn" path="res://Scripts/plattaform.gd" id="1_rnr2a"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wn07x"]
+size = Vector2(57, 15)
+
+[node name="Plataform" type="AnimatableBody2D" unique_id=1955014938]
+script = ExtResource("1_rnr2a")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1333113305]
+texture = ExtResource("1_1xu65")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=96901704]
+position = Vector2(-0.5, -0.5)
+shape = SubResource("RectangleShape2D_wn07x")
