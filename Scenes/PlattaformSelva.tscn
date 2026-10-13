@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://bbk4vfnkmnhn5"]
+
+[ext_resource type="Script" uid="uid://cphrx1jfpdfpn" path="res://Scripts/plattaform.gd" id="1_g2gxo"]
+[ext_resource type="Texture2D" uid="uid://d1grf54igwu6a" path="res://Assets/Tilemaps/jungle_platforms_16x16.png" id="2_g2gxo"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wn07x"]
+size = Vector2(37, 15)
+
+[node name="Plataform" type="AnimatableBody2D" unique_id=1955014938]
+script = ExtResource("1_g2gxo")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=1333113305]
+position = Vector2(-3.0000002, 0)
+scale = Vector2(2.375, 1)
+texture = ExtResource("2_g2gxo")
+region_enabled = true
+region_rect = Rect2(48.668514, 0.42660332, 16.023777, 16.023779)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=96901704]
+position = Vector2(-3.5, 0)
+shape = SubResource("RectangleShape2D_wn07x")
