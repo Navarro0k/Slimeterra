@@ -1,0 +1,122 @@
+class_name PantallaFin
+extends CanvasLayer
+## Pantalla de pausa / victoria / derrota. Congela el juego (get_tree().paused) y ofrece
+## Reiniciar (y Continuar cuando es solo una pausa). Se construye por código: no necesita escena.
+## Esc (ui_cancel) abre y cierra la pausa.
+
+enum Modo { OCULTA, PAUSA, VICTORIA, DERROTA }
+
+var modo: Modo = Modo.OCULTA
+
+var _raiz: Control
+var _titulo: Label
+var _mensaje: Label
+var _btn_continuar: Button
+var _btn_reiniciar: Button
+
+func _ready() -> void:
+	layer = 50
+	# Tiene que seguir funcionando con el árbol en pausa.
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	_construir()
+	_raiz.visible = false
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and (modo == Modo.OCULTA or modo == Modo.PAUSA):
+		get_viewport().set_input_as_handled()
+		alternar_pausa()
+
+# ---------------------------------------------------------------------------
+# API pública
+# ---------------------------------------------------------------------------
+
+func alternar_pausa() -> void:
+	if modo == Modo.PAUSA:
+		continuar()
+	elif modo == Modo.OCULTA:
+		_mostrar(Modo.PAUSA, "Pausa", "")
+
+func mostrar_victoria(mensaje: String = "") -> void:
+	_mostrar(Modo.VICTORIA, "¡Nivel completado!", mensaje)
+
+func mostrar_derrota(mensaje: String = "") -> void:
+	_mostrar(Modo.DERROTA, "Sin slimes", mensaje)
+
+func continuar() -> void:
+	modo = Modo.OCULTA
+	_raiz.visible = false
+	get_tree().paused = false
+
+func reiniciar() -> void:
+	get_tree().paused = false
+	get_tree().reload_current_scene()
+
+# ---------------------------------------------------------------------------
+# Interno
+# ---------------------------------------------------------------------------
+
+func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String) -> void:
+	modo = nuevo_modo
+	_titulo.text = titulo
+	_mensaje.text = mensaje
+	_mensaje.visible = mensaje != ""
+	_btn_continuar.visible = nuevo_modo == Modo.PAUSA
+	_raiz.visible = true
+	get_tree().paused = true
+	if nuevo_modo == Modo.PAUSA:
+		_btn_continuar.grab_focus()
+	else:
+		_btn_reiniciar.grab_focus()
+
+func _construir() -> void:
+	_raiz = Control.new()
+	_raiz.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_raiz.mouse_filter = Control.MOUSE_FILTER_STOP # Bloquea clics al juego mientras está abierta.
+	add_child(_raiz)
+
+	var fondo := ColorRect.new()
+	fondo.color = Color(0.0, 0.0, 0.0, 0.6)
+	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_raiz.add_child(fondo)
+
+	var centro := CenterContainer.new()
+	centro.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	centro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_raiz.add_child(centro)
+
+	var panel := PanelContainer.new()
+	centro.add_child(panel)
+
+	var margen := MarginContainer.new()
+	for lado in ["left", "top", "right", "bottom"]:
+		margen.add_theme_constant_override("margin_" + lado, 14)
+	panel.add_child(margen)
+
+	var caja := VBoxContainer.new()
+	caja.add_theme_constant_override("separation", 8)
+	margen.add_child(caja)
+
+	_titulo = Label.new()
+	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_titulo.add_theme_font_size_override("font_size", 20)
+	caja.add_child(_titulo)
+
+	_mensaje = Label.new()
+	_mensaje.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mensaje.add_theme_font_size_override("font_size", 10)
+	caja.add_child(_mensaje)
+
+	_btn_continuar = _crear_boton("Continuar", continuar)
+	caja.add_child(_btn_continuar)
+
+	_btn_reiniciar = _crear_boton("Reiniciar", reiniciar)
+	caja.add_child(_btn_reiniciar)
+
+func _crear_boton(texto: String, accion: Callable) -> Button:
+	var boton := Button.new()
+	boton.text = texto
+	boton.custom_minimum_size = Vector2(110, 0)
+	boton.add_theme_font_size_override("font_size", 12)
+	boton.pressed.connect(accion)
+	return boton

@@ -3635,7 +3635,6 @@ texture = ExtResource("6_pnx27")
 2:1/0 = 0
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_6073x"]
-load_path = "res://.godot/imported/hielo_colgante_v2.png-1687c388e2f91f1d76bdc7c219dbe84f.ctex"
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_5sjxy"]
 texture = SubResource("CompressedTexture2D_6073x")
