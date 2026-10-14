@@ -5,7 +5,7 @@ extends Node2D
 ## Slimes disponibles en este nivel: { tipo de slime: cantidad }.
 ## Los tipos están definidos en SlimeCatalogo.Tipo.
 var slimes_nivel: Dictionary = {
-	SlimeCatalogo.Tipo.BASE: 3,
+	SlimeCatalogo.Tipo.BASE: 4,
 	SlimeCatalogo.Tipo.FUEGO: 1,
 }
 
