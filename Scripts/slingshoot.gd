@@ -23,6 +23,10 @@ signal slime_cargado(slime: Node2D)
 ## Tiempo máximo (s) que un slime puede atravesar sólidos si fue lanzado desde
 ## dentro de uno. Pasado ese tiempo se descarta y se carga el siguiente.
 @export var tiempo_respeto: float = 1.5
+## Margen (px) extra sobre el radio de estiramiento para el círculo de respeto.
+@export var margen_respeto: float = 2.0
+## Dibuja el círculo de respeto (para ajustarlo). El slime lo abandona cuando su cuerpo sale por completo.
+@export var mostrar_area_respeto: bool = false
 
 var is_dragging: bool = false
 var current_drag_position: Vector2
@@ -49,6 +53,7 @@ func _ready():
 	_padre_original = get_parent()
 	current_drag_position = center_marker.position
 	actualizar_cuerdas(current_drag_position)
+	queue_redraw()
 	# La munición NO se carga aquí: el nivel llama a configurar().
 
 # ---------------------------------------------------------------------------
@@ -124,7 +129,14 @@ func _input(event):
 		actualizar_cuerdas(current_drag_position)
 		queue_redraw()
 
+## Radio (en unidades globales) del círculo de respeto: todo lo que alcanza el slime al estirar.
+func radio_area_respeto() -> float:
+	return max_stretch * absf(global_scale.x) + margen_respeto
+
 func _draw():
+	if mostrar_area_respeto:
+		draw_arc(center_marker.position, max_stretch + margen_respeto, 0.0, TAU, 48, Color(1.0, 0.3, 0.3, 0.5), 0.5)
+
 	if is_dragging and slime_actual != null:
 		var vector_disparo = center_marker.position - current_drag_position
 
@@ -264,8 +276,8 @@ func soltar_resortera():
 			slime_actual.turno_terminado.connect(_al_terminar_turno)
 
 		if slime_actual.has_method("lanzar"):
-			# Nace sin colisiones y las recupera en cuanto su forma queda libre de sólidos.
-			slime_actual.lanzar(vector_disparo * multiplicador_fuerza, tiempo_respeto)
+			# Nace dentro del círculo de respeto: no colisiona ni se pega hasta salir de él.
+			slime_actual.lanzar(vector_disparo * multiplicador_fuerza, tiempo_respeto, center_marker, radio_area_respeto())
 
 		slime_lanzado.emit(slime_actual)
 		slime_actual = null

@@ -1,11 +1,13 @@
+class_name NivelSlimes
 extends Node2D
 ## Script del nivel: es el único que conoce a la resortera y a la UI.
 ## Les entrega el inventario de slimes y los comunica entre sí.
 
 ## Slimes disponibles en este nivel: { tipo de slime: cantidad }.
 ## Los tipos están definidos en SlimeCatalogo.Tipo.
+## Cada nivel concreto lo redefine en su propio script (ver jungle_level.gd).
 var slimes_nivel: Dictionary = {
-	SlimeCatalogo.Tipo.BASE: 4,
+	SlimeCatalogo.Tipo.BASE: 3,
 	SlimeCatalogo.Tipo.FUEGO: 1,
 }
 
