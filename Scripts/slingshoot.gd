@@ -6,6 +6,10 @@ extends Node2D
 signal inventario_cambiado(inventario: Array, indice_seleccionado: int)
 ## Se emite cuando ya no queda ningún slime (ni en vuelo) para cargar.
 signal sin_municion
+## Se emite al soltar un slime: lo usa el nivel para que la cámara lo siga.
+signal slime_lanzado(slime: Node2D)
+## Se emite cuando hay un slime listo en la resortera (la cámara vuelve a ella).
+signal slime_cargado(slime: Node2D)
 
 @export var multiplicador_fuerza: float = 15.0
 @export var max_stretch: float = 30.0
@@ -171,6 +175,7 @@ func _instanciar_slime(indice: int) -> void:
 		slime_actual.preparar()
 	else:
 		slime_actual.freeze = true
+	slime_cargado.emit(slime_actual)
 
 ## Quita el slime cargado (sin gastarlo) para poder cambiarlo por otro.
 func _quitar_slime_cargado() -> void:
@@ -262,6 +267,7 @@ func soltar_resortera():
 			# Nace sin colisiones y las recupera en cuanto su forma queda libre de sólidos.
 			slime_actual.lanzar(vector_disparo * multiplicador_fuerza, tiempo_respeto)
 
+		slime_lanzado.emit(slime_actual)
 		slime_actual = null
 
 		# El disparo gasta una unidad del tipo seleccionado.

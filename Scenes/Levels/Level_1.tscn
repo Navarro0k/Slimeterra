@@ -4,7 +4,8 @@
 [ext_resource type="Texture2D" uid="uid://k7fpccgr3tow" path="res://Assets/Tilemaps/Nature Platformer Tileset RottingPixels/nature-paltformer-tileset-16x16.png" id="2_87l2y"]
 [ext_resource type="PackedScene" uid="uid://ckg85fsv6f1hf" path="res://Scenes/Slingshoot.tscn" id="3_qpfou"]
 [ext_resource type="PackedScene" uid="uid://db2i0ydt32t44" path="res://Scenes/Plattaform.tscn" id="4_87l2y"]
-[ext_resource type="Script" uid="uid://wpjhvqwgdlqn" path="res://Scripts/level.gd" id="5_level"]
+[ext_resource type="Script" path="res://Scripts/level.gd" id="5_level"]
+[ext_resource type="Script" path="res://Scripts/camara_seguimiento.gd" id="9_cam"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="8_ui"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
@@ -3094,4 +3095,7 @@ position = Vector2(-54, -71)
 distance = 100.0
 travel_time = 5.0
 
-[node name="SlimeSelectorUI" parent="." unique_id=1595419692 instance=ExtResource("8_ui")]
+[node name="SlimeSelectorUI" parent="." instance=ExtResource("8_ui")]
+
+[node name="Camara" type="Camera2D" parent="."]
+script = ExtResource("9_cam")

@@ -2,6 +2,8 @@ extends RigidBody2D
 
 @export var metodo: SolverNumerico.Metodo = SolverNumerico.Metodo.RK4
 @export var tipo_slime: String = "base" # Opciones: "base" o "fuego"
+## Margen (px) extra alrededor del slime para considerar que "toca" un bloque rompible.
+@export var margen_quema: float = 2.0
 ## Segundos máximos en vuelo. Si no choca con nada (cae al vacío) se descarta y el turno termina.
 @export var tiempo_vuelo_max: float = 8.0
 
@@ -20,6 +22,9 @@ var v_motor: Vector2 = Vector2.ZERO
 var volando: bool = false
 var ya_choco: bool = false
 var _tiempo_vuelo: float = 0.0
+## El slime de fuego quema (rompe) todo bloque rompible que toca mientras vuela.
+var _quema_bloques: bool = false
+var _radio: float = 7.0
 
 # --- Colisiones y área de respeto -------------------------------------------
 var _capa_original: int
@@ -32,6 +37,12 @@ func _ready():
 	contact_monitor = true
 	max_contacts_reported = 3
 	body_entered.connect(_on_body_entered)
+
+	_quema_bloques = tipo_slime == "fuego"
+	var circulo := forma_colision.shape as CircleShape2D
+	if circulo != null:
+		var escala := forma_colision.global_scale
+		_radio = circulo.radius * maxf(absf(escala.x), absf(escala.y))
 
 	_capa_original = collision_layer
 	_mascara_original = collision_mask
@@ -48,6 +59,11 @@ func _physics_process(delta):
 		if _tiempo_vuelo >= tiempo_vuelo_max:
 			_descartar()
 			return
+
+	# Se quema ANTES de que la física resuelva el choque: así el slime atraviesa
+	# los bloques rompibles en vez de rebotar contra ellos.
+	if _quema_bloques and volando and not ya_choco:
+		_quemar_bloques(delta)
 
 	if _en_respeto:
 		_tiempo_respeto -= delta
@@ -117,6 +133,55 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	v_motor = (r[0] - pos) / dt
 	state.linear_velocity = v_motor
 
+## Rompe todo bloque rompible que el slime toca ahora o tocará en este paso de física.
+## Se evalúa la posición actual y la del siguiente paso para no saltarse bloques a alta velocidad.
+func _quemar_bloques(delta: float) -> void:
+	var radio := _radio + margen_quema
+	_quemar_en(global_position, radio)
+	_quemar_en(global_position + v_motor * delta, radio)
+
+func _quemar_en(centro: Vector2, radio: float) -> void:
+	var forma := CircleShape2D.new()
+	forma.radius = radio
+	var consulta := PhysicsShapeQueryParameters2D.new()
+	consulta.shape = forma
+	consulta.transform = Transform2D(0.0, centro)
+	consulta.collision_mask = _mascara_original
+	consulta.collide_with_bodies = true
+	consulta.collide_with_areas = false
+	var excluidos: Array[RID] = [get_rid()]
+	consulta.exclude = excluidos
+	for choque in get_world_2d().direct_space_state.intersect_shape(consulta, 8):
+		var capa = choque["collider"]
+		if capa is TileMapLayer:
+			_quemar_celdas(capa, centro, radio)
+
+## Borra las celdas rompibles de la capa cuyo rectángulo intersecta el círculo (centro, radio).
+func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
+	var mitad := Vector2(capa.tile_set.tile_size) * 0.5
+	var local := capa.to_local(centro)
+	var celda_min := capa.local_to_map(local - Vector2(radio, radio))
+	var celda_max := capa.local_to_map(local + Vector2(radio, radio))
+	for x in range(celda_min.x, celda_max.x + 1):
+		for y in range(celda_min.y, celda_max.y + 1):
+			var celda := Vector2i(x, y)
+			var datos := capa.get_cell_tile_data(celda)
+			if datos == null or not datos.get_custom_data("rompible_por_fuego"):
+				continue
+			# Distancia del centro del círculo al rectángulo de la celda.
+			var d := (local - capa.map_to_local(celda)).abs() - mitad
+			var fuera := Vector2(maxf(d.x, 0.0), maxf(d.y, 0.0)).length()
+			if fuera <= radio:
+				capa.erase_cell(celda)
+
+## Se pega a la superficie (tile o plataforma). La honda se encarga de moverse y recargar.
+func _pegarse(superficie: Node) -> void:
+	ya_choco = true
+	volando = false
+	set_deferred("freeze", true)
+	slime_pegado.emit(global_position, superficie)
+	queue_free()
+
 func _on_body_entered(body):
 	if ya_choco or _en_respeto: return
 
@@ -124,6 +189,11 @@ func _on_body_entered(body):
 	# CASO 1: Colisión con un TileMap
 	# -------------------------------------------------------------
 	if body.has_method("local_to_map"):
+		# Red de seguridad: si algo rompible llegó a chocar, se quema (diferido: estamos
+		# dentro de un callback de colisión).
+		if _quema_bloques:
+			_quemar_en.call_deferred(global_position, _radio + margen_quema)
+
 		var direccion = v_motor.normalized()
 		if direccion == Vector2.ZERO:
 			direccion = linear_velocity.normalized()
@@ -143,47 +213,23 @@ func _on_body_entered(body):
 
 			for vecino in vecinos:
 				var data_vecino = body.get_cell_tile_data(vecino)
-				if data_vecino:
-					var es_tile_pegajoso = data_vecino.get_custom_data("es_pegajoso")
-					var es_rompible = data_vecino.get_custom_data("rompible_por_fuego")
+				if data_vecino and data_vecino.get_custom_data("es_pegajoso"):
+					cell_pos = vecino
+					tile_data = data_vecino
+					break
 
-					if (tipo_slime == "fuego" and es_rompible) or (tipo_slime == "base" and es_tile_pegajoso):
-						cell_pos = vecino
-						tile_data = data_vecino
-						break
-
-		if tile_data:
-			if tipo_slime == "fuego" and tile_data.get_custom_data("rompible_por_fuego"):
-				body.erase_cell(cell_pos)
-				ya_choco = true
-				volando = false
-				turno_terminado.emit()
-				queue_free()
-
-			elif tipo_slime == "base" and tile_data.get_custom_data("es_pegajoso"):
-				ya_choco = true
-				volando = false
-				set_deferred("freeze", true)
-				slime_pegado.emit(global_position, null)
-				queue_free()
+		# Ambos tipos de slime (base y fuego) se pegan a los tiles pegajosos.
+		if tile_data and tile_data.get_custom_data("es_pegajoso"):
+			_pegarse(null)
 
 	# -------------------------------------------------------------
 	# CASO 2: Colisión con una Escena Independiente (Ej. Plataforma Móvil)
 	# -------------------------------------------------------------
 	else:
-		if tipo_slime != "base":
-			return
 		var superficie := _buscar_superficie_pegajosa(body)
 		if superficie == null:
 			return
-
-		ya_choco = true
-		volando = false
-		set_deferred("freeze", true)
-		# UNA sola señal (igual que los tiles). La honda se encarga de moverse
-		# a la plataforma y cargar el siguiente slime.
-		slime_pegado.emit(global_position, superficie)
-		queue_free()
+		_pegarse(superficie)
 
 
 ## Sube por la jerarquía buscando el nodo que tenga la variable o el grupo,

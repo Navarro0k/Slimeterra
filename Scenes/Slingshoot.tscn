@@ -45,6 +45,4 @@ shape = SubResource("CircleShape2D_wn07x")
 [node name="Sprite2D" type="Sprite2D" parent="Holder" unique_id=1713362262]
 texture = ExtResource("3_6d2l2")
 
-[node name="Camera2D" type="Camera2D" parent="." unique_id=1780070757]
-
 [connection signal="input_event" from="Holder" to="." method="_on_holder_input_event"]
