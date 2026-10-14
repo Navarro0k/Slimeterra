@@ -4,6 +4,6 @@ extends NivelSlimes
 
 func _init() -> void:
 	slimes_nivel = {
-		SlimeCatalogo.Tipo.BASE: 6,
-		SlimeCatalogo.Tipo.FUEGO: 1,
+		SlimeCatalogo.Tipo.BASE: 10,
+		SlimeCatalogo.Tipo.FUEGO: 5,
 	}
