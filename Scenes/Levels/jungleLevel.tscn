@@ -12,8 +12,9 @@
 [ext_resource type="Texture2D" uid="uid://o8klxax3xl7k" path="res://Assets/Tilemaps/tileset.png" id="9_d5yi4"]
 [ext_resource type="Texture2D" uid="uid://c1kes0ntu64du" path="res://Assets/Tilemaps/Pixel Mushroom Pack/sprites.png" id="10_udm3q"]
 [ext_resource type="PackedScene" uid="uid://bbk4vfnkmnhn5" path="res://Scenes/PlattaformSelva.tscn" id="11_ed17r"]
-[ext_resource type="PackedScene" uid="uid://bpkujnev46v12" path="res://Scenes/slime.tscn" id="13_ssnc5"]
-[ext_resource type="PackedScene" uid="uid://c8r44f0avesth" path="res://Scenes/slime_fire.tscn" id="14_6u4ig"]
+[ext_resource type="Script" uid="uid://d0x1fgsnrhpt" path="res://Scripts/jungle_level.gd" id="15_level"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="16_ui"]
+[ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="17_cam"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
 texture = ExtResource("1_6r2ke")
@@ -3927,7 +3928,8 @@ sources/9 = SubResource("TileSetAtlasSource_t60x3")
 sources/10 = SubResource("TileSetAtlasSource_xxmx2")
 sources/12 = SubResource("TileSetAtlasSource_h3wp1")
 
-[node name="Level1" type="Node2D" unique_id=539677101]
+[node name="LevelJungla" type="Node2D" unique_id=539677101]
+script = ExtResource("15_level")
 
 [node name="Fondo" type="TileMapLayer" parent="." unique_id=2134146970]
 texture_filter = 1
@@ -3965,4 +3967,9 @@ travel_time = 3.0
 
 [node name="Slingshoot" parent="." unique_id=280816846 instance=ExtResource("3_n1siw")]
 position = Vector2(-65, 3)
-slimes_disponibles = Array[PackedScene]([ExtResource("13_ssnc5"), ExtResource("13_ssnc5"), ExtResource("13_ssnc5"), ExtResource("13_ssnc5"), ExtResource("13_ssnc5"), ExtResource("14_6u4ig"), ExtResource("13_ssnc5")])
+multiplicador_fuerza = 20.0
+
+[node name="SlimeSelectorUI" parent="." unique_id=819441574 instance=ExtResource("16_ui")]
+
+[node name="Camara" type="Camera2D" parent="." unique_id=2100129150]
+script = ExtResource("17_cam")

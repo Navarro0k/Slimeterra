@@ -3,7 +3,9 @@
 [ext_resource type="Texture2D" uid="uid://ctn2fiu4wucww" path="res://Assets/Tilemaps/15 Blob TileMap 16x16.png" id="1_q8yj7"]
 [ext_resource type="Texture2D" uid="uid://k7fpccgr3tow" path="res://Assets/Tilemaps/Nature Platformer Tileset RottingPixels/nature-paltformer-tileset-16x16.png" id="2_87l2y"]
 [ext_resource type="PackedScene" uid="uid://ckg85fsv6f1hf" path="res://Scenes/Slingshoot.tscn" id="3_qpfou"]
-[ext_resource type="PackedScene" uid="uid://db2i0ydt32t44" path="res://Scenes/Plattaform.tscn" id="4_87l2y"]
+[ext_resource type="Script" uid="uid://wpjhvqwgdlqn" path="res://Scripts/level.gd" id="5_level"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="8_ui"]
+[ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="9_cam"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
 texture = ExtResource("1_q8yj7")
@@ -928,25 +930,34 @@ texture = ExtResource("1_q8yj7")
 9:0/0/custom_data_0 = true
 11:0/0 = 0
 11:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+11:0/0/custom_data_1 = true
 12:0/0 = 0
 12:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+12:0/0/custom_data_1 = true
 13:0/0 = 0
 13:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+13:0/0/custom_data_1 = true
 14:0/0 = 0
 14:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+14:0/0/custom_data_1 = true
 15:0/0 = 0
 15:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+15:0/0/custom_data_1 = true
 16:0/0 = 0
 16:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 16:0/0/custom_data_1 = true
 17:0/0 = 0
 17:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+17:0/0/custom_data_1 = true
 18:0/0 = 0
 18:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+18:0/0/custom_data_1 = true
 19:0/0 = 0
 19:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+19:0/0/custom_data_1 = true
 20:0/0 = 0
 20:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
+20:0/0/custom_data_1 = true
 22:0/0 = 0
 22:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-8, -8, 8, -8, 8, 8, -8, 8)
 22:0/0/custom_data_0 = true
@@ -3071,6 +3082,7 @@ sources/0 = SubResource("TileSetAtlasSource_ducwx")
 sources/1 = SubResource("TileSetAtlasSource_hs11j")
 
 [node name="Level1" type="Node2D" unique_id=539677101]
+script = ExtResource("5_level")
 metadata/_edit_horizontal_guides_ = [-289.0]
 
 [node name="Fondo" type="TileMapLayer" parent="." unique_id=2134146970]
@@ -3086,7 +3098,7 @@ tile_set = SubResource("TileSet_k5mtd")
 [node name="Slingshoot" parent="." unique_id=280816846 instance=ExtResource("3_qpfou")]
 position = Vector2(-65, 3)
 
-[node name="Plataform" parent="." unique_id=1955014938 instance=ExtResource("4_87l2y")]
-position = Vector2(-54, -71)
-distance = 100.0
-travel_time = 5.0
+[node name="SlimeSelectorUI" parent="." unique_id=1628797462 instance=ExtResource("8_ui")]
+
+[node name="Camara" type="Camera2D" parent="." unique_id=306958255]
+script = ExtResource("9_cam")
