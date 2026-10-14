@@ -1,6 +1,12 @@
 extends Node2D
 
-@export var slimes_disponibles: Array[PackedScene]
+## Se emite cada vez que cambia el inventario o el slime seleccionado.
+## inventario: [{ "tipo": SlimeCatalogo.Tipo, "cantidad": int }, ...] (solo lectura).
+## indice_seleccionado: -1 si no queda munición.
+signal inventario_cambiado(inventario: Array, indice_seleccionado: int)
+## Se emite cuando ya no queda ningún slime (ni en vuelo) para cargar.
+signal sin_municion
+
 @export var multiplicador_fuerza: float = 15.0
 @export var max_stretch: float = 30.0
 @export var grosor_reposo: float = 2.0
@@ -17,7 +23,14 @@ extends Node2D
 var is_dragging: bool = false
 var current_drag_position: Vector2
 var slime_actual: RigidBody2D
-var _municion: Array[PackedScene] = []
+
+## Munición por tipo: [{ "tipo": SlimeCatalogo.Tipo, "cantidad": int }].
+var _inventario: Array[Dictionary] = []
+## Índice (en _inventario) del tipo seleccionado. -1 = ninguno disponible.
+var _indice: int = -1
+## true desde que se lanza un slime hasta que termina su turno.
+## Mientras es true NO se carga ningún slime en el holder.
+var _esperando_turno: bool = false
 ## Padre original de la honda: a él vuelve cuando el slime se pega a un tile.
 var _padre_original: Node
 
@@ -30,11 +43,48 @@ var _padre_original: Node
 
 func _ready():
 	_padre_original = get_parent()
-	# Copia: no consumir el array exportado de la escena.
-	_municion = slimes_disponibles.duplicate()
 	current_drag_position = center_marker.position
 	actualizar_cuerdas(current_drag_position)
+	# La munición NO se carga aquí: el nivel llama a configurar().
+
+# ---------------------------------------------------------------------------
+# API pública (la usa el script del nivel)
+# ---------------------------------------------------------------------------
+
+## Define los slimes con los que cuenta la resortera: { SlimeCatalogo.Tipo: cantidad }
+## y carga el primero disponible.
+func configurar(slimes: Dictionary) -> void:
+	_quitar_slime_cargado()
+	_esperando_turno = false
+	_inventario = SlimeInventario.desde_diccionario(slimes)
+	_indice = _primer_indice_con_stock()
 	cargar_nuevo_slime()
+	_notificar()
+
+## Cambia el tipo de slime a disparar. Si hay uno cargado y no se está
+## arrastrando, se cambia por uno del tipo nuevo (sin gastar munición).
+func seleccionar(indice: int) -> void:
+	if is_dragging or not _indice_valido(indice) or _inventario[indice]["cantidad"] <= 0:
+		_notificar() # Re-sincroniza la UI con el estado real.
+		return
+
+	if indice != _indice:
+		_indice = indice
+		# Si hay un slime en vuelo solo cambia la selección: se cargará al terminar el turno.
+		if not _esperando_turno and slime_actual != null:
+			_quitar_slime_cargado()
+			_instanciar_slime(_indice)
+	_notificar()
+
+func get_inventario() -> Array[Dictionary]:
+	return _inventario
+
+func get_indice_seleccionado() -> int:
+	return _indice
+
+# ---------------------------------------------------------------------------
+# Posicionamiento del slime cargado
+# ---------------------------------------------------------------------------
 
 # El slime cargado SIEMPRE va en la punta de la cauchera (el Holder).
 # Se fija por código en cada frame porque la física pisa la posición de un
@@ -49,6 +99,10 @@ func _pegar_slime_al_holder():
 	if slime_actual != null and is_instance_valid(slime_actual):
 		slime_actual.global_position = holder.global_position
 		slime_actual.global_rotation = 0.0
+
+# ---------------------------------------------------------------------------
+# Input y dibujo
+# ---------------------------------------------------------------------------
 
 func _input(event):
 	if not is_dragging:
@@ -87,22 +141,65 @@ func _on_holder_input_event(_viewport, event, _shape_idx):
 		if slime_actual != null:
 			is_dragging = true
 
+# ---------------------------------------------------------------------------
+# Munición
+# ---------------------------------------------------------------------------
+
 func cargar_nuevo_slime():
+	_esperando_turno = false
 	# Guarda anti-duplicados: si ya hay un slime cargado, no crear otro.
 	if slime_actual != null and is_instance_valid(slime_actual):
 		return
-	if _municion.size() > 0:
-		var siguiente_slime = _municion.pop_front()
-		slime_actual = siguiente_slime.instantiate()
-		holder.add_child(slime_actual)
-		slime_actual.position = Vector2.ZERO
-		# Cargado en la resortera: congelado y sin colisiones mientras se estira.
-		if slime_actual.has_method("preparar"):
-			slime_actual.preparar()
-		else:
-			slime_actual.freeze = true
-	else:
+
+	# Si el tipo seleccionado se agotó, pasa al primero que tenga stock.
+	_ajustar_seleccion()
+
+	if _indice == -1:
 		print("¡Te quedaste sin munición de slimes!")
+		sin_municion.emit()
+	else:
+		_instanciar_slime(_indice)
+	_notificar()
+
+func _instanciar_slime(indice: int) -> void:
+	var escena: PackedScene = SlimeCatalogo.escena(_inventario[indice]["tipo"])
+	slime_actual = escena.instantiate()
+	holder.add_child(slime_actual)
+	slime_actual.position = Vector2.ZERO
+	# Cargado en la resortera: congelado y sin colisiones mientras se estira.
+	if slime_actual.has_method("preparar"):
+		slime_actual.preparar()
+	else:
+		slime_actual.freeze = true
+
+## Quita el slime cargado (sin gastarlo) para poder cambiarlo por otro.
+func _quitar_slime_cargado() -> void:
+	if slime_actual != null and is_instance_valid(slime_actual):
+		slime_actual.get_parent().remove_child(slime_actual)
+		slime_actual.queue_free()
+	slime_actual = null
+
+func _indice_valido(indice: int) -> bool:
+	return indice >= 0 and indice < _inventario.size()
+
+func _primer_indice_con_stock() -> int:
+	for i in _inventario.size():
+		if _inventario[i]["cantidad"] > 0:
+			return i
+	return -1
+
+## Mantiene la selección si aún hay stock de ese tipo; si no, elige otro.
+func _ajustar_seleccion() -> void:
+	if _indice_valido(_indice) and _inventario[_indice]["cantidad"] > 0:
+		return
+	_indice = _primer_indice_con_stock()
+
+func _notificar() -> void:
+	inventario_cambiado.emit(_inventario, _indice)
+
+# ---------------------------------------------------------------------------
+# Cuerdas
+# ---------------------------------------------------------------------------
 
 func actualizar_cuerdas(pos: Vector2):
 	holder.position = pos
@@ -134,6 +231,10 @@ func dibujar_banda_curva(linea: Line2D, p_inicio: Vector2, p_fin: Vector2, tensi
 
 	linea.points = puntos
 
+# ---------------------------------------------------------------------------
+# Disparo
+# ---------------------------------------------------------------------------
+
 func soltar_resortera():
 	is_dragging = false
 	var vector_disparo = center_marker.position - current_drag_position
@@ -162,6 +263,12 @@ func soltar_resortera():
 			slime_actual.lanzar(vector_disparo * multiplicador_fuerza, tiempo_respeto)
 
 		slime_actual = null
+
+		# El disparo gasta una unidad del tipo seleccionado.
+		_esperando_turno = true
+		_inventario[_indice]["cantidad"] -= 1
+		_ajustar_seleccion()
+		_notificar()
 
 func _al_slime_pegarse(nueva_posicion: Vector2, plataforma: Node):
 	# Estas señales salen de un callback de colisión: no se puede modificar el
