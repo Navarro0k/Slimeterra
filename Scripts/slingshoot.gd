@@ -28,6 +28,32 @@ signal slime_cargado(slime: Node2D)
 ## Dibuja el círculo de respeto (para ajustarlo). El slime lo abandona cuando su cuerpo sale por completo.
 @export var mostrar_area_respeto: bool = false
 
+@export_group("Sonido")
+## Sonido de inicio al estirar: suena UNA vez al empezar a arrastrar (opcional).
+@export var sonido_estirar: AudioStream
+## Sonido sostenido mientras se mantiene estirada: debe estar importado con Loop activado.
+## Arranca al terminar el de inicio (o de inmediato si no hay sonido de inicio).
+@export var sonido_estirar_loop: AudioStream
+## Volumen del bucle (dB) con la cauchera apenas estirada. Al estirar al máximo llega a volumen_estirar_db.
+@export var volumen_loop_min_db: float = -20.0
+## Tono del bucle con la cauchera apenas estirada y estirada al máximo.
+@export var tono_loop_min: float = 0.9
+@export var tono_loop_max: float = 1.3
+## Sonido al soltar y lanzar el slime.
+@export var sonido_lanzar: AudioStream
+## Bus de audio de los efectos. Si no existe en el proyecto, usa Master.
+## Conviene tener el ambiente en otro bus (ej. "Ambiente") para mezclar cada uno por separado.
+@export var bus_efectos: StringName = &"SFX"
+## Volumen (dB) del sonido de inicio y del bucle de estirar cuando está al máximo.
+@export var volumen_estirar_db: float = -4.0
+## Volumen (dB) del lanzamiento. Es el más fuerte: marca el momento del disparo.
+@export var volumen_lanzar_db: float = 0.0
+## Velocidad de reproducción (también cambia el tono): 1.0 = original, 1.3 = 30% más rápido.
+@export_range(0.5, 2.0, 0.05) var velocidad_inicio: float = 1.0
+@export_range(0.5, 2.0, 0.05) var velocidad_lanzar: float = 1.0
+## Variación aleatoria de tono para que no suene siempre idéntico (0 = sin variación).
+@export_range(0.0, 0.3, 0.01) var variacion_tono: float = 0.05
+
 var is_dragging: bool = false
 var current_drag_position: Vector2
 var slime_actual: RigidBody2D
@@ -41,6 +67,12 @@ var _indice: int = -1
 var _esperando_turno: bool = false
 ## Padre original de la honda: a él vuelve cuando el slime se pega a un tile.
 var _padre_original: Node
+## Reproductores de audio (se crean por código en _ready).
+var _player_estirar: AudioStreamPlayer
+var _player_estirar_loop: AudioStreamPlayer
+var _player_lanzar: AudioStreamPlayer
+## Evita repetir el sonido de estirar en cada movimiento del ratón durante un mismo arrastre.
+var _sonido_estirar_sonado: bool = false
 
 @onready var anchor_left = $AnchorLeft
 @onready var anchor_right = $AnchorRight
@@ -51,6 +83,7 @@ var _padre_original: Node
 
 func _ready():
 	_padre_original = get_parent()
+	_crear_reproductores()
 	current_drag_position = center_marker.position
 	actualizar_cuerdas(current_drag_position)
 	queue_redraw()
@@ -125,6 +158,18 @@ func _input(event):
 		var mouse_pos = get_local_mouse_position()
 		var drag_vector = mouse_pos - center_marker.position
 		current_drag_position = center_marker.position + drag_vector.limit_length(max_stretch)
+
+		# Suena una sola vez por arrastre, en cuanto se empieza a estirar de verdad.
+		if not _sonido_estirar_sonado and drag_vector.length() > 5.0:
+			_sonido_estirar_sonado = true
+			if sonido_estirar != null:
+				_reproducir(_player_estirar, volumen_estirar_db, velocidad_inicio) # Al terminar, entra el bucle.
+			else:
+				_iniciar_loop_estirar()
+
+		# La intensidad del bucle sigue la tensión (0 = reposo, 1 = estiramiento máximo).
+		if _sonido_estirar_sonado:
+			_actualizar_loop_estirar(drag_vector.length() / max_stretch)
 
 		actualizar_cuerdas(current_drag_position)
 		queue_redraw()
@@ -249,12 +294,71 @@ func dibujar_banda_curva(linea: Line2D, p_inicio: Vector2, p_fin: Vector2, tensi
 	linea.points = puntos
 
 # ---------------------------------------------------------------------------
+# Sonido
+# ---------------------------------------------------------------------------
+
+## Crea los AudioStreamPlayer por código, así no hace falta tocar la escena.
+func _crear_reproductores() -> void:
+	_player_estirar = AudioStreamPlayer.new()
+	_player_estirar.name = "SonidoEstirar"
+	_player_estirar.stream = sonido_estirar
+	_player_estirar.finished.connect(_al_terminar_sonido_inicio)
+	_player_estirar.bus = _bus_efectos_valido()
+	add_child(_player_estirar)
+
+	_player_estirar_loop = AudioStreamPlayer.new()
+	_player_estirar_loop.name = "SonidoEstirarLoop"
+	_player_estirar_loop.stream = sonido_estirar_loop
+	_player_estirar_loop.bus = _bus_efectos_valido()
+	add_child(_player_estirar_loop)
+
+	_player_lanzar = AudioStreamPlayer.new()
+	_player_lanzar.name = "SonidoLanzar"
+	_player_lanzar.stream = sonido_lanzar
+	_player_lanzar.bus = _bus_efectos_valido()
+	add_child(_player_lanzar)
+
+func _bus_efectos_valido() -> StringName:
+	return bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
+
+## Cuando acaba el sonido de inicio, si se sigue arrastrando, entra el bucle.
+func _al_terminar_sonido_inicio() -> void:
+	if is_dragging:
+		_iniciar_loop_estirar()
+
+func _iniciar_loop_estirar() -> void:
+	if _player_estirar_loop.stream == null or _player_estirar_loop.playing:
+		return
+	_player_estirar_loop.play()
+
+## Más estirado = más fuerte y más agudo.
+func _actualizar_loop_estirar(tension: float) -> void:
+	var t := clampf(tension, 0.0, 1.0)
+	_player_estirar_loop.volume_db = lerpf(volumen_loop_min_db, volumen_estirar_db, t)
+	_player_estirar_loop.pitch_scale = lerpf(tono_loop_min, tono_loop_max, t)
+
+func _detener_sonidos_estirar() -> void:
+	_player_estirar.stop()
+	_player_estirar_loop.stop()
+	_sonido_estirar_sonado = false
+
+func _reproducir(player: AudioStreamPlayer, volumen: float, velocidad: float) -> void:
+	if player == null or player.stream == null:
+		return
+	player.volume_db = volumen
+	player.pitch_scale = velocidad * (1.0 + randf_range(-variacion_tono, variacion_tono))
+	player.play()
+
+# ---------------------------------------------------------------------------
 # Disparo
 # ---------------------------------------------------------------------------
 
 func soltar_resortera():
 	is_dragging = false
 	var vector_disparo = center_marker.position - current_drag_position
+
+	# Corta los sonidos de estirar y los deja listos para el próximo arrastre.
+	_detener_sonidos_estirar()
 
 	queue_redraw()
 
@@ -278,6 +382,8 @@ func soltar_resortera():
 		if slime_actual.has_method("lanzar"):
 			# Nace dentro del círculo de respeto: no colisiona ni se pega hasta salir de él.
 			slime_actual.lanzar(vector_disparo * multiplicador_fuerza, tiempo_respeto, center_marker, radio_area_respeto())
+
+		_reproducir(_player_lanzar, volumen_lanzar_db, velocidad_lanzar)
 
 		slime_lanzado.emit(slime_actual)
 		slime_actual = null
