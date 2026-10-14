@@ -23,6 +23,13 @@ enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 ## Los contactos por detrás o de lado (la superficie de la que acaba de salir) nunca pegan.
 @export_range(0.0, 0.9, 0.05) var umbral_impacto: float = 0.1
 
+@export_group("Límites del nivel")
+## Velocidad que conserva al rebotar contra los límites del nivel (0 = se amortigua, 1 = rebote perfecto).
+@export_range(0.0, 1.0, 0.05) var rebote_limites: float = 0.7
+## Si tras rebotar en el límite inferior sale con menos velocidad que esta (px/s), se da por
+## perdido y se descarta: evita esperar a `tiempo_vuelo_max` viéndolo rodar por el suelo del nivel.
+@export var velocidad_minima_suelo: float = 60.0
+
 @onready var particulas_rastro: CPUParticles2D = $CPUParticles2D
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var forma_colision: CollisionShape2D = $CollisionShape2D
@@ -33,6 +40,10 @@ signal slime_pegado(nueva_posicion, plataforma)
 signal turno_terminado
 
 var estado: Estado = Estado.CARGADO
+
+## Rectángulo (coordenadas globales) dentro del que rebota. Lo asigna el nivel al lanzarse;
+## un rectángulo sin área significa "sin límites".
+var limites: Rect2 = Rect2()
 
 var arrastre: float
 var vel_sim: Vector2 = Vector2.ZERO
@@ -193,10 +204,52 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 
 	var pos: Vector2 = state.transform.origin
 	var r: Array = SolverNumerico.paso(metodo, pos, vel_sim, dt, gravedad, arrastre)
+	var nueva_pos: Vector2 = r[0]
+	var nueva_vel: Vector2 = r[1]
 
-	vel_sim = r[1]
-	v_motor = (r[0] - pos) / dt
+	# Rebote en los límites del nivel: se resuelve sobre el paso ya calculado, así que no
+	# hay túnel posible por rápido que vaya (no depende de paredes físicas).
+	if limites.has_area():
+		var rebote := _rebotar_en_limites(nueva_pos, nueva_vel)
+		if estado == Estado.TERMINADO:
+			return
+		nueva_pos = rebote[0]
+		nueva_vel = rebote[1]
+
+	vel_sim = nueva_vel
+	v_motor = (nueva_pos - pos) / dt
 	state.linear_velocity = v_motor
+
+## Mantiene el cuerpo del slime dentro de `limites` y refleja su velocidad al tocar un borde.
+## Devuelve [posición, velocidad] corregidas.
+func _rebotar_en_limites(pos: Vector2, vel: Vector2) -> Array:
+	var izquierda := limites.position.x + _radio
+	var derecha := limites.end.x - _radio
+	var arriba := limites.position.y + _radio
+	var abajo := limites.end.y - _radio
+
+	if pos.x < izquierda:
+		pos.x = izquierda
+		if vel.x < 0.0:
+			vel.x = -vel.x * rebote_limites
+	elif pos.x > derecha:
+		pos.x = derecha
+		if vel.x > 0.0:
+			vel.x = -vel.x * rebote_limites
+
+	if pos.y < arriba:
+		pos.y = arriba
+		if vel.y < 0.0:
+			vel.y = -vel.y * rebote_limites
+	elif pos.y > abajo:
+		pos.y = abajo
+		if vel.y > 0.0:
+			vel.y = -vel.y * rebote_limites
+		# Rebote sin fuerza contra el suelo del nivel: perdido, se libera el turno.
+		if absf(vel.y) < velocidad_minima_suelo:
+			_descartar()
+
+	return [pos, vel]
 
 # ---------------------------------------------------------------------------
 # Impactos
