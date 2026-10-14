@@ -2,12 +2,14 @@ class_name PantallaFin
 extends CanvasLayer
 ## Pantalla de pausa / victoria / derrota. Congela el juego (get_tree().paused) y ofrece
 ## Reiniciar (y Continuar cuando es solo una pausa). Se construye por código: no necesita escena.
-## Esc (ui_cancel) abre y cierra la pausa.
+## Además dibuja un botón "Pausa" siempre visible en la esquina superior derecha de la pantalla
+## de juego; Esc (ui_cancel) hace lo mismo.
 
 enum Modo { OCULTA, PAUSA, VICTORIA, DERROTA }
 
 var modo: Modo = Modo.OCULTA
 
+var _btn_pausa: Button
 var _raiz: Control
 var _titulo: Label
 var _mensaje: Label
@@ -45,6 +47,7 @@ func mostrar_derrota(mensaje: String = "") -> void:
 func continuar() -> void:
 	modo = Modo.OCULTA
 	_raiz.visible = false
+	_btn_pausa.visible = true
 	get_tree().paused = false
 
 func reiniciar() -> void:
@@ -61,6 +64,7 @@ func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String) -> void:
 	_mensaje.text = mensaje
 	_mensaje.visible = mensaje != ""
 	_btn_continuar.visible = nuevo_modo == Modo.PAUSA
+	_btn_pausa.visible = false
 	_raiz.visible = true
 	get_tree().paused = true
 	if nuevo_modo == Modo.PAUSA:
@@ -69,6 +73,14 @@ func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String) -> void:
 		_btn_reiniciar.grab_focus()
 
 func _construir() -> void:
+	# Botón de pausa de la pantalla de juego (esquina superior derecha).
+	_btn_pausa = _crear_boton("Pausa", alternar_pausa)
+	_btn_pausa.custom_minimum_size = Vector2(0, 0)
+	_btn_pausa.focus_mode = Control.FOCUS_NONE # Que Espacio/Enter no lo activen por accidente.
+	add_child(_btn_pausa)
+	_btn_pausa.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 6)
+
+	# Overlay de pausa / victoria / derrota.
 	_raiz = Control.new()
 	_raiz.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_raiz.mouse_filter = Control.MOUSE_FILTER_STOP # Bloquea clics al juego mientras está abierta.

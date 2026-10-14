@@ -38,7 +38,10 @@ func _ready() -> void:
 		add_child(pantalla)
 
 	# Meta(s) del nivel: cualquier nodo Meta en la escena se encuentra por su grupo.
-	for meta in get_tree().get_nodes_in_group("meta"):
+	var metas := get_tree().get_nodes_in_group("meta")
+	if metas.is_empty():
+		push_warning("Este nivel no tiene ninguna Meta (instancia Scenes/Meta.tscn): no se podrá ganar.")
+	for meta in metas:
 		meta.meta_alcanzada.connect(_on_meta_alcanzada)
 
 	# Mismo diccionario para los dos. Primero la UI (crea los slots) y luego la
