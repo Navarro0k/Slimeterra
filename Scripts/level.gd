@@ -4,6 +4,13 @@ extends Node2D
 ## Les entrega el inventario de slimes y los comunica entre sí.
 ## También decide cuándo termina el nivel: victoria al tocar una Meta, derrota al quedarse sin slimes.
 
+## Orden de los niveles del juego. Al ganar se pasa al siguiente de esta lista y el último
+## cierra el juego. Para añadir un nivel basta con añadirlo aquí.
+const ORDEN_NIVELES: Array[String] = [
+	"res://Scenes/Levels/jungleLevel.tscn",
+	"res://Scenes/Levels/Level_Ice.tscn",
+]
+
 ## Slimes disponibles en este nivel: { tipo de slime: cantidad }.
 ## Los tipos están definidos en SlimeCatalogo.Tipo.
 ## Cada nivel concreto lo redefine en su propio script (ver jungle_level.gd).
@@ -54,6 +61,7 @@ func _ready() -> void:
 	if pantalla == null:
 		pantalla = PantallaFin.new()
 		add_child(pantalla)
+	_configurar_progresion()
 
 	# Meta(s) del nivel: cualquier nodo Meta en la escena se encuentra por su grupo.
 	var metas := get_tree().get_nodes_in_group("meta")
@@ -103,7 +111,18 @@ func _slimes_restantes() -> int:
 	for entrada in slingshoot.get_inventario():
 		total += int(entrada["cantidad"])
 	return total
-	# Punto de enganche para derrota / reinicio del nivel.
+
+## Le dice a la pantalla de fin qué viene después de este nivel según ORDEN_NIVELES.
+## Un nivel que no esté en la lista (por ejemplo Level_1) solo ofrece repetirse.
+func _configurar_progresion() -> void:
+	var posicion := ORDEN_NIVELES.find(scene_file_path)
+	if posicion < 0:
+		return
+	pantalla.primer_nivel = ORDEN_NIVELES[0]
+	if posicion + 1 < ORDEN_NIVELES.size():
+		pantalla.siguiente_nivel = ORDEN_NIVELES[posicion + 1]
+	else:
+		pantalla.es_final_del_juego = true
 
 ## Límites manuales o, si están activados, los del dibujo del nivel: el rectángulo que
 ## engloba lo que realmente se ve (tiles visibles y sprites de fondo) más los márgenes.

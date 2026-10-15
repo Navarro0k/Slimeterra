@@ -5,7 +5,7 @@ extends Area2D
 ##
 ## Detecta al slime de DOS formas independientes (basta con que funcione una):
 ##   1. La señal body_entered del Area2D (necesita que la capa/máscara de física coincidan).
-#   2. Un chequeo geométrico cada frame: ¿la posición del slime está dentro de la forma des
+##   2. Un chequeo geométrico cada frame: ¿la posición del slime está dentro de la forma de
 ##      colisión de la meta? No depende de capas, máscaras ni de cómo esté configurado el Area2D.
 
 signal meta_alcanzada

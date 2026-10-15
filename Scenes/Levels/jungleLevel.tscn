@@ -13,7 +13,7 @@
 [ext_resource type="Texture2D" uid="uid://c1kes0ntu64du" path="res://Assets/Tilemaps/Pixel Mushroom Pack/sprites.png" id="10_udm3q"]
 [ext_resource type="PackedScene" uid="uid://bbk4vfnkmnhn5" path="res://Scenes/PlattaformSelva.tscn" id="11_ed17r"]
 [ext_resource type="Script" uid="uid://d0x1fgsnrhpt" path="res://Scripts/jungle_level.gd" id="15_level"]
-[ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="16_lpkn4"]
+[ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="18_meta"]
 [ext_resource type="AudioStream" uid="uid://d0tebamej1gic" path="res://Assets/Audio/ForestEnvironment.mp3" id="16_lpkn4"]
 [ext_resource type="PackedScene" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="16_ui"]
 [ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="17_cam"]
@@ -3977,9 +3977,10 @@ multiplicador_fuerza = 20.0
 [node name="Camara" type="Camera2D" parent="." unique_id=2100129150]
 script = ExtResource("17_cam")
 
-[node name="Meta" parent="." unique_id=570286554 instance=ExtResource("16_lpkn4")]
-position = Vector2(-32, 17)
+[node name="Meta" parent="." unique_id=570286554 instance=ExtResource("18_meta")]
+position = Vector2(-111, -800)
 scale = Vector2(1.1393256, 0.90381575)
+
 [node name="AudioStreamPlayer2D" type="AudioStreamPlayer2D" parent="." unique_id=684883822]
 stream = ExtResource("16_lpkn4")
 volume_db = -10.0

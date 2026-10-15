@@ -9,12 +9,21 @@ enum Modo { OCULTA, PAUSA, VICTORIA, DERROTA }
 
 var modo: Modo = Modo.OCULTA
 
+## Si no está vacío, la victoria ofrece pasar a este nivel (ruta res://...tscn). Lo asigna el nivel.
+var siguiente_nivel: String = ""
+## true en el último nivel del juego: la victoria pasa a ser la del juego completo.
+var es_final_del_juego: bool = false
+## Primer nivel del juego, al que se vuelve desde la pantalla final.
+var primer_nivel: String = ""
+
 var _btn_pausa: Button
 var _raiz: Control
 var _titulo: Label
 var _mensaje: Label
 var _btn_continuar: Button
 var _btn_reiniciar: Button
+var _btn_siguiente: Button
+var _btn_inicio: Button
 
 func _ready() -> void:
 	layer = 50
@@ -39,7 +48,8 @@ func alternar_pausa() -> void:
 		_mostrar(Modo.PAUSA, "Pausa", "")
 
 func mostrar_victoria(mensaje: String = "") -> void:
-	_mostrar(Modo.VICTORIA, "¡Nivel completado!", mensaje)
+	var titulo := "¡Juego completado!" if es_final_del_juego else "¡Nivel completado!"
+	_mostrar(Modo.VICTORIA, titulo, mensaje)
 
 func mostrar_derrota(mensaje: String = "") -> void:
 	_mostrar(Modo.DERROTA, "Sin slimes", mensaje)
@@ -54,6 +64,19 @@ func reiniciar() -> void:
 	get_tree().paused = false
 	get_tree().reload_current_scene()
 
+func ir_al_siguiente_nivel() -> void:
+	_cambiar_de_nivel(siguiente_nivel)
+
+func ir_al_primer_nivel() -> void:
+	_cambiar_de_nivel(primer_nivel)
+
+func _cambiar_de_nivel(ruta: String) -> void:
+	if ruta.is_empty():
+		return
+	# Se quita la pausa ANTES: si no, el nivel nuevo arrancaría congelado.
+	get_tree().paused = false
+	get_tree().change_scene_to_file(ruta)
+
 # ---------------------------------------------------------------------------
 # Interno
 # ---------------------------------------------------------------------------
@@ -63,12 +86,18 @@ func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String) -> void:
 	_titulo.text = titulo
 	_mensaje.text = mensaje
 	_mensaje.visible = mensaje != ""
+	var victoria := nuevo_modo == Modo.VICTORIA
 	_btn_continuar.visible = nuevo_modo == Modo.PAUSA
+	_btn_siguiente.visible = victoria and siguiente_nivel != ""
+	_btn_inicio.visible = victoria and es_final_del_juego and primer_nivel != ""
+	_btn_reiniciar.text = "Repetir nivel" if victoria else "Reiniciar"
 	_btn_pausa.visible = false
 	_raiz.visible = true
 	get_tree().paused = true
 	if nuevo_modo == Modo.PAUSA:
 		_btn_continuar.grab_focus()
+	elif _btn_siguiente.visible:
+		_btn_siguiente.grab_focus()
 	else:
 		_btn_reiniciar.grab_focus()
 
@@ -122,8 +151,14 @@ func _construir() -> void:
 	_btn_continuar = _crear_boton("Continuar", continuar)
 	caja.add_child(_btn_continuar)
 
+	_btn_siguiente = _crear_boton("Siguiente nivel", ir_al_siguiente_nivel)
+	caja.add_child(_btn_siguiente)
+
 	_btn_reiniciar = _crear_boton("Reiniciar", reiniciar)
 	caja.add_child(_btn_reiniciar)
+
+	_btn_inicio = _crear_boton("Volver al inicio", ir_al_primer_nivel)
+	caja.add_child(_btn_inicio)
 
 func _crear_boton(texto: String, accion: Callable) -> Button:
 	var boton := Button.new()
