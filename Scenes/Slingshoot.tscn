@@ -14,6 +14,7 @@ script = ExtResource("1_f3jow")
 sonido_estirar = ExtResource("2_ghotg")
 sonido_estirar_loop = ExtResource("3_bpcd0")
 sonido_lanzar = ExtResource("4_bpcd0")
+volumen_lanzar_db = -8.0
 
 [node name="SlingshotSprite" type="Sprite2D" parent="." unique_id=1805601218]
 z_index = 1

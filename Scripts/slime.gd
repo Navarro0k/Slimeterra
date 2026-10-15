@@ -30,6 +30,18 @@ enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 ## perdido y se descarta: evita esperar a `tiempo_vuelo_max` viéndolo rodar por el suelo del nivel.
 @export var velocidad_minima_suelo: float = 60.0
 
+@export_group("Sonido")
+## Sonido al pegarse a una superficie (tile o plataforma).
+@export var sonido_pegado: AudioStream
+## Volumen (dB) del sonido de pegado.
+@export var volumen_pegado_db: float = -2.0
+## Velocidad de reproducción (también cambia el tono): 1.0 = original.
+@export_range(0.5, 2.0, 0.05) var velocidad_pegado: float = 1.0
+## Variación aleatoria de tono para que no suene siempre idéntico (0 = sin variación).
+@export_range(0.0, 0.3, 0.01) var variacion_tono: float = 0.05
+## Bus de audio de los efectos. Si no existe en el proyecto, usa Master.
+@export var bus_efectos: StringName = &"SFX"
+
 @onready var particulas_rastro: CPUParticles2D = $CPUParticles2D
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var forma_colision: CollisionShape2D = $CollisionShape2D
@@ -180,8 +192,25 @@ func _pegarse(superficie: Node, posicion: Vector2) -> void:
 		return
 	estado = Estado.TERMINADO
 	set_deferred("freeze", true)
+	_reproducir_sonido_pegado()
 	slime_pegado.emit(posicion, superficie)
 	queue_free()
+
+## El slime se libera justo después de pegarse, así que el sonido NO puede ser hijo suyo
+## (se cortaría al instante). Se usa un reproductor temporal en la escena actual que se
+## borra solo al terminar de sonar.
+func _reproducir_sonido_pegado() -> void:
+	var escena := get_tree().current_scene
+	if sonido_pegado == null or escena == null:
+		return
+	var reproductor := AudioStreamPlayer.new()
+	reproductor.stream = sonido_pegado
+	reproductor.volume_db = volumen_pegado_db
+	reproductor.pitch_scale = velocidad_pegado * (1.0 + randf_range(-variacion_tono, variacion_tono))
+	reproductor.bus = bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
+	escena.add_child(reproductor)
+	reproductor.finished.connect(reproductor.queue_free)
+	reproductor.play()
 
 # ---------------------------------------------------------------------------
 # Física
