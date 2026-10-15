@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="SlimeTerra"
-run/main_scene="uid://ckg85fsv6f1hf"
+run/main_scene="uid://dq5yseetfs0ts"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 config/icon="res://icon.svg"
 

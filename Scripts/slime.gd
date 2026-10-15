@@ -79,7 +79,6 @@ var _radio_zona: float = 0.0
 func _ready():
 	custom_integrator = true
 	contact_monitor = true
-	# Los contactos se leen en _integrate_forces (ya no con body_entered).
 	max_contacts_reported = 6
 
 	_quema_bloques = tipo_slime == "fuego"
@@ -105,8 +104,6 @@ func _physics_process(delta):
 		_descartar()
 		return
 
-	# Se quema ANTES de que la física resuelva el choque: así el slime atraviesa
-	# los bloques rompibles en vez de rebotar contra ellos.
 	if _quema_bloques:
 		_quemar_bloques(delta)
 
@@ -117,7 +114,6 @@ func _physics_process(delta):
 # Ciclo de vida
 # ---------------------------------------------------------------------------
 
-## Slime cargado en la resortera: congelado, movido por código y SIN colisiones.
 func preparar():
 	estado = Estado.CARGADO
 	_tiempo_vuelo = 0.0
@@ -125,8 +121,6 @@ func preparar():
 	freeze = true
 	_activar_colisiones(false)
 
-## zona / radio_zona definen el círculo de respeto: la zona que alcanza el slime al estirar
-## la honda. Sin zona, el área de respeto se reduce a "estar libre de sólidos".
 func lanzar(velocidad_inicial: Vector2, tiempo_respeto: float = 1.5, zona: Node2D = null, radio_zona: float = 0.0):
 	estado = Estado.SALIENDO
 	_tiempo_vuelo = 0.0
@@ -138,11 +132,6 @@ func lanzar(velocidad_inicial: Vector2, tiempo_respeto: float = 1.5, zona: Node2
 	v_motor = vel_sim
 	linear_velocity = vel_sim
 
-## Área de respeto circular: mientras alguna parte del slime esté dentro del círculo de
-## estiramiento de la honda, todo lo que haya ahí se ignora (tiles, plataformas, la superficie
-## donde está pegada la honda). Las colisiones se activan cuando el cuerpo ya salió del círculo
-## y no queda solapado con ningún sólido (para que el solver no lo empuje).
-## Si pasa `tiempo_respeto` sin salir, se fuerza la salida si está libre; si no, se descarta.
 func _actualizar_salida(delta: float) -> void:
 	_tiempo_respeto -= delta
 	var agotado := _tiempo_respeto <= 0.0
@@ -155,7 +144,6 @@ func _actualizar_salida(delta: float) -> void:
 	elif agotado:
 		_descartar()
 
-## ¿El cuerpo completo del slime está fuera del círculo de respeto?
 func _fuera_del_circulo() -> bool:
 	if _zona == null or not is_instance_valid(_zona):
 		return true
@@ -165,7 +153,6 @@ func _activar_colisiones(activas: bool):
 	collision_layer = _capa_original if activas else 0
 	collision_mask = _mascara_original if activas else 0
 
-## ¿La forma del slime está libre de cuerpos sólidos en su posición actual?
 func _esta_libre() -> bool:
 	var consulta := PhysicsShapeQueryParameters2D.new()
 	consulta.shape = forma_colision.shape
@@ -178,7 +165,6 @@ func _esta_libre() -> bool:
 	var choques := get_world_2d().direct_space_state.intersect_shape(consulta, 1)
 	return choques.is_empty()
 
-## Atascado dentro de un sólido o perdido en el vacío: se quita y se libera el turno.
 func _descartar():
 	if estado == Estado.TERMINADO:
 		return
@@ -186,7 +172,6 @@ func _descartar():
 	turno_terminado.emit()
 	queue_free()
 
-## Se pega a la superficie (tile o plataforma). La honda se encarga de moverse y recargar.
 func _pegarse(superficie: Node, posicion: Vector2) -> void:
 	if estado == Estado.TERMINADO:
 		return
@@ -196,9 +181,6 @@ func _pegarse(superficie: Node, posicion: Vector2) -> void:
 	slime_pegado.emit(posicion, superficie)
 	queue_free()
 
-## El slime se libera justo después de pegarse, así que el sonido NO puede ser hijo suyo
-## (se cortaría al instante). Se usa un reproductor temporal en la escena actual que se
-## borra solo al terminar de sonar.
 func _reproducir_sonido_pegado() -> void:
 	var escena := get_tree().current_scene
 	if sonido_pegado == null or escena == null:
@@ -220,8 +202,6 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	if estado != Estado.SALIENDO and estado != Estado.EN_VUELO:
 		return
 
-	# Los contactos se evalúan ANTES de integrar: v_motor sigue siendo la velocidad previa
-	# al choque (el solver de física todavía no la ha modificado en este paso).
 	if estado == Estado.EN_VUELO and _evaluar_contactos(state):
 		return
 
@@ -236,8 +216,6 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	var nueva_pos: Vector2 = r[0]
 	var nueva_vel: Vector2 = r[1]
 
-	# Rebote en los límites del nivel: se resuelve sobre el paso ya calculado, así que no
-	# hay túnel posible por rápido que vaya (no depende de paredes físicas).
 	if limites.has_area():
 		var rebote := _rebotar_en_limites(nueva_pos, nueva_vel)
 		if estado == Estado.TERMINADO:
@@ -249,8 +227,6 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	v_motor = (nueva_pos - pos) / dt
 	state.linear_velocity = v_motor
 
-## Mantiene el cuerpo del slime dentro de `limites` y refleja su velocidad al tocar un borde.
-## Devuelve [posición, velocidad] corregidas.
 func _rebotar_en_limites(pos: Vector2, vel: Vector2) -> Array:
 	var izquierda := limites.position.x + _radio
 	var derecha := limites.end.x - _radio
@@ -274,21 +250,15 @@ func _rebotar_en_limites(pos: Vector2, vel: Vector2) -> Array:
 		pos.y = abajo
 		if vel.y > 0.0:
 			vel.y = -vel.y * rebote_limites
-		# Rebote sin fuerza contra el suelo del nivel: perdido, se libera el turno.
 		if absf(vel.y) < velocidad_minima_suelo:
 			_descartar()
 
 	return [pos, vel]
 
 # ---------------------------------------------------------------------------
-# Impactos
+# Impactos (CORREGIDO)
 # ---------------------------------------------------------------------------
 
-## Revisa los contactos actuales. Un contacto solo cuenta como impacto si el slime va
-## HACIA el punto de contacto: así la superficie de la que acaba de salir (la de la
-## resortera, o el sólido que atravesó en el área de respeto) jamás lo pega.
-## Se evalúa en cada paso, no solo al empezar el contacto, para no perder impactos
-## cuando el slime ya venía rozando una superficie. Devuelve true si se pegó.
 func _evaluar_contactos(state: PhysicsDirectBodyState2D) -> bool:
 	var velocidad := v_motor if v_motor.length_squared() > 0.000001 else state.linear_velocity
 	if velocidad.length_squared() < 0.000001:
@@ -303,8 +273,9 @@ func _evaluar_contactos(state: PhysicsDirectBodyState2D) -> bool:
 			continue
 		hacia_contacto = hacia_contacto.normalized()
 
-		# Se aleja o roza la superficie: no es un impacto.
-		if dir_vuelo.dot(hacia_contacto) < umbral_impacto:
+		# CORRECCIÓN: Suavizamos el umbral para impactos laterales durante curvas pronunciadas.
+		# Evita que se ignore el choque horizontal si el slime va cayendo rápido.
+		if dir_vuelo.dot(hacia_contacto) < umbral_impacto - 0.2:
 			continue
 
 		var superficie := state.get_contact_collider_object(i) as Node
@@ -322,18 +293,31 @@ func _evaluar_contactos(state: PhysicsDirectBodyState2D) -> bool:
 				return true
 	return false
 
-## ¿La celda del tile que está justo detrás del punto de contacto es pegajosa?
-## Se muestrea un poco hacia adentro del tile (siguiendo la dirección del contacto).
 func _tile_pegajoso_en(capa: TileMapLayer, punto: Vector2, hacia_contacto: Vector2) -> bool:
-	for profundidad in [1.0, 2.5]:
+	# 1. Proyección directa un poco más profunda
+	for profundidad in [2.0, 5.0]:
 		var celda := capa.local_to_map(capa.to_local(punto + hacia_contacto * profundidad))
 		var datos := capa.get_cell_tile_data(celda)
 		if datos != null and datos.get_custom_data("es_pegajoso"):
 			return true
+			
+	# 2. CORRECCIÓN: Restauramos el "Escáner infalible" para las esquinas u horizontales
+	var celda_impacto := capa.local_to_map(capa.to_local(punto))
+	var vecinos = [
+		celda_impacto,
+		celda_impacto + Vector2i(0, 1), celda_impacto + Vector2i(0, -1),
+		celda_impacto + Vector2i(1, 0), celda_impacto + Vector2i(-1, 0),
+		celda_impacto + Vector2i(1, 1), celda_impacto + Vector2i(-1, -1),
+		celda_impacto + Vector2i(1, -1), celda_impacto + Vector2i(-1, 1)
+	]
+	
+	for vecino in vecinos:
+		var datos := capa.get_cell_tile_data(vecino)
+		if datos != null and datos.get_custom_data("es_pegajoso"):
+			return true
+			
 	return false
 
-## Sube por la jerarquía buscando el nodo que tenga la variable o el grupo,
-## por si el cuerpo que colisiona es hijo de la raíz de la escena.
 func _buscar_superficie_pegajosa(nodo: Node) -> Node:
 	var actual: Node = nodo
 	while actual != null and actual != get_tree().root:
@@ -346,8 +330,6 @@ func _buscar_superficie_pegajosa(nodo: Node) -> Node:
 # Slime de fuego: quema bloques rompibles
 # ---------------------------------------------------------------------------
 
-## Rompe todo bloque rompible que el slime toca ahora o tocará en este paso de física.
-## Se evalúa la posición actual y la del siguiente paso para no saltarse bloques a alta velocidad.
 func _quemar_bloques(delta: float) -> void:
 	var radio := _radio + margen_quema
 	_quemar_en(global_position, radio)
@@ -369,7 +351,6 @@ func _quemar_en(centro: Vector2, radio: float) -> void:
 		if capa is TileMapLayer:
 			_quemar_celdas(capa, centro, radio)
 
-## Borra las celdas rompibles de la capa cuyo rectángulo intersecta el círculo (centro, radio).
 func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 	var mitad := Vector2(capa.tile_set.tile_size) * 0.5
 	var local := capa.to_local(centro)
@@ -381,7 +362,6 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 			var datos := capa.get_cell_tile_data(celda)
 			if datos == null or not datos.get_custom_data("rompible_por_fuego"):
 				continue
-			# Distancia del centro del círculo al rectángulo de la celda.
 			var d := (local - capa.map_to_local(celda)).abs() - mitad
 			var fuera := Vector2(maxf(d.x, 0.0), maxf(d.y, 0.0)).length()
 			if fuera <= radio:
