@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="10_5sjxy"]
 [ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="11_hbc57"]
 [ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="12_meta"]
+[ext_resource type="AudioStream" uid="uid://t2gd5ws7ajl8" path="res://Assets/Audio/level_music/Newer Wave.mp3" id="13_44arf"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
 texture = ExtResource("1_1yxr7")
@@ -3773,5 +3774,9 @@ position = Vector2(-65, 3)
 [node name="Camara" type="Camera2D" parent="." unique_id=1928810597]
 script = ExtResource("11_hbc57")
 
-[node name="Meta" parent="." instance=ExtResource("12_meta")]
+[node name="Meta" parent="." unique_id=873520821 instance=ExtResource("12_meta")]
 position = Vector2(-14, -400)
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=246797248]
+stream = ExtResource("13_44arf")
+autoplay = true
