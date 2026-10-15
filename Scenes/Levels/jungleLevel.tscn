@@ -3977,6 +3977,5 @@ multiplicador_fuerza = 20.0
 script = ExtResource("17_cam")
 
 [node name="Meta" parent="." unique_id=570286554 instance=ExtResource("16_lpkn4")]
-position = Vector2(-33, 16)
+position = Vector2(-32, 17)
 scale = Vector2(1.1393256, 0.90381575)
-script = null
