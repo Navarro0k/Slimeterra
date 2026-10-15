@@ -9,3 +9,4 @@ func _init() -> void:
 		SlimeCatalogo.Tipo.BASE: 10,
 		SlimeCatalogo.Tipo.FUEGO: 5,
 	}
+#s
