@@ -2,12 +2,19 @@
 
 [ext_resource type="Script" uid="uid://c38th0qpckur" path="res://Scripts/slingshoot.gd" id="1_f3jow"]
 [ext_resource type="Texture2D" uid="uid://ds4og3yfsm21f" path="res://Assets/pngs/Honda madera.png" id="2_6d2l2"]
+[ext_resource type="AudioStream" uid="uid://cweyfyxlf7xfe" path="res://Assets/Audio/sound_effects/SlingshotSound.mp3" id="2_ghotg"]
 [ext_resource type="Texture2D" uid="uid://cn2yjeturx25r" path="res://Assets/pngs/parche honda.png" id="3_6d2l2"]
+[ext_resource type="AudioStream" uid="uid://ux3jwwio112g" path="res://Assets/Audio/sound_effects/SlingshotLoopSound.mp3" id="3_bpcd0"]
+[ext_resource type="AudioStream" uid="uid://b7t3agdr174gg" path="res://Assets/Audio/sound_effects/SlingshotLaunchSound.mp3" id="4_bpcd0"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_wn07x"]
 
 [node name="Slingshoot" type="Node2D" unique_id=280816846]
 script = ExtResource("1_f3jow")
+sonido_estirar = ExtResource("2_ghotg")
+sonido_estirar_loop = ExtResource("3_bpcd0")
+sonido_lanzar = ExtResource("4_bpcd0")
+volumen_lanzar_db = -8.0
 
 [node name="SlingshotSprite" type="Sprite2D" parent="." unique_id=1805601218]
 z_index = 1

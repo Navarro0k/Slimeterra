@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://bpkujnev46v12"]
 
 [ext_resource type="Script" uid="uid://phqojg0jfj1h" path="res://Scripts/slime.gd" id="1_swwnm"]
+[ext_resource type="AudioStream" uid="uid://d2v4spr8kueu0" path="res://Assets/Audio/sound_effects/SlimeStick.mp3" id="2_paq7w"]
 [ext_resource type="Texture2D" uid="uid://dwjocvnyecne1" path="res://Assets/pngs/slime-base.png" id="2_swwnm"]
 [ext_resource type="Texture2D" uid="uid://bnj0cfmgy03m" path="res://Assets/pngs/pixel drop.png" id="3_aiwxb"]
 
@@ -11,6 +12,7 @@ radius = 6.8108597
 
 [node name="Slime" type="RigidBody2D" unique_id=1874400018]
 script = ExtResource("1_swwnm")
+sonido_pegado = ExtResource("2_paq7w")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=511180151]
 scale = Vector2(0.6, 0.6)
