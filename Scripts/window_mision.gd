@@ -1,8 +1,8 @@
 class_name WindowMision
 extends CanvasLayer
 
-@onready var mensaje_label: Label = $Center/Margin/VBox/mensaje
-@onready var boton_play: Button = $Center/Margin/VBox/ButtonPlay
+@onready var mensaje_label: Label = $Center/PanelContainer/Margin/VBox/mensaje
+@onready var boton_play: Button = $Center/PanelContainer/Margin/VBox/ButtonPlay
 
 # Called when the node enters the scene tree for the first time.
 func _ready() -> void:

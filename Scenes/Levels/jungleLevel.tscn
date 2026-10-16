@@ -17,6 +17,7 @@
 [ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="17_cam"]
 [ext_resource type="AudioStream" uid="uid://b2dau1up0hlh4" path="res://Assets/Audio/level_music/Island Meet and Greet.mp3" id="17_d5yi4"]
 [ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="18_meta"]
+[ext_resource type="PackedScene" uid="uid://7p8vlvlapjfg" path="res://Scenes/UI/WindowMision.tscn" id="18_udm3q"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
 texture = ExtResource("1_6r2ke")
@@ -3985,3 +3986,5 @@ scale = Vector2(1.1393256, 0.90381575)
 stream = ExtResource("17_d5yi4")
 volume_db = 2.0
 autoplay = true
+
+[node name="WindowMision" parent="." unique_id=1461847285 instance=ExtResource("18_udm3q")]

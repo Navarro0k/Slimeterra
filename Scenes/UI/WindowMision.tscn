@@ -13,7 +13,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0253638, 0.0253638, 0.025363795, 0.39607844)
+color = Color(0.023529412, 0.023529412, 0.023529412, 0.74509805)
 
 [node name="Center" type="CenterContainer" parent="." unique_id=2008194622]
 anchors_preset = 15
@@ -23,30 +23,33 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Margin" type="MarginContainer" parent="Center" unique_id=1478888523]
+[node name="PanelContainer" type="PanelContainer" parent="Center" unique_id=1021394955]
+layout_mode = 2
+
+[node name="Margin" type="MarginContainer" parent="Center/PanelContainer" unique_id=1478888523]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBox" type="VBoxContainer" parent="Center/Margin" unique_id=580582118]
+[node name="VBox" type="VBoxContainer" parent="Center/PanelContainer/Margin" unique_id=580582118]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="titulo" type="Label" parent="Center/Margin/VBox" unique_id=18092332]
+[node name="titulo" type="Label" parent="Center/PanelContainer/Margin/VBox" unique_id=18092332]
 layout_mode = 2
 theme_override_font_sizes/font_size = 14
 text = "GOAL"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="mensaje" type="Label" parent="Center/Margin/VBox" unique_id=913518810]
+[node name="mensaje" type="Label" parent="Center/PanelContainer/Margin/VBox" unique_id=913518810]
 layout_mode = 2
 theme_override_font_sizes/font_size = 10
 text = "Collect at least 2 coins and reach the top."
 
-[node name="ButtonPlay" type="Button" parent="Center/Margin/VBox" unique_id=631178013]
+[node name="ButtonPlay" type="Button" parent="Center/PanelContainer/Margin/VBox" unique_id=631178013]
 custom_minimum_size = Vector2(80, 40)
 layout_mode = 2
 size_flags_horizontal = 4
