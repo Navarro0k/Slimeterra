@@ -1,8 +1,11 @@
 [gd_scene format=3 uid="uid://7p8vlvlapjfg"]
 
+[ext_resource type="Script" uid="uid://cckerpm4c3gbo" path="res://Scripts/window_mision.gd" id="1_2ieu6"]
+
 [node name="WindowMision" type="CanvasLayer" unique_id=1461847285]
 process_mode = 3
 layer = 11
+script = ExtResource("1_2ieu6")
 
 [node name="darkBackground" type="ColorRect" parent="." unique_id=24966388]
 anchors_preset = 15
