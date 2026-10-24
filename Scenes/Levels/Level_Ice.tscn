@@ -3745,6 +3745,9 @@ sources/4 = SubResource("TileSetAtlasSource_cdqyy")
 sources/5 = SubResource("TileSetAtlasSource_5sjxy")
 sources/6 = SubResource("TileSetAtlasSource_hbc57")
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_44arf"]
+size = Vector2(313.5, 569)
+
 [node name="LevelIce" type="Node2D" unique_id=539677101]
 script = ExtResource("1_6073x")
 metadata/_edit_horizontal_guides_ = [-289.0]
@@ -3780,3 +3783,9 @@ position = Vector2(-14, -400)
 [node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="." unique_id=246797248]
 stream = ExtResource("13_44arf")
 autoplay = true
+
+[node name="LimitesCamara" type="Area2D" parent="." unique_id=1792631318]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LimitesCamara" unique_id=1764099669]
+position = Vector2(-25.75, -182.5)
+shape = SubResource("RectangleShape2D_44arf")

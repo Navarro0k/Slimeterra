@@ -3931,6 +3931,9 @@ sources/9 = SubResource("TileSetAtlasSource_t60x3")
 sources/10 = SubResource("TileSetAtlasSource_xxmx2")
 sources/12 = SubResource("TileSetAtlasSource_h3wp1")
 
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wn07x"]
+size = Vector2(287, 927)
+
 [node name="LevelJungla" type="Node2D" unique_id=539677101]
 script = ExtResource("15_level")
 
@@ -3985,3 +3988,9 @@ scale = Vector2(1.1393256, 0.90381575)
 stream = ExtResource("17_d5yi4")
 volume_db = 2.0
 autoplay = true
+
+[node name="LimitesCamara" type="Area2D" parent="." unique_id=661558882]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="LimitesCamara" unique_id=1955233700]
+position = Vector2(-47.5, -367.5)
+shape = SubResource("RectangleShape2D_wn07x")
