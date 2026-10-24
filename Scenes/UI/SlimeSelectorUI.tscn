@@ -1,12 +1,12 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://dw82wq0fcv5vs"]
 
-[ext_resource type="Script" path="res://Scripts/slime_selector_ui.gd" id="1_ui"]
+[ext_resource type="Script" uid="uid://gfs5t72cfxht" path="res://Scripts/slime_selector_ui.gd" id="1_ui"]
 
-[node name="SlimeSelectorUI" type="CanvasLayer"]
+[node name="SlimeSelectorUI" type="CanvasLayer" unique_id=1856473588]
 layer = 10
 script = ExtResource("1_ui")
 
-[node name="Margen" type="MarginContainer" parent="."]
+[node name="Margen" type="MarginContainer" parent="." unique_id=1486919279]
 anchors_preset = 2
 anchor_top = 1.0
 anchor_bottom = 1.0
@@ -19,27 +19,21 @@ theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 8
 theme_override_constants/margin_bottom = 8
 
-[node name="Panel" type="PanelContainer" parent="Margen"]
+[node name="Panel" type="PanelContainer" parent="Margen" unique_id=1858646630]
 layout_mode = 2
 
-[node name="Contenido" type="MarginContainer" parent="Margen/Panel"]
+[node name="Contenido" type="MarginContainer" parent="Margen/Panel" unique_id=1322013463]
 layout_mode = 2
 theme_override_constants/margin_left = 6
 theme_override_constants/margin_top = 4
 theme_override_constants/margin_right = 6
 theme_override_constants/margin_bottom = 6
 
-[node name="VBox" type="VBoxContainer" parent="Margen/Panel/Contenido"]
+[node name="VBox" type="VBoxContainer" parent="Margen/Panel/Contenido" unique_id=906288240]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="Total" type="Label" parent="Margen/Panel/Contenido/VBox"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_font_sizes/font_size = 10
-text = "Slimes: 0"
-
-[node name="Slots" type="HBoxContainer" parent="Margen/Panel/Contenido/VBox"]
+[node name="Slots" type="HBoxContainer" parent="Margen/Panel/Contenido/VBox" unique_id=2134010868]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 4

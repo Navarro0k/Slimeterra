@@ -9,7 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://d0uwkj8caodst" path="res://Assets/Tilemaps/Snow Platform Pack/ice level demo.png" id="5_icg6m"]
 [ext_resource type="Texture2D" uid="uid://b71aghsyouxg2" path="res://Assets/Tilemaps/Snow Platform Pack/SimpleChest.png" id="6_pnx27"]
 [ext_resource type="Texture2D" uid="uid://b0r1d2dctifo5" path="res://Assets/Tilemaps/Snow Platform Pack/hielo_colgante_v3.png" id="7_pnx27"]
-[ext_resource type="PackedScene" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="10_5sjxy"]
+[ext_resource type="PackedScene" uid="uid://dw82wq0fcv5vs" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="10_5sjxy"]
 [ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="11_hbc57"]
 [ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="12_meta"]
 [ext_resource type="AudioStream" uid="uid://t2gd5ws7ajl8" path="res://Assets/Audio/level_music/Newer Wave.mp3" id="13_44arf"]
@@ -3770,7 +3770,7 @@ tile_map_data = PackedByteArray("AAD7/wEAAgADAAMAAAD7/wIAAgAJAAEAAAD8/wEAAgABAAA
 tile_set = SubResource("TileSet_k5mtd")
 
 [node name="Slingshoot" parent="." unique_id=280816846 instance=ExtResource("3_qsfqn")]
-position = Vector2(-65, 3)
+position = Vector2(-64, 15)
 
 [node name="SlimeSelectorUI" parent="." unique_id=488396557 instance=ExtResource("10_5sjxy")]
 
