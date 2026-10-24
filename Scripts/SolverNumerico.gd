@@ -79,3 +79,15 @@ static func error_en(
 	var puntos := trayectoria(pos0, vel0, gravedad, k, dt, pasos, metodo)
 	var exacta := solucion_exacta(pos0, vel0, gravedad, k, dt * pasos)
 	return puntos[pasos - 1].distance_to(exacta)
+
+
+## Aplica una matriz de rotación 2D a un vector de velocidad o posición 
+## usando un ángulo en radianes.
+static func aplicar_matriz_rotacion(vector: Vector2, angulo_radianes: float) -> Vector2:
+	var cos_a = cos(angulo_radianes)
+	var sin_a = sin(angulo_radianes)
+	
+	var x_rotado = vector.x * cos_a - vector.y * sin_a
+	var y_rotado = vector.x * sin_a + vector.y * cos_a
+	
+	return Vector2(x_rotado, y_rotado)
