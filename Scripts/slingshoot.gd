@@ -16,7 +16,7 @@ signal slime_cargado(slime: Node2D)
 @export var grosor_reposo: float = 2.0
 @export var grosor_estirado: float = 1.0
 @export var caida_reposo: float = 5.0
-@export var puntos_trayectoria: int = 15
+@export var puntos_trayectoria: int = 4
 @export var paso_tiempo: float = 0.08
 
 @export_group("Área de respeto")
@@ -80,12 +80,21 @@ var _sonido_estirar_sonado: bool = false
 @onready var band_left = $BandLeft
 @onready var band_right = $BandRight
 @onready var holder = $Holder
+@onready var slingshot_sprite = $SlingshotSprite
+@onready var parche_sprite = $Holder/Sprite2D
+@onready var collision_holder = $Holder/CollisionShape2D
 
 func _ready():
 	_padre_original = get_parent()
 	_crear_reproductores()
 	current_drag_position = center_marker.position
 	actualizar_cuerdas(current_drag_position)
+	
+	# Ajustar la colisión al tamaño exacto del slime
+	if collision_holder.shape is CircleShape2D:
+		collision_holder.shape.radius = 7.0
+		
+	_actualizar_visibilidad_honda(false) # Ocultar la honda al inicio
 	queue_redraw()
 	# La munición NO se carga aquí: el nivel llama a configurar().
 
@@ -141,6 +150,16 @@ func _pegar_slime_al_holder():
 	if slime_actual != null and is_instance_valid(slime_actual):
 		slime_actual.global_position = holder.global_position
 		slime_actual.global_rotation = 0.0
+
+# ---------------------------------------------------------------------------
+# Visibilidad
+# ---------------------------------------------------------------------------
+
+func _actualizar_visibilidad_honda(mostrar: bool) -> void:
+	slingshot_sprite.visible = mostrar
+	band_left.visible = mostrar
+	band_right.visible = mostrar
+	parche_sprite.visible = mostrar
 
 # ---------------------------------------------------------------------------
 # Input y dibujo
@@ -201,6 +220,7 @@ func _on_holder_input_event(_viewport, event, _shape_idx):
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
 		if slime_actual != null:
 			is_dragging = true
+			_actualizar_visibilidad_honda(true) # Mostrar la honda al empezar a agarrar el slime
 
 # ---------------------------------------------------------------------------
 # Munición
@@ -366,6 +386,12 @@ func soltar_resortera():
 	tween.tween_method(actualizar_cuerdas, current_drag_position, center_marker.position, 0.3)\
 		 .set_trans(Tween.TRANS_SPRING)\
 		 .set_ease(Tween.EASE_OUT)
+		 
+	# Ocultar la honda una vez termine la animación de retroceso de la cuerda
+	tween.finished.connect(func():
+		if not is_dragging:
+			_actualizar_visibilidad_honda(false)
+	)
 
 	if vector_disparo.length() > 5.0 and slime_actual != null:
 		# Sale exactamente desde la punta de la cauchera, aunque el ratón se haya movido en este frame.
