@@ -178,6 +178,7 @@ func _quitar_slime() -> void:
 	slime_actual = null
 
 func _soltar_resortera() -> void:
+	_aplicar_tension_slime(0.0, Vector2.ZERO)  # por si se suelta sin disparar
 	is_dragging = false
 	var vector_tiro = center_marker.position - current_drag_position
 	
@@ -238,7 +239,8 @@ func _procesar_arrastre() -> void:
 	if _sonido_estirar_sonado:
 		_player_estirar_loop.volume_db = lerpf(volumen_loop_min_db, volumen_estirar_db, tension)
 		_player_estirar_loop.pitch_scale = lerpf(tono_loop_min, tono_loop_max, tension)
-		
+	
+	_aplicar_tension_slime(minf(tension, 1.0), current_drag_position - center_marker.position)
 	actualizar_cuerdas(current_drag_position)
 	queue_redraw()
 
@@ -247,6 +249,11 @@ func _primer_con_stock() -> int:
 		if _inventario[i]["cantidad"] > 0: 
 			return i
 	return -1
+
+## Le pasa al slime cuánto se está estirando (0..1) y hacia dónde se jala.
+func _aplicar_tension_slime(t: float, direccion_tiron: Vector2) -> void:
+	if is_instance_valid(slime_actual) and slime_actual.has_method("set_tension"):
+		slime_actual.set_tension(t, direccion_tiron)
 
 # ==============================================================================
 # LÓGICA VISUAL Y DIBUJO

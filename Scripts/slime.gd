@@ -42,6 +42,10 @@ enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 ## Bus de audio de los efectos. Si no existe en el proyecto, usa Master.
 @export var bus_efectos: StringName = &"SFX"
 
+@export_group("Estirado en la resortera")
+@export var color_burbujas: Color = Color(1.0, 0.65, 0.9)
+@export var burbujas_cantidad: int = 20
+
 @onready var particulas_rastro: CPUParticles2D = $CPUParticles2D
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var forma_colision: CollisionShape2D = $CollisionShape2D
@@ -76,6 +80,12 @@ var _zona: Node2D = null
 ## Radio del círculo de estiramiento de la honda (sin contar el cuerpo del slime).
 var _radio_zona: float = 0.0
 
+# --- Estirado visual ---------------------------------------------------------
+var _escala_base: Vector2 = Vector2.ONE
+var _tension: float = 0.0
+var _brillo: Sprite2D
+var _burbujas: CPUParticles2D
+
 func _ready():
 	custom_integrator = true
 	contact_monitor = true
@@ -92,6 +102,12 @@ func _ready():
 
 	var damp_global: float = ProjectSettings.get_setting("physics/2d/default_linear_damp")
 	arrastre = linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
+
+	_escala_base = sprite.scale
+	if _quema_bloques:
+		color_burbujas = Color(1.0, 0.6, 0.2)
+	_crear_brillo()
+	_crear_burbujas()
 
 func _physics_process(delta):
 	particulas_rastro.emitting = linear_velocity.length() > 5.0
@@ -110,6 +126,12 @@ func _physics_process(delta):
 	if estado == Estado.SALIENDO:
 		_actualizar_salida(delta)
 
+func _process(_delta: float) -> void:
+	# Pulso del brillo: más intenso y rápido a más tensión.
+	if _tension > 0.0 and _brillo != null and _brillo.visible:
+		var pulso := 0.65 + 0.25 * sin(Time.get_ticks_msec() * 0.001 * lerpf(8.0, 18.0, _tension))
+		_brillo.modulate.a = _tension * pulso
+
 # ---------------------------------------------------------------------------
 # Ciclo de vida
 # ---------------------------------------------------------------------------
@@ -122,6 +144,7 @@ func preparar():
 	_activar_colisiones(false)
 
 func lanzar(velocidad_inicial: Vector2, tiempo_respeto: float = 1.5, zona: Node2D = null, radio_zona: float = 0.0):
+	set_tension(0.0)
 	estado = Estado.SALIENDO
 	_tiempo_vuelo = 0.0
 	_tiempo_respeto = tiempo_respeto
@@ -193,6 +216,64 @@ func _reproducir_sonido_pegado() -> void:
 	escena.add_child(reproductor)
 	reproductor.finished.connect(reproductor.queue_free)
 	reproductor.play()
+
+# ---------------------------------------------------------------------------
+# Estirado visual en la resortera
+# ---------------------------------------------------------------------------
+
+## t: 0..1 (potencia acumulada). Solo controla el brillo y las burbujas;
+## el sprite NO se deforma ni rota. direccion_tiron se ignora, se conserva
+## en la firma para no tocar slingshoot.gd.
+func set_tension(t: float, direccion_tiron: Vector2 = Vector2.ZERO) -> void:
+	if _brillo == null or _burbujas == null:
+		return
+	t = clampf(t, 0.0, 1.0)
+	if t <= 0.01 or direccion_tiron == Vector2.ZERO:
+		_tension = 0.0
+		_brillo.visible = false
+		_burbujas.emitting = false
+		return
+
+	_tension = t
+	_brillo.visible = true
+	_burbujas.emitting = t > 0.08
+	_burbujas.speed_scale = lerpf(0.7, 2.2, t)  # más potencia = más burbujas por segundo
+	_burbujas.scale_amount_max = lerpf(1.5, 3.0, t)
+	
+func _crear_brillo() -> void:
+	_brillo = Sprite2D.new()
+	_brillo.texture = sprite.texture
+	_brillo.scale = _escala_base * 1.08
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	_brillo.material = mat
+	_brillo.modulate = Color(1, 1, 1, 0)
+	_brillo.visible = false
+	add_child(_brillo)
+
+func _crear_burbujas() -> void:
+	_burbujas = CPUParticles2D.new()
+	_burbujas.emitting = false
+	_burbujas.amount = burbujas_cantidad
+	_burbujas.lifetime = 0.7
+	_burbujas.local_coords = false  # las burbujas se quedan flotando donde nacen
+	_burbujas.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	_burbujas.emission_sphere_radius = _radio + 2.0
+	_burbujas.direction = Vector2.UP
+	_burbujas.spread = 60.0
+	_burbujas.gravity = Vector2(0, -14)  # suben
+	_burbujas.initial_velocity_min = 2.0
+	_burbujas.initial_velocity_max = 8.0
+	_burbujas.scale_amount_min = 1.0
+	_burbujas.scale_amount_max = 1.5
+	var degradado := Gradient.new()
+	degradado.offsets = PackedFloat32Array([0.0, 1.0])
+	degradado.colors = PackedColorArray([
+		Color(color_burbujas, 0.95), Color(color_burbujas, 0.0)
+	])
+	_burbujas.color_ramp = degradado
+	_burbujas.z_index = 1
+	add_child(_burbujas)
 
 # ---------------------------------------------------------------------------
 # Física

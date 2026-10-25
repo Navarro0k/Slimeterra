@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://dw82wq0fcv5vs" path="res://Scenes/UI/SlimeSelectorUI.tscn" id="10_5sjxy"]
 [ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="11_hbc57"]
 [ext_resource type="AudioStream" uid="uid://t2gd5ws7ajl8" path="res://Assets/Audio/level_music/Newer Wave.mp3" id="13_44arf"]
+[ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="14_meta"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
 texture = ExtResource("1_1yxr7")
@@ -3745,7 +3746,7 @@ sources/5 = SubResource("TileSetAtlasSource_5sjxy")
 sources/6 = SubResource("TileSetAtlasSource_hbc57")
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_44arf"]
-size = Vector2(313.5, 569)
+size = Vector2(313.5, 838)
 
 [node name="LevelIce" type="Node2D" unique_id=539677101]
 script = ExtResource("1_6073x")
@@ -3783,5 +3784,8 @@ autoplay = true
 [node name="LimitesCamara" type="Area2D" parent="." unique_id=1792631318]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="LimitesCamara" unique_id=1764099669]
-position = Vector2(-25.75, -182.5)
+position = Vector2(-25.75, -317)
 shape = SubResource("RectangleShape2D_44arf")
+
+[node name="Meta" parent="." unique_id=1924661586 instance=ExtResource("14_meta")]
+position = Vector2(-56, -670)

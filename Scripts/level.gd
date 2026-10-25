@@ -22,7 +22,15 @@ var slimes_nivel: Dictionary = {
 @export_group("Límites del nivel")
 @export var mostrar_limites: bool = false
 
+@export_group("Estrellas")
+## Tiempo (s) máximo para conseguir 3 estrellas.
+@export var tiempo_3_estrellas: float = 45.0
+## Tiempo (s) máximo para conseguir 2 estrellas. Más que esto = 1 estrella.
+@export var tiempo_2_estrellas: float = 90.0
+
 var limites_globales: Rect2 = Rect2()
+var tiempo_transcurrido: float = 0.0
+var _etiqueta_tiempo: Label
 
 @onready var slingshoot: Node2D = $Slingshoot
 @onready var ui: SlimeSelectorUI = $SlimeSelectorUI
@@ -71,6 +79,47 @@ func _ready() -> void:
 	# La cámara arranca ya sobre la resortera (sin paneo inicial).
 	camara.seguir(slingshoot, true)
 
+	_crear_hud_tiempo()
+
+func _process(delta: float) -> void:
+	if _terminado or _etiqueta_tiempo == null:
+		return
+	tiempo_transcurrido += delta
+	_etiqueta_tiempo.text = _formatear_tiempo(tiempo_transcurrido)
+
+# ---------------------------------------------------------------------------
+# Contador de tiempo y estrellas
+# ---------------------------------------------------------------------------
+
+func _crear_hud_tiempo() -> void:
+	var capa := CanvasLayer.new()
+	capa.layer = 20
+	add_child(capa)
+	_etiqueta_tiempo = Label.new()
+	_etiqueta_tiempo.text = "0:00.0"
+	_etiqueta_tiempo.custom_minimum_size = Vector2(80, 0)
+	_etiqueta_tiempo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_etiqueta_tiempo.add_theme_font_size_override("font_size", 14)
+	_etiqueta_tiempo.add_theme_color_override("font_outline_color", Color.BLACK)
+	_etiqueta_tiempo.add_theme_constant_override("outline_size", 4)
+	capa.add_child(_etiqueta_tiempo)
+	_etiqueta_tiempo.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 6)
+	_etiqueta_tiempo.grow_horizontal = Control.GROW_DIRECTION_BOTH
+
+func _formatear_tiempo(t: float) -> String:
+	var minutos := floori(t / 60.0)
+	var segundos := fmod(t, 60.0)
+	return "%d:%04.1f" % [minutos, segundos]
+
+func _calcular_estrellas() -> int:
+	if tiempo_transcurrido <= tiempo_3_estrellas:
+		return 3
+	if tiempo_transcurrido <= tiempo_2_estrellas:
+		return 2
+	return 1
+
+# ---------------------------------------------------------------------------
+
 func _on_slime_lanzado(slime: Node2D) -> void:
 	# El slime en vuelo rebota en los límites del nivel y la cámara lo sigue.
 	slime.set("limites", limites_globales)
@@ -90,7 +139,8 @@ func _on_meta_alcanzada() -> void:
 	if _terminado:
 		return
 	_terminado = true
-	pantalla.mostrar_victoria.call_deferred("Slimes sobrantes: %d" % _slimes_restantes())
+	var mensaje := "Tiempo: %s\nSlimes sobrantes: %d" % [_formatear_tiempo(tiempo_transcurrido), _slimes_restantes()]
+	pantalla.mostrar_victoria.call_deferred(mensaje, _calcular_estrellas())
 
 ## Slimes que aún no se han disparado (el que está volando ya se descontó).
 func _slimes_restantes() -> int:
