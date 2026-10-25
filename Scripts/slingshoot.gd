@@ -70,6 +70,7 @@ var _player_lanzar: AudioStreamPlayer
 @onready var slingshot_sprite = $SlingshotSprite
 @onready var parche_sprite = $Holder/Sprite2D
 @onready var collision_holder = $Holder/CollisionShape2D
+@onready var label_angulo = $LabelAngulo
 
 # ==============================================================================
 # CICLO DE VIDA (Engine Callbacks)
@@ -227,9 +228,6 @@ func _fijar_slime_al_holder() -> void:
 func _procesar_arrastre() -> void:
 	var offset = get_local_mouse_position() - center_marker.position
 	current_drag_position = center_marker.position + offset.limit_length(max_stretch)
-	
-	# SOLUCIÓN: Calculamos la tensión usando la distancia ya limitada (current_drag_position) 
-	# y nos aseguramos de que no supere el 1.0 (100%).
 	var tension = clampf(current_drag_position.distance_to(center_marker.position) / max_stretch, 0.0, 1.0)
 	
 	if not _sonido_estirar_sonado and offset.length() > 5.0:
@@ -245,6 +243,12 @@ func _procesar_arrastre() -> void:
 	
 	_aplicar_tension_slime(tension, current_drag_position - center_marker.position)
 	actualizar_cuerdas(current_drag_position)
+	
+	var vector_tiro = center_marker.position - current_drag_position
+	var grados = round(-rad_to_deg(vector_tiro.angle()))
+	label_angulo.text = str(grados) + "°"
+	label_angulo.position = center_marker.position + Vector2(10, 0) 
+	
 	queue_redraw()
 
 func _primer_con_stock() -> int:
@@ -265,6 +269,7 @@ func _actualizar_visibilidad(mostrar: bool) -> void:
 	band_left.visible = mostrar
 	band_right.visible = mostrar
 	parche_sprite.visible = mostrar
+	if label_angulo: label_angulo.visible = mostrar 
 
 func actualizar_cuerdas(pos: Vector2) -> void:
 	holder.position = pos
