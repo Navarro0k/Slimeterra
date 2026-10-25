@@ -6,6 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://cn2yjeturx25r" path="res://Assets/pngs/parche honda.png" id="3_6d2l2"]
 [ext_resource type="AudioStream" uid="uid://ux3jwwio112g" path="res://Assets/Audio/sound_effects/SlingshotLoopSound.mp3" id="3_bpcd0"]
 [ext_resource type="AudioStream" uid="uid://b7t3agdr174gg" path="res://Assets/Audio/sound_effects/SlingshotLaunchSound.mp3" id="4_bpcd0"]
+[ext_resource type="FontFile" uid="uid://feoonswbksyi" path="res://Assets/fonts/tinypixel.otf" id="7_smq0e"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_wn07x"]
 
@@ -57,6 +58,7 @@ offset_right = 40.0
 offset_bottom = 23.0
 theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
 theme_override_constants/outline_size = 1
+theme_override_fonts/font = ExtResource("7_smq0e")
 theme_override_font_sizes/font_size = 6
 
 [connection signal="input_event" from="Holder" to="." method="_on_holder_input_event"]

@@ -249,6 +249,13 @@ func _procesar_arrastre() -> void:
 	label_angulo.text = str(grados) + "°"
 	label_angulo.position = center_marker.position + Vector2(10, 0) 
 	
+	if is_instance_valid(slime_actual) and "tipo_slime" in slime_actual:
+		if slime_actual.tipo_slime == "fuego":
+			label_angulo.add_theme_color_override("font_color", Color(1.0, 0.7, 0.4)) 
+		else:
+			label_angulo.add_theme_color_override("font_color", Color(1.0, 0.65, 0.9)) 
+	# -----------------------------------------------------
+	
 	queue_redraw()
 
 func _primer_con_stock() -> int:
