@@ -19,6 +19,9 @@ var slimes_nivel: Dictionary = {
 	SlimeCatalogo.Tipo.FUEGO: 1,
 }
 
+## Qué introducción teórica ("¿Sabías que…?") muestra este nivel. Ver ContenidoTeoria.intro().
+var id_teoria: String = "jungla"
+
 @export_group("Límites del nivel")
 @export var mostrar_limites: bool = false
 
@@ -40,6 +43,12 @@ var _etiqueta_tiempo: Label
 var pantalla: PantallaFin
 ## true cuando el nivel ya terminó (victoria o derrota): evita que una pantalla pise a la otra.
 var _terminado: bool = false
+
+## Modo educativo: panel de datos, rastro del tiro y tarjetas de teoría.
+var panel_tiro: PanelTiro
+var rastro: RastroTiro
+var tarjeta: TarjetaTeoria
+var _slime_en_vuelo: Node2D
 
 func _ready() -> void:
 	# Resortera -> UI: cambió la munición o la selección.
@@ -80,6 +89,35 @@ func _ready() -> void:
 	camara.seguir(slingshoot, true)
 
 	_crear_hud_tiempo()
+	_crear_modo_educativo()
+
+# ---------------------------------------------------------------------------
+# Modo educativo (panel de datos, rastro del tiro y tarjetas "¿Sabías que…?")
+# ---------------------------------------------------------------------------
+
+func _crear_modo_educativo() -> void:
+	rastro = RastroTiro.new()
+	add_child(rastro)
+
+	panel_tiro = PanelTiro.new()
+	add_child(panel_tiro)
+	panel_tiro.configurar(slingshoot)
+
+	# La tarjeta se añade después de la pantalla de fin: así recibe primero la tecla Esc
+	# cuando está abierta.
+	tarjeta = TarjetaTeoria.new()
+	add_child(tarjeta)
+
+	slingshoot.tiro_disparado.connect(_on_tiro_disparado)
+	rastro.vuelo_terminado.connect(_on_vuelo_terminado)
+	tarjeta.configurar_intro.call_deferred(id_teoria, ContenidoTeoria.intro(id_teoria))
+
+func _on_tiro_disparado(datos: Dictionary) -> void:
+	if is_instance_valid(_slime_en_vuelo):
+		rastro.iniciar(_slime_en_vuelo, datos)
+
+func _on_vuelo_terminado(datos: Dictionary, resumen: Dictionary) -> void:
+	tarjeta.poner_explicacion(ContenidoTeoria.explicacion_tiro(datos, resumen))
 
 func _process(delta: float) -> void:
 	if _terminado or _etiqueta_tiempo == null:
@@ -122,6 +160,7 @@ func _calcular_estrellas() -> int:
 
 func _on_slime_lanzado(slime: Node2D) -> void:
 	# El slime en vuelo rebota en los límites del nivel y la cámara lo sigue.
+	_slime_en_vuelo = slime
 	slime.set("limites", limites_globales)
 	camara.seguir(slime)
 
@@ -140,6 +179,9 @@ func _on_meta_alcanzada() -> void:
 		return
 	_terminado = true
 	var mensaje := "Tiempo: %s\nSlimes sobrantes: %d" % [_formatear_tiempo(tiempo_transcurrido), _slimes_restantes()]
+	mensaje += "\n\n¿Sabías que…? " + ContenidoTeoria.dato_curioso()
+	if tarjeta:
+		tarjeta.cerrar()
 	pantalla.mostrar_victoria.call_deferred(mensaje, _calcular_estrellas())
 
 ## Slimes que aún no se han disparado (el que está volando ya se descontó).

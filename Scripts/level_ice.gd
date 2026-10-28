@@ -3,6 +3,7 @@ extends NivelSlimes
 ## y solo define con cuántos slimes cuenta.
 
 func _init() -> void:
+	id_teoria = "hielo"
 	# Límites del nivel: calculados con los tiles sólidos (cámara limitada y rebote del slime).
 	slimes_nivel = {
 		SlimeCatalogo.Tipo.BASE: 10,

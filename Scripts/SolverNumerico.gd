@@ -29,22 +29,106 @@ static func paso(metodo: Metodo, pos: Vector2, vel: Vector2, dt: float, gravedad
 			]
 
 		_:  # Metodo.RK4 (orden 4)
-			var k1p: Vector2 = vel
-			var k1v: Vector2 = aceleracion(pos, vel, gravedad, k)
+			var e: Dictionary = etapas_rk4(pos, vel, dt, gravedad, k)
+			return [e["pos_nueva"], e["vel_nueva"]]
 
-			var k2p: Vector2 = vel + k1v * (dt * 0.5)
-			var k2v: Vector2 = aceleracion(pos + k1p * (dt * 0.5), k2p, gravedad, k)
 
-			var k3p: Vector2 = vel + k2v * (dt * 0.5)
-			var k3v: Vector2 = aceleracion(pos + k2p * (dt * 0.5), k3p, gravedad, k)
+## Un paso de RK4 devolviendo TODAS sus etapas, para poder enseñarlas en pantalla.
+## Las k*p son pendientes de la posición (velocidades) y las k*v pendientes de la velocidad
+## (aceleraciones). Los puntos_eval son las posiciones donde se evaluó cada pendiente:
+##   k1 al inicio, k2 y k3 a mitad del paso, k4 al final.
+static func etapas_rk4(pos: Vector2, vel: Vector2, dt: float, gravedad: float, k: float) -> Dictionary:
+	var k1p: Vector2 = vel
+	var k1v: Vector2 = aceleracion(pos, vel, gravedad, k)
 
-			var k4p: Vector2 = vel + k3v * dt
-			var k4v: Vector2 = aceleracion(pos + k3p * dt, k4p, gravedad, k)
+	var p2: Vector2 = pos + k1p * (dt * 0.5)
+	var k2p: Vector2 = vel + k1v * (dt * 0.5)
+	var k2v: Vector2 = aceleracion(p2, k2p, gravedad, k)
 
-			return [
-				pos + (k1p + k2p * 2.0 + k3p * 2.0 + k4p) * (dt / 6.0),
-				vel + (k1v + k2v * 2.0 + k3v * 2.0 + k4v) * (dt / 6.0),
-			]
+	var p3: Vector2 = pos + k2p * (dt * 0.5)
+	var k3p: Vector2 = vel + k2v * (dt * 0.5)
+	var k3v: Vector2 = aceleracion(p3, k3p, gravedad, k)
+
+	var p4: Vector2 = pos + k3p * dt
+	var k4p: Vector2 = vel + k3v * dt
+	var k4v: Vector2 = aceleracion(p4, k4p, gravedad, k)
+
+	var pendiente_p: Vector2 = (k1p + k2p * 2.0 + k3p * 2.0 + k4p) / 6.0
+	var pendiente_v: Vector2 = (k1v + k2v * 2.0 + k3v * 2.0 + k4v) / 6.0
+	return {
+		"pos": pos, "vel": vel, "dt": dt,
+		"kp": [k1p, k2p, k3p, k4p],
+		"kv": [k1v, k2v, k3v, k4v],
+		"puntos_eval": [pos, p2, p3, p4],
+		"pendiente_p": pendiente_p,
+		"pendiente_v": pendiente_v,
+		"pos_nueva": pos + pendiente_p * dt,
+		"vel_nueva": vel + pendiente_v * dt,
+	}
+
+
+## Etapas del paso número `indice` (0 = primer paso) de una trayectoria RK4.
+static func etapas_en_paso(
+		pos0: Vector2, vel0: Vector2, gravedad: float, k: float, dt: float, indice: int
+) -> Dictionary:
+	var pos := pos0
+	var vel := vel0
+	for i in range(indice):
+		var r: Array = paso(Metodo.RK4, pos, vel, dt, gravedad, k)
+		pos = r[0]
+		vel = r[1]
+	return etapas_rk4(pos, vel, dt, gravedad, k)
+
+
+## Predice con RK4 las magnitudes clásicas del tiro parabólico (en píxeles y segundos):
+##   altura_max  -> cuánto sube por encima del punto de lanzamiento
+##   alcance     -> distancia horizontal al volver a la altura de lanzamiento
+##   tiempo      -> tiempo de vuelo hasta volver a esa altura
+##   t_cima      -> instante en que la velocidad vertical se hace cero
+## Usa el mismo paso dt que el motor de física para que coincida con el vuelo real.
+## Si el tiro no sube (sale horizontal o hacia abajo), "sube" es false y no hay alcance.
+static func predecir_tiro(
+		pos0: Vector2, vel0: Vector2, gravedad: float, k: float,
+		dt: float = 1.0 / 60.0, t_max: float = 15.0
+) -> Dictionary:
+	var resultado := {
+		"sube": vel0.y < 0.0, "altura_max": 0.0, "punto_cima": pos0, "t_cima": 0.0,
+		"alcance": 0.0, "tiempo": 0.0, "punto_caida": pos0, "completo": false,
+	}
+	if not resultado["sube"]:
+		return resultado
+
+	var pos := pos0
+	var vel := vel0
+	var t := 0.0
+	while t < t_max:
+		var r: Array = paso(Metodo.RK4, pos, vel, dt, gravedad, k)
+		var pos_n: Vector2 = r[0]
+		var vel_n: Vector2 = r[1]
+		var t_n := t + dt
+
+		# Cima: la velocidad vertical cambia de signo (en Godot "subir" es y negativa).
+		if vel.y < 0.0 and vel_n.y >= 0.0:
+			var f := -vel.y / (vel_n.y - vel.y)
+			var cima := pos.lerp(pos_n, f)
+			resultado["punto_cima"] = cima
+			resultado["altura_max"] = pos0.y - cima.y
+			resultado["t_cima"] = t + f * dt
+
+		# Caída: vuelve a cruzar la altura de lanzamiento bajando.
+		if vel_n.y > 0.0 and pos.y < pos0.y and pos_n.y >= pos0.y:
+			var f := (pos0.y - pos.y) / (pos_n.y - pos.y)
+			var caida := pos.lerp(pos_n, f)
+			resultado["punto_caida"] = caida
+			resultado["alcance"] = absf(caida.x - pos0.x)
+			resultado["tiempo"] = t + f * dt
+			resultado["completo"] = true
+			return resultado
+
+		pos = pos_n
+		vel = vel_n
+		t = t_n
+	return resultado
 
 
 ## Calcula 'pasos' puntos de la trayectoria (sin incluir el punto inicial).

@@ -181,6 +181,9 @@ func _construir() -> void:
 	_mensaje = Label.new()
 	_mensaje.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mensaje.add_theme_font_size_override("font_size", 10)
+	# Con ancho fijo y ajuste de línea para que el dato curioso de la victoria no estire el panel.
+	_mensaje.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_mensaje.custom_minimum_size = Vector2(240, 0)
 	caja.add_child(_mensaje)
 
 	_btn_continuar = _crear_boton("Continuar", continuar)

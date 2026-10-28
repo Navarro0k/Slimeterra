@@ -151,9 +151,17 @@ func lanzar(velocidad_inicial: Vector2, tiempo_respeto: float = 1.5, zona: Node2
 	_zona = zona
 	_radio_zona = radio_zona
 
-	vel_sim = velocidad_inicial
-	v_motor = vel_sim
-	linear_velocity = vel_sim
+	# Godot llama a _integrate_forces DESPUÉS de mover el cuerpo en cada paso de física,
+	# así que el primer paso usaría velocidad_inicial "a secas", sin gravedad ni aire, y todo
+	# el vuelo quedaría desfasado un frame respecto a la predicción de la resortera.
+	# Para evitarlo se calcula aquí el primer paso de RK4: el motor mueve el slime con la
+	# velocidad media de ese paso y llega justo al punto que predice RK4.
+	var dt := 1.0 / float(Engine.physics_ticks_per_second)
+	var gravedad: float = ProjectSettings.get_setting("physics/2d/default_gravity")
+	var primer: Array = SolverNumerico.paso(metodo, global_position, velocidad_inicial, dt, gravedad, arrastre)
+	vel_sim = primer[1]
+	v_motor = (primer[0] - global_position) / dt
+	linear_velocity = v_motor
 
 func _actualizar_salida(delta: float) -> void:
 	_tiempo_respeto -= delta
