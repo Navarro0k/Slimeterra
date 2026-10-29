@@ -53,7 +53,8 @@ func _construir_interfaz() -> void:
 	panel.name = "AimPanel"
 	panel.add_theme_stylebox_override("panel", _panel_style(BG))
 	panel.position = Vector2(18, 18)
-	panel.custom_minimum_size = Vector2(250, 0)
+	panel.custom_minimum_size = Vector2(300, 0)
+	panel.size = Vector2(300, 0)
 	root.add_child(panel)
 
 	var columna := VBoxContainer.new()
@@ -80,6 +81,7 @@ func _construir_interfaz() -> void:
 
 	var dial_frame := PanelContainer.new()
 	dial_frame.add_theme_stylebox_override("panel", _panel_style(BG_DARK, 12))
+	dial_frame.custom_minimum_size = Vector2(270, 175)
 	columna.add_child(dial_frame)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
@@ -133,8 +135,8 @@ func _construir_interfaz() -> void:
 
 	_math_panel = PanelContainer.new()
 	_math_panel.name = "MathPanel"
-	_math_panel.position = Vector2(285, 18)
-	_math_panel.custom_minimum_size = Vector2(360, 0)
+	_math_panel.position = Vector2(330, 18)
+	_math_panel.custom_minimum_size = Vector2(300, 0)
 	_math_panel.add_theme_stylebox_override("panel", _panel_style(BG_DARK, 12))
 	root.add_child(_math_panel)
 	var math_col := VBoxContainer.new()
@@ -147,7 +149,7 @@ func _construir_interfaz() -> void:
 	_math_label.fit_content = true
 	_math_label.bbcode_enabled = true
 	_math_label.scroll_active = false
-	_math_label.custom_minimum_size = Vector2(325, 185)
+	_math_label.custom_minimum_size = Vector2(270, 150)
 	_math_label.add_theme_color_override("default_color", FG)
 	math_col.add_child(_math_label)
 	_math_panel.visible = false
