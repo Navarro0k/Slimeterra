@@ -11,10 +11,10 @@ signal angle_changed(value: float)
 		queue_redraw()
 
 var _dragging := false
-const ACCENT := Color("#65E6B5")
-const RING := Color("#41616C")
-const TEXT_COLOR := Color("#EAF7F5")
-const MUTED := Color("#8EABB5")
+const ACCENT := Color("#62D9C7")
+const RING := Color("#4B6C91")
+const TEXT_COLOR := Color("#F0F6FF")
+const MUTED := Color("#A6B8D0")
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(96, 43)
@@ -45,7 +45,7 @@ func _draw() -> void:
 	var centro := Vector2(size.x * 0.5, size.y - 5.0)
 	var radio: float = minf(size.x * 0.43, size.y - 17.0)
 	draw_arc(centro, radio, PI, TAU, 48, RING, 1.5, true)
-	draw_arc(centro, radio, PI, PI + PI * 0.42, 24, Color("#263F49"), 1.0, true)
+	draw_arc(centro, radio, PI, PI + PI * 0.42, 24, Color("#2A4563"), 1.0, true)
 	for grados in range(0, 181, 30):
 		var theta := deg_to_rad(float(grados))
 		var direccion := Vector2(cos(theta), -sin(theta))

@@ -16,11 +16,11 @@ var _math_label: RichTextLabel
 var _launch_button: Button
 var _pause_button: Button
 
-const PANEL := Color("#292D32")
-const PANEL_LIGHT := Color("#777777")
-const RED := Color("#A00020")
-const TEXT := Color("#F7F7F7")
-const EDGE := Color("#BDBDBD")
+const PANEL := Color("#17263B")
+const PANEL_LIGHT := Color("#243B55")
+const RED := Color("#62D9C7")
+const TEXT := Color("#F0F6FF")
+const EDGE := Color("#3C6680")
 
 func _ready() -> void:
 	layer = 10
@@ -68,7 +68,7 @@ func _construir_interfaz() -> void:
 	add_child(root)
 
 	# Ecuación siempre visible en una tarjeta pequeña, como en el mockup.
-	var ecuacion_panel := _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(150, 43), Color("#F0F0F0"))
+	var ecuacion_panel := _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(214, 82), Color("#17263B"))
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.add_theme_constant_override("separation", 0)
 	ecuacion_panel.add_child(ecuacion_col)
@@ -78,14 +78,14 @@ func _construir_interfaz() -> void:
 	_math_label.fit_content = false
 	_math_label.scroll_active = false
 	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_math_label.custom_minimum_size = Vector2(140, 23)
+	_math_label.custom_minimum_size = Vector2(204, 62)
 	_math_label.add_theme_font_size_override("normal_font_size", 9)
 	_math_label.add_theme_font_size_override("bold_font_size", 9)
-	_math_label.add_theme_color_override("default_color", Color("#202020"))
+	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
 	ecuacion_col.add_child(_math_label)
 
 	# Perilla inferior central: el área de interacción permanece compacta.
-	var dial_panel := _panel_contenedor(root, "AnglePanel", Vector2(155, 202), Vector2(104, 63), Color("#E8E8E8"))
+	var dial_panel := _panel_contenedor(root, "AnglePanel", Vector2(157, 202), Vector2(104, 63), Color("#17263B"))
 	var dial_col := VBoxContainer.new()
 	dial_col.add_theme_constant_override("separation", 0)
 	dial_panel.add_child(dial_col)
@@ -101,7 +101,7 @@ func _construir_interfaz() -> void:
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
 	# Potencia y acción de disparo se integran en una sola tarjeta.
-	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(333, 214), Vector2(140, 51), Color("#F0F0F0"))
+	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(329, 211), Vector2(146, 54), Color("#17263B"))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 1)
 	power_panel.add_child(power_col)
@@ -123,10 +123,10 @@ func _construir_interfaz() -> void:
 	_launch_button.text = "CLIC PARA DISPARAR  ↗"
 	_launch_button.custom_minimum_size = Vector2(130, 19)
 	_launch_button.add_theme_font_size_override("font_size", 8)
-	_launch_button.add_theme_color_override("font_color", Color.WHITE)
-	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#970020")))
-	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#C32342")))
-	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#650016")))
+	_launch_button.add_theme_color_override("font_color", Color("#102338"))
+	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#62D9C7")))
+	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AEBDD")))
+	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#3CAFA6")))
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
 
@@ -158,18 +158,25 @@ func set_launch_enabled(enabled: bool) -> void:
 func set_model_values(position_initial: Vector2, velocity_initial: Vector2, gravity: float, damping: float) -> void:
 	if not is_instance_valid(_math_label):
 		return
-	var modelo := ModeloDisparo.ecuacion_parabolica(position_initial, velocity_initial, gravity)
-	var texto := "[color=#A00020][b]y(x) = "
-	if bool(modelo.get("valida", false)) and absf(damping) < 0.00001:
+
+	# La forma parabólica se calcula a partir del estado actual del disparo.
+	# Con rozamiento la simulación es numérica (RK4); se muestra también la
+	# parábola balística ideal, cuyos coeficientes cambian con ángulo y potencia.
+	var modelo: Dictionary = ModeloDisparo.ecuacion_parabolica(position_initial, velocity_initial, gravity)
+	var texto := "[color=#62D9C7][b]TRAYECTORIA · TIEMPO REAL[/b][/color]\\n"
+	texto += "[color=#F0F6FF]θ=%d°   P=%d%%   v₀=%.1f[/color]\\n" % [roundi(angle_degrees), roundi(power_percent), velocity_initial.length()]
+	if bool(modelo.get("valida", false)):
 		var a: float = float(modelo["a"])
 		var b: float = float(modelo["b"])
 		var c: float = float(modelo["c"])
-		texto += "%.3fx[sup]2[/sup] %s %.3fx %s %.2f" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
-	elif absf(velocity_initial.x) < 0.0001:
-		texto += "x = %.1f (vertical)" % position_initial.x
+		texto += "[b]y(x) = ax[sup]2[/sup] + bx + c[/b]\\n"
+		texto += "a=%.4f   b=%.3f   c=%.2f\\n" % [a, b, c]
+		texto += "[color=#62D9C7]y(x)=%.4fx[sup]2[/sup] %s %.3fx %s %.2f[/color]" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
 	else:
-		texto += "modelo RK4 (rozamiento)"
-	texto += "[/b][/color]"
+		texto += "[b]Tiro casi vertical[/b]\\n"
+		texto += "x(t)=%.2f + %.2ft\\n" % [position_initial.x, velocity_initial.x]
+		texto += "y(t)=%.2f %s %.2ft + %.2ft[sup]2[/sup]" % [position_initial.y, "+" if velocity_initial.y >= 0.0 else "−", absf(velocity_initial.y), gravity * 0.5]
+	texto += "\\n[color=#A6B8D0]%s[/color]" % ("Simulación con rozamiento: RK4" if damping > 0.00001 else "Modelo balístico parabólico")
 	_math_label.text = texto
 
 func _actualizar_lecturas() -> void:
