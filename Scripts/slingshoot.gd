@@ -11,7 +11,7 @@ signal slime_cargado(slime: Node2D)
 @export var grosor_reposo: float = 2.0
 @export var grosor_estirado: float = 1.0
 @export var caida_reposo: float = 5.0
-@export_range(1, 8, 1) var puntos_trayectoria: int = 5
+@export_range(1, 8, 1) var puntos_trayectoria: int = 10
 @export var paso_tiempo: float = 0.08
 @export var angulo_desvio_grados: float = 0.0
 
@@ -45,6 +45,8 @@ var _sonido_estirar_sonado: bool = false
 var _hud: ShotHUD
 var _ultimo_vector_disparo: Vector2 = Vector2.ZERO
 var _ultima_posicion_disparo: Vector2 = Vector2.ZERO
+var _arrastrando_slime: bool = false
+var _posicion_holder_reposo: Vector2 = Vector2.ZERO
 
 var _player_estirar: AudioStreamPlayer
 var _player_estirar_loop: AudioStreamPlayer
@@ -65,6 +67,7 @@ func _ready() -> void:
 	_padre_original = get_parent()
 	_crear_reproductores()
 	actualizar_cuerdas(center_marker.position)
+	_posicion_holder_reposo = center_marker.position
 	if collision_holder.shape is CircleShape2D:
 		collision_holder.shape.radius = 7.0
 	_actualizar_visibilidad(false)
@@ -76,6 +79,60 @@ func _physics_process(_delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	_fijar_slime_al_holder()
+
+func _input(event: InputEvent) -> void:
+	# Permite jugar con el ratón: pulsar sobre el slime, estirar hacia atrás
+	# y soltar para disparar. Los controles del HUD siguen sincronizados.
+	if _esperando_turno or not is_instance_valid(slime_actual):
+		return
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed and not _arrastrando_slime:
+			var mouse_global := get_global_mouse_position()
+			var radio_captura := maxf(12.0, max_stretch * 0.55)
+			if mouse_global.distance_to(holder.global_position) <= radio_captura:
+				_arrastrando_slime = true
+				_sonido_estirar_sonado = true
+				_actualizar_visibilidad(true)
+				_actualizar_arrastre(mouse_global)
+				get_viewport().set_input_as_handled()
+		elif not event.pressed and _arrastrando_slime:
+			_arrastrando_slime = false
+			var potencia_final := potencia_objetivo
+			var angulo_final := angulo_objetivo
+			if potencia_final > 1.0:
+				disparar_con_parametros(angulo_final, potencia_final)
+			else:
+				holder.position = _posicion_holder_reposo
+				actualizar_cuerdas(holder.position)
+				_actualizar_visibilidad(false)
+				_aplicar_tension_slime(0.0, Vector2.ZERO)
+				queue_redraw()
+			get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _arrastrando_slime:
+		_actualizar_arrastre(get_global_mouse_position())
+		get_viewport().set_input_as_handled()
+
+func _actualizar_arrastre(mouse_global: Vector2) -> void:
+	var centro_global := center_marker.global_position
+	var desplazamiento := mouse_global - centro_global
+	# Arrastre libre en 360°: el slime puede estirarse en cualquier dirección.
+	if desplazamiento.length() > max_stretch:
+		desplazamiento = desplazamiento.normalized() * max_stretch
+	holder.global_position = centro_global + desplazamiento
+	actualizar_cuerdas(holder.position)
+	var vector_lanzamiento := centro_global - holder.global_position
+	if vector_lanzamiento.length() > 0.5:
+		angulo_objetivo = fposmod(rad_to_deg(atan2(-vector_lanzamiento.y, vector_lanzamiento.x)), 360.0)
+	potencia_objetivo = clampf(desplazamiento.length() / maxf(max_stretch, 0.001) * 100.0, 0.0, 100.0)
+	_aplicar_tension_slime(potencia_objetivo / 100.0, desplazamiento.normalized())
+	if is_instance_valid(_hud):
+		_hud.set_aim_from_drag(angulo_objetivo, potencia_objetivo)
+		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
+		_hud.set_model_values(holder.global_position, velocidad, gravedad, k)
+	queue_redraw()
 
 func _draw() -> void:
 	if mostrar_area_respeto:
@@ -118,11 +175,12 @@ func get_indice_seleccionado() -> int:
 	return _indice
 
 func actualizar_aim(angulo: float, potencia: float) -> void:
-	angulo_objetivo = clampf(angulo, 0.0, 180.0)
+	angulo_objetivo = fposmod(angulo, 360.0)
 	potencia_objetivo = clampf(potencia, 0.0, 100.0)
 	queue_redraw()
 
 func disparar_con_parametros(angulo: float, potencia: float) -> void:
+	_arrastrando_slime = false
 	if _esperando_turno or not is_instance_valid(slime_actual) or potencia <= 0.0:
 		return
 	actualizar_aim(angulo, potencia)
@@ -134,6 +192,8 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	_ultima_posicion_disparo = holder.global_position
 	_ultimo_vector_disparo = vector_tiro * multiplicador_fuerza
 	_esperando_turno = true
+	holder.position = _posicion_holder_reposo
+	actualizar_cuerdas(holder.position)
 	_detener_sonidos_estirar()
 	_actualizar_visibilidad(true)
 	_aplicar_tension_slime(0.0, Vector2.ZERO)
@@ -249,7 +309,7 @@ func _dibujar_trayectoria() -> void:
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 	var puntos := ModeloDisparo.trayectoria(holder.position, velocidad, gravedad, k, paso_tiempo, puntos_trayectoria)
 	# Solo se dibujan unos pocos puntos iniciales, como en Angry Birds.
-	for i in range(mini(puntos.size(), 5)):
+	for i in range(mini(puntos.size(), 10)):
 		var p: Vector2 = puntos[i]
 		draw_circle(p, maxf(1.0, 2.6 - i * 0.25), Color(0.91, 1.0, 0.97, 0.8 - i * 0.1))
 

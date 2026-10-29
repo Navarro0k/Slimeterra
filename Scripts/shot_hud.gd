@@ -74,7 +74,7 @@ func _construir_interfaz() -> void:
 	# Grid de HUD para viewport 480x270:
 	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
 	# El botón de ecuación vive en la cabecera del propio panel.
-	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(158, 91), Color(0.09, 0.15, 0.23, 0.38))
+	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0.09, 0.15, 0.23, 0.38))
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.position = Vector2(4, 18)
 	ecuacion_col.size = Vector2(150, 69)
@@ -99,8 +99,8 @@ func _construir_interfaz() -> void:
 	# El botón es hermano del panel, no hijo: permanece visible para volver a abrirlo.
 	_equation_toggle = Button.new()
 	_equation_toggle.name = "EquationToggle"
-	_equation_toggle.position = Vector2(7, 5)
-	_equation_toggle.custom_minimum_size = Vector2(39, 12)
+	_equation_toggle.position = Vector2(5, 5)
+	_equation_toggle.custom_minimum_size = Vector2(42, 12)
 	_equation_toggle.text = "OCULTAR"
 	_equation_toggle.add_theme_font_size_override("font_size", 5)
 	_equation_toggle.add_theme_color_override("font_color", RED)
@@ -114,8 +114,8 @@ func _construir_interfaz() -> void:
 	# Brújula sin panel de fondo; lectura única del ángulo y dial 20% mayor.
 	var dial_col := VBoxContainer.new()
 	dial_col.name = "AngleControls"
-	dial_col.position = Vector2(184, 218)
-	dial_col.size = Vector2(112, 49)
+	dial_col.position = Vector2(216, 207)
+	dial_col.size = Vector2(48, 61)
 	dial_col.add_theme_constant_override("separation", 0)
 	root.add_child(dial_col)
 	_angle_label = _label("45°", 9)
@@ -123,7 +123,7 @@ func _construir_interfaz() -> void:
 	dial_col.add_child(_angle_label)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
-	_angle_dial.custom_minimum_size = Vector2(104, 37)
+	_angle_dial.custom_minimum_size = Vector2(44, 44)
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
@@ -169,6 +169,17 @@ func _button_style(color: Color) -> StyleBoxFlat:
 	var s := _panel_style(color)
 	s.border_color = color
 	return s
+
+func set_aim_from_drag(angulo: float, potencia: float) -> void:
+	# Sincroniza dial, porcentaje y etiquetas sin crear bucles de señales.
+	angle_degrees = fposmod(angulo, 360.0)
+	power_percent = clampf(potencia, 0.0, 100.0)
+	if is_instance_valid(_angle_dial):
+		_angle_dial.angle = angle_degrees
+	if is_instance_valid(_power_slider):
+		_power_slider.set_value_no_signal(power_percent)
+	_actualizar_lecturas()
+	aim_changed.emit(angle_degrees, power_percent)
 
 func _on_angle_changed(valor: float) -> void:
 	angle_degrees = valor
