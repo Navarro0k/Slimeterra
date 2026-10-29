@@ -20,11 +20,16 @@ func _ready() -> void:
 	follow_viewport_enabled = false
 	var panel := get_node_or_null("Margen/Panel") as PanelContainer
 	if panel:
+		# El contenedor queda completamente transparente; solo se ven los slots.
 		var estilo := StyleBoxFlat.new()
-		estilo.bg_color = Color("#17263B")
-		estilo.border_color = Color("#3C6680")
-		estilo.set_border_width_all(1)
-		estilo.set_corner_radius_all(5)
+		estilo.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+		estilo.border_color = Color(0.0, 0.0, 0.0, 0.0)
+		estilo.set_border_width_all(0)
+		estilo.set_corner_radius_all(0)
+		estilo.content_margin_left = 0
+		estilo.content_margin_right = 0
+		estilo.content_margin_top = 0
+		estilo.content_margin_bottom = 0
 		panel.add_theme_stylebox_override("panel", estilo)
 
 ## Construye un slot por cada tipo del diccionario { SlimeCatalogo.Tipo: cantidad }
@@ -64,7 +69,7 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	boton.add_theme_color_override("font_color", Color("#EAF4FF"))
 	boton.add_theme_color_override("font_hover_color", Color("#FFFFFF"))
 	boton.add_theme_color_override("font_pressed_color", Color("#102338"))
-	boton.add_theme_stylebox_override("normal", _slot_style(Color("#263B55")))
+	boton.add_theme_stylebox_override("normal", _slot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0)))
 	boton.add_theme_stylebox_override("hover", _slot_style(Color("#365978")))
 	boton.add_theme_stylebox_override("pressed", _slot_style(Color("#62D9C7")))
 	boton.add_theme_stylebox_override("focus", _slot_style(Color("#62D9C7")))
@@ -91,11 +96,12 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	_slots.append({"boton": boton, "cantidad": etiqueta})
 
 
-func _slot_style(color: Color) -> StyleBoxFlat:
+func _slot_style(color: Color, border: Color = Color("#62D9C7")) -> StyleBoxFlat:
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = color
-	estilo.border_color = Color("#62D9C7")
-	estilo.set_border_width_all(1)
+	estilo.border_color = border
+	var borde := 0 if border.a == 0.0 else 1
+	estilo.set_border_width_all(borde)
 	estilo.set_corner_radius_all(5)
 	estilo.content_margin_left = 2
 	estilo.content_margin_right = 2

@@ -74,8 +74,10 @@ func _construir_interfaz() -> void:
 	# Grid de HUD para viewport 480x270:
 	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
 	# El botón de ecuación vive en la cabecera del propio panel.
-	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(150, 82), Color(0.09, 0.15, 0.23, 0.76))
+	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(158, 91), Color(0.09, 0.15, 0.23, 0.38))
 	var ecuacion_col := VBoxContainer.new()
+	ecuacion_col.position = Vector2(4, 18)
+	ecuacion_col.size = Vector2(150, 69)
 	ecuacion_col.add_theme_constant_override("separation", 1)
 	_equation_panel.add_child(ecuacion_col)
 	_equation_title = _label("TRAYECTORIA", 7)
@@ -86,7 +88,7 @@ func _construir_interfaz() -> void:
 	_math_label.fit_content = false
 	_math_label.scroll_active = false
 	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_math_label.custom_minimum_size = Vector2(140, 62)
+	_math_label.custom_minimum_size = Vector2(150, 68)
 	_math_label.add_theme_font_size_override("normal_font_size", 7)
 	_math_label.add_theme_font_size_override("bold_font_size", 7)
 	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
@@ -97,14 +99,14 @@ func _construir_interfaz() -> void:
 	# El botón es hermano del panel, no hijo: permanece visible para volver a abrirlo.
 	_equation_toggle = Button.new()
 	_equation_toggle.name = "EquationToggle"
-	_equation_toggle.position = Vector2(108, 7)
-	_equation_toggle.custom_minimum_size = Vector2(42, 13)
+	_equation_toggle.position = Vector2(7, 5)
+	_equation_toggle.custom_minimum_size = Vector2(39, 12)
 	_equation_toggle.text = "OCULTAR"
 	_equation_toggle.add_theme_font_size_override("font_size", 5)
 	_equation_toggle.add_theme_color_override("font_color", RED)
 	_equation_toggle.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_equation_toggle.add_theme_constant_override("outline_size", 2)
-	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.82)))
+	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.58)))
 	_equation_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.14, 0.23, 0.33, 0.92)))
 	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
 	root.add_child(_equation_toggle)

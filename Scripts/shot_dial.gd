@@ -46,16 +46,15 @@ func _draw() -> void:
 	var radio: float = minf(size.x * 0.43, size.y - 17.0)
 	draw_arc(centro, radio, PI, TAU, 48, RING, 1.5, true)
 	draw_arc(centro, radio, PI, PI + PI * 0.42, 24, Color("#2A4563"), 1.0, true)
-	for grados in range(0, 181, 30):
+	# Solo marcas, sin números alrededor del dial: el ángulo se muestra
+	# una única vez en la etiqueta del HUD para evitar lecturas superpuestas.
+	for grados in range(0, 181, 15):
 		var theta := deg_to_rad(float(grados))
 		var direccion := Vector2(cos(theta), -sin(theta))
-		var p1 := centro + direccion * (radio - 4.0)
+		var p1 := centro + direccion * (radio - 3.0)
 		var p2 := centro + direccion * (radio + 1.0)
 		draw_line(p1, p2, MUTED, 1.0, true)
-		var etiqueta_pos := centro + direccion * (radio + 5.0) - Vector2(4, 2)
-		draw_string(ThemeDB.fallback_font, etiqueta_pos, str(grados), HORIZONTAL_ALIGNMENT_CENTER, 9, 6, MUTED)
 	var theta_aguja := deg_to_rad(angle)
 	var direccion_aguja := Vector2(cos(theta_aguja), -sin(theta_aguja))
 	draw_line(centro, centro + direccion_aguja * (radio - 4.0), ACCENT, 1.5, true)
 	draw_circle(centro, 2.0, TEXT_COLOR)
-	draw_string(ThemeDB.fallback_font, Vector2(centro.x - 8.0, 8.0), "%d°" % roundi(angle), HORIZONTAL_ALIGNMENT_CENTER, 16, 7, TEXT_COLOR)
