@@ -296,7 +296,7 @@ func _detener_sonidos_estirar() -> void:
 	_sonido_estirar_sonado = false
 
 func _al_pegarse(pos: Vector2, plataforma: Node) -> void:
-	var punto_local := plataforma.to_local(pos) if plataforma else Vector2.ZERO
+	var punto_local: Vector2 = plataforma.to_local(pos) if is_instance_valid(plataforma) else Vector2.ZERO
 	_mover_y_recargar.call_deferred(pos, plataforma, punto_local)
 
 func _mover_y_recargar(pos_global: Vector2, plataforma: Node, pos_local: Vector2) -> void:
