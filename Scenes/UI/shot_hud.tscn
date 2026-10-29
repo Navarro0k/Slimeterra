@@ -1,0 +1,87 @@
+[gd_scene format=3 uid="uid://8gpmj5ek0tv0"]
+
+[ext_resource type="Script" uid="uid://k7a0gh25fmjg" path="res://Scripts/shot_hud.gd" id="1_b3tk2"]
+[ext_resource type="Script" uid="uid://ccuumyfw1il37" path="res://Scripts/shot_dial.gd" id="2_spjip"]
+
+[node name="ShotHUD" type="CanvasLayer" unique_id=1010176254]
+script = ExtResource("1_b3tk2")
+
+[node name="Root" type="Control" parent="." unique_id=786528750]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="AimPanel" type="PanelContainer" parent="Root" unique_id=212407274]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MainColumn" type="VBoxContainer" parent="Root/AimPanel" unique_id=955122837]
+layout_mode = 2
+
+[node name="Header" type="HBoxContainer" parent="Root/AimPanel/MainColumn" unique_id=2107219628]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Root/AimPanel/MainColumn/Header" unique_id=1677162972]
+layout_mode = 2
+
+[node name="AngleReadout" type="Label" parent="Root/AimPanel/MainColumn/Header" unique_id=1663587727]
+layout_mode = 2
+
+[node name="DialFrame" type="PanelContainer" parent="Root/AimPanel/MainColumn" unique_id=984174398]
+layout_mode = 2
+
+[node name="Dial" type="Control" parent="Root/AimPanel/MainColumn/DialFrame" unique_id=668591162]
+layout_mode = 2
+script = ExtResource("2_spjip")
+
+[node name="PowerHeader" type="HBoxContainer" parent="Root/AimPanel/MainColumn" unique_id=290753388]
+layout_mode = 2
+
+[node name="PowerTitle" type="Label" parent="Root/AimPanel/MainColumn/PowerHeader" unique_id=1887506706]
+layout_mode = 2
+
+[node name="PowerReadout" type="Label" parent="Root/AimPanel/MainColumn/PowerHeader" unique_id=176205300]
+layout_mode = 2
+
+[node name="PowerSlider" type="HSlider" parent="Root/AimPanel/MainColumn" unique_id=1882115820]
+layout_mode = 2
+
+[node name="PowerProgress" type="ProgressBar" parent="Root/AimPanel/MainColumn" unique_id=1529232075]
+layout_mode = 2
+
+[node name="LaunchButtontton" type="Button" parent="Root/AimPanel/MainColumn" unique_id=1264231681]
+layout_mode = 2
+
+[node name="MathToggle" type="Button" parent="Root/AimPanel/MainColumn" unique_id=687918902]
+layout_mode = 2
+
+[node name="MathPanel" type="PanelContainer" parent="Root" unique_id=584448876]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="MathColumn" type="VBoxContainer" parent="Root/MathPanel" unique_id=184922128]
+layout_mode = 2
+
+[node name="MathHeader" type="HBoxContainer" parent="Root/MathPanel/MathColumn" unique_id=1196513843]
+layout_mode = 2
+
+[node name="MathTitle" type="Label" parent="Root/MathPanel/MathColumn/MathHeader" unique_id=443888798]
+layout_mode = 2
+
+[node name="CloseMathButton" type="Button" parent="Root/MathPanel/MathColumn/MathHeader" unique_id=2058229118]
+layout_mode = 2
+
+[node name="ModelLabel" type="Label" parent="Root/MathPanel/MathColumn" unique_id=1315355987]
+layout_mode = 2
+
+[node name="EquationLabel" type="RichTextLabel" parent="Root/MathPanel/MathColumn" unique_id=916055131]
+layout_mode = 2
+
+[node name="InitialConditions" type="RichTextLabel" parent="Root/MathPanel/MathColumn" unique_id=2122648221]
+layout_mode = 2
+
+[node name="NumericalInfo" type="RichTextLabel" parent="Root/MathPanel/MathColumn" unique_id=962056161]
+layout_mode = 2

@@ -1,23 +1,17 @@
 extends Node2D
 
-# ==============================================================================
-# SEÑALES
-# ==============================================================================
 signal inventario_cambiado(inventario: Array, indice_seleccionado: int)
 signal sin_municion
 signal slime_lanzado(slime: Node2D)
 signal slime_cargado(slime: Node2D)
 
-# ==============================================================================
-# EXPORTS (Configuración del nodo)
-# ==============================================================================
 @export_group("Física y Tiro")
 @export var multiplicador_fuerza: float = 15.0
 @export var max_stretch: float = 30.0
 @export var grosor_reposo: float = 2.0
 @export var grosor_estirado: float = 1.0
 @export var caida_reposo: float = 5.0
-@export var puntos_trayectoria: int = 4
+@export_range(1, 8, 1) var puntos_trayectoria: int = 10
 @export var paso_tiempo: float = 0.08
 @export var angulo_desvio_grados: float = 0.0
 
@@ -40,81 +34,120 @@ signal slime_cargado(slime: Node2D)
 @export_range(0.5, 2.0, 0.05) var velocidad_lanzar: float = 1.0
 @export_range(0.0, 0.3, 0.01) var variacion_tono: float = 0.05
 
-# ==============================================================================
-# VARIABLES DE ESTADO
-# ==============================================================================
 var slime_actual: RigidBody2D
-var is_dragging: bool = false
-var current_drag_position: Vector2
-
+var angulo_objetivo: float = 45.0
+var potencia_objetivo: float = 65.0
 var _inventario: Array[Dictionary] = []
 var _indice: int = -1
 var _esperando_turno: bool = false
 var _padre_original: Node
 var _sonido_estirar_sonado: bool = false
+var _hud: ShotHUD
+var _ultimo_vector_disparo: Vector2 = Vector2.ZERO
+var _ultima_posicion_disparo: Vector2 = Vector2.ZERO
+var _arrastrando_slime: bool = false
+var _posicion_holder_reposo: Vector2 = Vector2.ZERO
 
-# Reproductores
 var _player_estirar: AudioStreamPlayer
 var _player_estirar_loop: AudioStreamPlayer
 var _player_lanzar: AudioStreamPlayer
 
-# ==============================================================================
-# NODOS (@onready)
-# ==============================================================================
-@onready var anchor_left = $AnchorLeft
-@onready var anchor_right = $AnchorRight
-@onready var center_marker = $CenterMarker
-@onready var band_left = $BandLeft
-@onready var band_right = $BandRight
-@onready var holder = $Holder
-@onready var slingshot_sprite = $SlingshotSprite
-@onready var parche_sprite = $Holder/Sprite2D
-@onready var collision_holder = $Holder/CollisionShape2D
-@onready var label_angulo = $LabelAngulo
+@onready var anchor_left: Marker2D = $AnchorLeft
+@onready var anchor_right: Marker2D = $AnchorRight
+@onready var center_marker: Marker2D = $CenterMarker
+@onready var band_left: Line2D = $BandLeft
+@onready var band_right: Line2D = $BandRight
+@onready var holder: Area2D = $Holder
+@onready var slingshot_sprite: Sprite2D = $SlingshotSprite
+@onready var parche_sprite: Sprite2D = $Holder/Sprite2D
+@onready var collision_holder: CollisionShape2D = $Holder/CollisionShape2D
+@onready var label_angulo: Label = $LabelAngulo
 
-# ==============================================================================
-# CICLO DE VIDA (Engine Callbacks)
-# ==============================================================================
 func _ready() -> void:
 	_padre_original = get_parent()
-	current_drag_position = center_marker.position
-	
 	_crear_reproductores()
-	actualizar_cuerdas(current_drag_position)
-	
-	if collision_holder.shape is CircleShape2D: 
+	actualizar_cuerdas(center_marker.position)
+	_posicion_holder_reposo = center_marker.position
+	if collision_holder.shape is CircleShape2D:
 		collision_holder.shape.radius = 7.0
-		
 	_actualizar_visibilidad(false)
+	_crear_hud()
 	queue_redraw()
 
-func _physics_process(_delta: float) -> void: 
+func _physics_process(_delta: float) -> void:
 	_fijar_slime_al_holder()
 
-func _process(_delta: float) -> void: 
+func _process(_delta: float) -> void:
 	_fijar_slime_al_holder()
 
 func _input(event: InputEvent) -> void:
-	if not is_dragging: 
+	# Permite jugar con el ratón: pulsar sobre el slime, estirar hacia atrás
+	# y soltar para disparar. Los controles del HUD siguen sincronizados.
+	if _esperando_turno or not is_instance_valid(slime_actual):
 		return
-		
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
-		_soltar_resortera()
-		return
-		
-	if event is InputEventMouseMotion:
-		_procesar_arrastre()
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+		if event.pressed and not _arrastrando_slime:
+			var mouse_global := get_global_mouse_position()
+			var radio_captura := maxf(12.0, max_stretch * 0.55)
+			if mouse_global.distance_to(holder.global_position) <= radio_captura:
+				_arrastrando_slime = true
+				_sonido_estirar_sonado = true
+				_actualizar_visibilidad(true)
+				_actualizar_arrastre(mouse_global)
+				get_viewport().set_input_as_handled()
+		elif not event.pressed and _arrastrando_slime:
+			_arrastrando_slime = false
+			var potencia_final := potencia_objetivo
+			var angulo_final := angulo_objetivo
+			if potencia_final > 1.0:
+				disparar_con_parametros(angulo_final, potencia_final)
+			else:
+				holder.position = _posicion_holder_reposo
+				actualizar_cuerdas(holder.position)
+				_actualizar_visibilidad(false)
+				_aplicar_tension_slime(0.0, Vector2.ZERO)
+				queue_redraw()
+			get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion and _arrastrando_slime:
+		_actualizar_arrastre(get_global_mouse_position())
+		get_viewport().set_input_as_handled()
+
+func _actualizar_arrastre(mouse_global: Vector2) -> void:
+	var centro_global := center_marker.global_position
+	var desplazamiento := mouse_global - centro_global
+	# Arrastre libre en 360°: el slime puede estirarse en cualquier dirección.
+	if desplazamiento.length() > max_stretch:
+		desplazamiento = desplazamiento.normalized() * max_stretch
+	holder.global_position = centro_global + desplazamiento
+	actualizar_cuerdas(holder.position)
+	var vector_lanzamiento := centro_global - holder.global_position
+	if vector_lanzamiento.length() > 0.5:
+		angulo_objetivo = fposmod(rad_to_deg(atan2(-vector_lanzamiento.y, vector_lanzamiento.x)), 360.0)
+	potencia_objetivo = clampf(desplazamiento.length() / maxf(max_stretch, 0.001) * 100.0, 0.0, 100.0)
+	_aplicar_tension_slime(potencia_objetivo / 100.0, desplazamiento.normalized())
+	if is_instance_valid(_hud):
+		_hud.set_aim_from_drag(angulo_objetivo, potencia_objetivo)
+		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
+		_hud.set_model_values(holder.global_position, velocidad, gravedad, k)
+	queue_redraw()
 
 func _draw() -> void:
-	if mostrar_area_respeto: 
+	if mostrar_area_respeto:
 		draw_arc(center_marker.position, max_stretch + margen_respeto, 0, TAU, 48, Color(1, 0.3, 0.3, 0.5), 0.5)
-		
-	if is_dragging and slime_actual:
+	if is_instance_valid(slime_actual) and not _esperando_turno:
 		_dibujar_trayectoria()
 
-# ==============================================================================
-# API PÚBLICA (Usada por el nivel/UI)
-# ==============================================================================
+func _crear_hud() -> void:
+	_hud = ShotHUD.new()
+	_hud.name = "ShotHUD"
+	get_tree().current_scene.call_deferred("add_child", _hud)
+	_hud.launch_requested.connect(disparar_con_parametros)
+	_hud.aim_changed.connect(_on_aim_changed)
+	_hud.set_launch_enabled(is_instance_valid(slime_actual))
+
 func configurar(slimes: Dictionary) -> void:
 	_quitar_slime()
 	_esperando_turno = false
@@ -124,53 +157,83 @@ func configurar(slimes: Dictionary) -> void:
 	inventario_cambiado.emit(_inventario, _indice)
 
 func seleccionar(idx: int) -> void:
-	if is_dragging or idx < 0 or idx >= _inventario.size() or _inventario[idx]["cantidad"] <= 0:
+	if idx < 0 or idx >= _inventario.size() or _inventario[idx]["cantidad"] <= 0:
 		inventario_cambiado.emit(_inventario, _indice)
 		return
-		
 	if idx != _indice:
 		_indice = idx
-		if not _esperando_turno and slime_actual:
+		if not _esperando_turno and is_instance_valid(slime_actual):
 			_quitar_slime()
 			_instanciar_slime(_indice)
-			
+	_actualizar_hud_estado()
 	inventario_cambiado.emit(_inventario, _indice)
 
-func get_inventario() -> Array[Dictionary]: 
+func get_inventario() -> Array[Dictionary]:
 	return _inventario
 
-func get_indice_seleccionado() -> int: 
+func get_indice_seleccionado() -> int:
 	return _indice
 
-# ==============================================================================
-# LÓGICA PRINCIPAL (Disparo y Munición)
-# ==============================================================================
+func actualizar_aim(angulo: float, potencia: float) -> void:
+	angulo_objetivo = fposmod(angulo, 360.0)
+	potencia_objetivo = clampf(potencia, 0.0, 100.0)
+	queue_redraw()
+
+func disparar_con_parametros(angulo: float, potencia: float) -> void:
+	_arrastrando_slime = false
+	if _esperando_turno or not is_instance_valid(slime_actual) or potencia <= 0.0:
+		return
+	actualizar_aim(angulo, potencia)
+	var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+	var intensidad := potencia_objetivo / 100.0
+	var vector_tiro := Vector2(cos(theta), -sin(theta)) * max_stretch * intensidad
+	if vector_tiro.length() <= 0.1:
+		return
+	_ultima_posicion_disparo = holder.global_position
+	_ultimo_vector_disparo = vector_tiro * multiplicador_fuerza
+	_esperando_turno = true
+	holder.position = _posicion_holder_reposo
+	actualizar_cuerdas(holder.position)
+	_detener_sonidos_estirar()
+	_actualizar_visibilidad(true)
+	_aplicar_tension_slime(0.0, Vector2.ZERO)
+	_ejecutar_disparo(vector_tiro)
+	_actualizar_hud_estado()
+	queue_redraw()
+
+func _on_aim_changed(angulo: float, potencia: float) -> void:
+	actualizar_aim(angulo, potencia)
+	if is_instance_valid(_hud):
+		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
+		_hud.set_model_values(holder.global_position, velocidad, gravedad, k)
+
 func _cargar_nuevo_slime() -> void:
 	_esperando_turno = false
-	if is_instance_valid(slime_actual): 
+	if is_instance_valid(slime_actual):
+		_actualizar_hud_estado()
 		return
-		
-	if _indice < 0 or _indice >= _inventario.size() or _inventario[_indice]["cantidad"] <= 0: 
+	if _indice < 0 or _indice >= _inventario.size() or _inventario[_indice]["cantidad"] <= 0:
 		_indice = _primer_con_stock()
-		
-	if _indice == -1: 
+	if _indice == -1:
 		sin_municion.emit()
-	else: 
+	else:
 		_instanciar_slime(_indice)
-		
+	_actualizar_hud_estado()
 	inventario_cambiado.emit(_inventario, _indice)
 
 func _instanciar_slime(idx: int) -> void:
 	slime_actual = SlimeCatalogo.escena(_inventario[idx]["tipo"]).instantiate()
 	holder.add_child(slime_actual)
 	slime_actual.position = Vector2.ZERO
-	
-	if slime_actual.has_method("preparar"): 
+	if slime_actual.has_method("preparar"):
 		slime_actual.preparar()
-	else: 
+	else:
 		slime_actual.freeze = true
-		
 	slime_cargado.emit(slime_actual)
+	_actualizar_hud_estado()
 
 func _quitar_slime() -> void:
 	if is_instance_valid(slime_actual):
@@ -178,45 +241,24 @@ func _quitar_slime() -> void:
 		slime_actual.queue_free()
 	slime_actual = null
 
-func _soltar_resortera() -> void:
-	_aplicar_tension_slime(0.0, Vector2.ZERO)  
-	is_dragging = false
-	var vector_tiro = center_marker.position - current_drag_position
-	
-	if angulo_desvio_grados != 0: 
-		vector_tiro = SolverNumerico.aplicar_matriz_rotacion(vector_tiro, deg_to_rad(angulo_desvio_grados))
-		
-	_detener_sonidos_estirar()
-	queue_redraw()
-	
-	var tween = create_tween()
-	tween.tween_method(actualizar_cuerdas, current_drag_position, center_marker.position, 0.3)\
-		 .set_trans(Tween.TRANS_SPRING).set_ease(Tween.EASE_OUT)
-	tween.finished.connect(func(): if not is_dragging: _actualizar_visibilidad(false))
-
-	if vector_tiro.length() > 5.0 and slime_actual:
-		_ejecutar_disparo(vector_tiro)
-
 func _ejecutar_disparo(vector_tiro: Vector2) -> void:
+	if not is_instance_valid(slime_actual):
+		return
 	slime_actual.global_position = holder.global_position
 	slime_actual.reparent(get_tree().current_scene)
 	slime_actual.freeze = false
-	
-	if slime_actual.has_signal("slime_pegado"): 
+	if slime_actual.has_signal("slime_pegado"):
 		slime_actual.slime_pegado.connect(_al_pegarse)
-	if slime_actual.has_signal("turno_terminado"): 
+	if slime_actual.has_signal("turno_terminado"):
 		slime_actual.turno_terminado.connect(func(): _cargar_nuevo_slime.call_deferred())
-	if slime_actual.has_method("lanzar"): 
-		var radio = max_stretch * absf(global_scale.x) + margen_respeto
+	if slime_actual.has_method("lanzar"):
+		var radio: float = max_stretch * absf(global_scale.x) + margen_respeto
 		slime_actual.lanzar(vector_tiro * multiplicador_fuerza, tiempo_respeto, center_marker, radio)
-	
 	_reproducir(_player_lanzar, volumen_lanzar_db, velocidad_lanzar)
 	slime_lanzado.emit(slime_actual)
 	slime_actual = null
-	
-	_esperando_turno = true
 	_inventario[_indice]["cantidad"] -= 1
-	if _inventario[_indice]["cantidad"] <= 0: 
+	if _inventario[_indice]["cantidad"] <= 0:
 		_indice = _primer_con_stock()
 	inventario_cambiado.emit(_inventario, _indice)
 
@@ -225,42 +267,9 @@ func _fijar_slime_al_holder() -> void:
 		slime_actual.global_position = holder.global_position
 		slime_actual.global_rotation = 0.0
 
-func _procesar_arrastre() -> void:
-	var offset = get_local_mouse_position() - center_marker.position
-	current_drag_position = center_marker.position + offset.limit_length(max_stretch)
-	var tension = clampf(current_drag_position.distance_to(center_marker.position) / max_stretch, 0.0, 1.0)
-	
-	if not _sonido_estirar_sonado and offset.length() > 5.0:
-		_sonido_estirar_sonado = true
-		if sonido_estirar: 
-			_reproducir(_player_estirar, volumen_estirar_db, velocidad_inicio)
-		else: 
-			_iniciar_loop()
-			
-	if _sonido_estirar_sonado:
-		_player_estirar_loop.volume_db = lerpf(volumen_loop_min_db, volumen_estirar_db, tension)
-		_player_estirar_loop.pitch_scale = lerpf(tono_loop_min, tono_loop_max, tension)
-	
-	_aplicar_tension_slime(tension, current_drag_position - center_marker.position)
-	actualizar_cuerdas(current_drag_position)
-	
-	var vector_tiro = center_marker.position - current_drag_position
-	var grados = round(-rad_to_deg(vector_tiro.angle()))
-	label_angulo.text = str(grados) + "°"
-	label_angulo.position = center_marker.position + Vector2(10, 0) 
-	
-	if is_instance_valid(slime_actual) and "tipo_slime" in slime_actual:
-		if slime_actual.tipo_slime == "fuego":
-			label_angulo.add_theme_color_override("font_color", Color(1.0, 0.7, 0.4)) 
-		else:
-			label_angulo.add_theme_color_override("font_color", Color(1.0, 0.65, 0.9)) 
-	# -----------------------------------------------------
-	
-	queue_redraw()
-
 func _primer_con_stock() -> int:
 	for i in _inventario.size():
-		if _inventario[i]["cantidad"] > 0: 
+		if _inventario[i]["cantidad"] > 0:
 			return i
 	return -1
 
@@ -268,64 +277,63 @@ func _aplicar_tension_slime(t: float, direccion_tiron: Vector2) -> void:
 	if is_instance_valid(slime_actual) and slime_actual.has_method("set_tension"):
 		slime_actual.set_tension(t, direccion_tiron)
 
-# ==============================================================================
-# LÓGICA VISUAL Y DIBUJO
-# ==============================================================================
 func _actualizar_visibilidad(mostrar: bool) -> void:
 	slingshot_sprite.visible = mostrar
 	band_left.visible = mostrar
 	band_right.visible = mostrar
 	parche_sprite.visible = mostrar
-	if label_angulo: label_angulo.visible = mostrar 
+	if is_instance_valid(label_angulo):
+		label_angulo.visible = false
 
 func actualizar_cuerdas(pos: Vector2) -> void:
 	holder.position = pos
-	var tension = clamp(center_marker.position.distance_to(pos) / max_stretch, 0.0, 1.0)
-	var grosor = lerp(grosor_reposo, grosor_estirado, tension)
-	
+	var tension: float = clampf(center_marker.position.distance_to(pos) / max_stretch, 0.0, 1.0)
+	var grosor: float = lerpf(grosor_reposo, grosor_estirado, tension)
 	band_left.width = grosor
 	band_right.width = grosor
 	_dibujar_curva(band_left, anchor_left.position, pos, tension)
 	_dibujar_curva(band_right, anchor_right.position, pos, tension)
 
 func _dibujar_curva(linea: Line2D, p_ini: Vector2, p_fin: Vector2, tension: float) -> void:
-	if tension > 0.05: 
+	if tension > 0.05:
 		linea.points = [p_ini, p_fin]
 	else:
-		var medio = p_ini.lerp(p_fin, 0.5)
-		medio.y += lerp(caida_reposo, 0.0, tension)
+		var medio := p_ini.lerp(p_fin, 0.5)
+		medio.y += lerpf(caida_reposo, 0.0, tension)
 		linea.points = [p_ini, medio, p_fin]
 
 func _dibujar_trayectoria() -> void:
-	var vector_tiro = center_marker.position - current_drag_position
-	
-	if angulo_desvio_grados != 0: 
-		vector_tiro = SolverNumerico.aplicar_matriz_rotacion(vector_tiro, deg_to_rad(angulo_desvio_grados))
-	
-	if vector_tiro.length() > 5.0:
-		var gravedad = ProjectSettings.get_setting("physics/2d/default_gravity")
-		var k = ProjectSettings.get_setting("physics/2d/default_linear_damp")
-		var puntos = SolverNumerico.trayectoria(
-			holder.position, vector_tiro * multiplicador_fuerza, 
-			gravedad, k, paso_tiempo, puntos_trayectoria, SolverNumerico.Metodo.RK4
-		)
-		for p in puntos:
-			draw_rect(Rect2(p - Vector2(1, 1), Vector2(2, 2)), Color(1, 1, 1, 0.6))
+	var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+	var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
+	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+	var puntos := ModeloDisparo.trayectoria(holder.position, velocidad, gravedad, k, paso_tiempo, puntos_trayectoria)
+	# Solo se dibujan unos pocos puntos iniciales, como en Angry Birds.
+	for i in range(mini(puntos.size(), 10)):
+		var p: Vector2 = puntos[i]
+		draw_circle(p, maxf(1.0, 2.6 - i * 0.25), Color(0.91, 1.0, 0.97, 0.8 - i * 0.1))
 
-# ==============================================================================
-# AUDIO
-# ==============================================================================
+func _actualizar_hud_estado() -> void:
+	if is_instance_valid(_hud):
+		_hud.set_launch_enabled(is_instance_valid(slime_actual) and not _esperando_turno)
+		var g: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
+		_hud.set_model_values(holder.global_position, velocidad, g, k)
+	queue_redraw()
+
 func _crear_reproductores() -> void:
-	var bus = bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
+	var bus := bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
 	_player_estirar = _nuevo_audio(sonido_estirar, bus, _al_terminar_sonido_inicio)
 	_player_estirar_loop = _nuevo_audio(sonido_estirar_loop, bus)
 	_player_lanzar = _nuevo_audio(sonido_lanzar, bus)
 
 func _nuevo_audio(stream: AudioStream, bus: StringName, callback: Callable = Callable()) -> AudioStreamPlayer:
-	var player = AudioStreamPlayer.new()
+	var player := AudioStreamPlayer.new()
 	player.stream = stream
 	player.bus = bus
-	if callback.is_valid(): 
+	if callback.is_valid():
 		player.finished.connect(callback)
 	add_child(player)
 	return player
@@ -336,37 +344,28 @@ func _reproducir(player: AudioStreamPlayer, vol: float, vel: float) -> void:
 		player.pitch_scale = vel * (1.0 + randf_range(-variacion_tono, variacion_tono))
 		player.play()
 
-func _al_terminar_sonido_inicio() -> void: 
-	if is_dragging: _iniciar_loop()
+func _al_terminar_sonido_inicio() -> void:
+	pass
 
-func _iniciar_loop() -> void: 
-	if not _player_estirar_loop.playing: _player_estirar_loop.play()
+func _iniciar_loop() -> void:
+	if not _player_estirar_loop.playing:
+		_player_estirar_loop.play()
 
 func _detener_sonidos_estirar() -> void:
 	_player_estirar.stop()
 	_player_estirar_loop.stop()
 	_sonido_estirar_sonado = false
 
-# ==============================================================================
-# EVENTOS (Callbacks de Nodos)
-# ==============================================================================
-func _on_holder_input_event(_viewport, event, _shape_idx) -> void:
-	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		if slime_actual:
-			is_dragging = true
-			_actualizar_visibilidad(true)
-
 func _al_pegarse(pos: Vector2, plataforma: Node) -> void:
-	var punto_local = plataforma.to_local(pos) if plataforma else Vector2.ZERO
+	var punto_local: Vector2 = plataforma.to_local(pos) if is_instance_valid(plataforma) else Vector2.ZERO
 	_mover_y_recargar.call_deferred(pos, plataforma, punto_local)
 
 func _mover_y_recargar(pos_global: Vector2, plataforma: Node, pos_local: Vector2) -> void:
 	if is_instance_valid(plataforma):
-		if get_parent() != plataforma: 
+		if get_parent() != plataforma:
 			reparent(plataforma, true)
 		global_position = plataforma.to_global(pos_local)
 	elif is_instance_valid(_padre_original):
 		reparent(_padre_original, true)
 		global_position = pos_global
-		
-	_cargar_nuevo_slime()
+	_cargar_nuevo_slime.call_deferred()

@@ -6,13 +6,31 @@ extends CanvasLayer
 ## El jugador eligió el tipo en la posición `indice` del inventario.
 signal slime_elegido(indice: int)
 
-@export var tamano_slot: Vector2 = Vector2(40, 40)
-@export var tamano_fuente: int = 10
+@export var tamano_slot: Vector2 = Vector2(38, 38)
+@export var tamano_fuente: int = 8
 
 @onready var _slots_box: HBoxContainer = %Slots
 
 ## Un diccionario por slot: { "boton": Button, "cantidad": Label }
 var _slots: Array[Dictionary] = []
+
+func _ready() -> void:
+	# El selector se dibuja por encima de los HUD creados dinámicamente.
+	layer = 40
+	follow_viewport_enabled = false
+	var panel := get_node_or_null("Margen/Panel") as PanelContainer
+	if panel:
+		# El contenedor queda completamente transparente; solo se ven los slots.
+		var estilo := StyleBoxFlat.new()
+		estilo.bg_color = Color(0.0, 0.0, 0.0, 0.0)
+		estilo.border_color = Color(0.0, 0.0, 0.0, 0.0)
+		estilo.set_border_width_all(0)
+		estilo.set_corner_radius_all(0)
+		estilo.content_margin_left = 0
+		estilo.content_margin_right = 0
+		estilo.content_margin_top = 0
+		estilo.content_margin_bottom = 0
+		panel.add_theme_stylebox_override("panel", estilo)
 
 ## Construye un slot por cada tipo del diccionario { SlimeCatalogo.Tipo: cantidad }
 ## (mismo orden que la resortera).
@@ -46,6 +64,15 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	boton.toggle_mode = true
 	boton.custom_minimum_size = tamano_slot
 	boton.focus_mode = Control.FOCUS_NONE # Evita que Espacio/Enter lo activen.
+	boton.mouse_filter = Control.MOUSE_FILTER_STOP
+	boton.z_index = 5
+	boton.add_theme_color_override("font_color", Color("#EAF4FF"))
+	boton.add_theme_color_override("font_hover_color", Color("#FFFFFF"))
+	boton.add_theme_color_override("font_pressed_color", Color("#102338"))
+	boton.add_theme_stylebox_override("normal", _slot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0)))
+	boton.add_theme_stylebox_override("hover", _slot_style(Color("#365978")))
+	boton.add_theme_stylebox_override("pressed", _slot_style(Color("#62D9C7")))
+	boton.add_theme_stylebox_override("focus", _slot_style(Color("#62D9C7")))
 	boton.icon = SlimeCatalogo.icono(tipo)
 	boton.expand_icon = true
 	boton.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -60,7 +87,8 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	etiqueta.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	etiqueta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	etiqueta.add_theme_font_size_override("font_size", tamano_fuente)
-	etiqueta.add_theme_color_override("font_outline_color", Color.BLACK)
+	etiqueta.add_theme_color_override("font_color", Color("#F2F7FF"))
+	etiqueta.add_theme_color_override("font_outline_color", Color("#142338"))
 	etiqueta.add_theme_constant_override("outline_size", 3)
 	boton.add_child(etiqueta)
 
@@ -68,5 +96,19 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	_slots.append({"boton": boton, "cantidad": etiqueta})
 
 
+func _slot_style(color: Color, border: Color = Color("#62D9C7")) -> StyleBoxFlat:
+	var estilo := StyleBoxFlat.new()
+	estilo.bg_color = color
+	estilo.border_color = border
+	var borde := 0 if border.a == 0.0 else 1
+	estilo.set_border_width_all(borde)
+	estilo.set_corner_radius_all(5)
+	estilo.content_margin_left = 2
+	estilo.content_margin_right = 2
+	estilo.content_margin_top = 2
+	estilo.content_margin_bottom = 2
+	return estilo
+
 func _on_slot_pressed(indice: int) -> void:
+	# Confirmar selección en UI inmediatamente; la resortera devuelve el estado real.
 	slime_elegido.emit(indice)
