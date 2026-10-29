@@ -34,12 +34,12 @@ func _panel_style(color: Color, radius: int = 16) -> StyleBoxFlat:
 	estilo.border_color = BORDER
 	estilo.set_border_width_all(1)
 	estilo.set_corner_radius_all(radius)
-	estilo.content_margin_left = 16
-	estilo.content_margin_right = 16
-	estilo.content_margin_top = 12
-	estilo.content_margin_bottom = 12
+	estilo.content_margin_left = 4
+	estilo.content_margin_right = 4
+	estilo.content_margin_top = 3
+	estilo.content_margin_bottom = 3
 	estilo.shadow_color = Color(0, 0, 0, 0.25)
-	estilo.shadow_size = 8
+	estilo.shadow_size = 0
 	return estilo
 
 func _construir_interfaz() -> void:
@@ -52,19 +52,19 @@ func _construir_interfaz() -> void:
 	var panel := PanelContainer.new()
 	panel.name = "AimPanel"
 	panel.add_theme_stylebox_override("panel", _panel_style(BG))
-	panel.position = Vector2(18, 18)
-	panel.custom_minimum_size = Vector2(300, 0)
-	panel.size = Vector2(300, 0)
+	panel.position = Vector2(5, 18)
+	panel.custom_minimum_size = Vector2(118, 0)
+	panel.size = Vector2(118, 0)
 	root.add_child(panel)
 
 	var columna := VBoxContainer.new()
-	columna.add_theme_constant_override("separation", 8)
+	columna.add_theme_constant_override("separation", 2)
 	panel.add_child(columna)
 
 	var titulo := Label.new()
-	titulo.text = "CONTROL DE DISPARO"
+	titulo.text = "DISPARO"
 	titulo.add_theme_color_override("font_color", FG)
-	titulo.add_theme_font_size_override("font_size", 14)
+	titulo.add_theme_font_size_override("font_size", 9)
 	columna.add_child(titulo)
 
 	var fila_angulo := HBoxContainer.new()
@@ -73,15 +73,16 @@ func _construir_interfaz() -> void:
 	lbl.text = "Ángulo"
 	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl.add_theme_color_override("font_color", MUTED)
+	lbl.add_theme_font_size_override("font_size", 9)
 	fila_angulo.add_child(lbl)
 	_angle_label = Label.new()
 	_angle_label.add_theme_color_override("font_color", ACCENT)
-	_angle_label.add_theme_font_size_override("font_size", 18)
+	_angle_label.add_theme_font_size_override("font_size", 10)
 	fila_angulo.add_child(_angle_label)
 
 	var dial_frame := PanelContainer.new()
 	dial_frame.add_theme_stylebox_override("panel", _panel_style(BG_DARK, 12))
-	dial_frame.custom_minimum_size = Vector2(270, 175)
+	dial_frame.custom_minimum_size = Vector2(108, 64)
 	columna.add_child(dial_frame)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
@@ -94,9 +95,11 @@ func _construir_interfaz() -> void:
 	lbl_potencia.text = "Potencia"
 	lbl_potencia.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	lbl_potencia.add_theme_color_override("font_color", MUTED)
+	lbl_potencia.add_theme_font_size_override("font_size", 9)
 	fila_potencia.add_child(lbl_potencia)
 	_power_label = Label.new()
 	_power_label.add_theme_color_override("font_color", ACCENT)
+	_power_label.add_theme_font_size_override("font_size", 9)
 	fila_potencia.add_child(_power_label)
 
 	_power_slider = HSlider.new()
@@ -104,21 +107,21 @@ func _construir_interfaz() -> void:
 	_power_slider.max_value = 100
 	_power_slider.step = 1
 	_power_slider.value = power_percent
-	_power_slider.custom_minimum_size.y = 24
+	_power_slider.custom_minimum_size.y = 10
 	_power_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_power_slider.value_changed.connect(_on_power_changed)
 	columna.add_child(_power_slider)
 
 	var nota := Label.new()
-	nota.text = "Ajusta el ángulo y la fuerza antes de lanzar."
+	nota.text = "Ángulo y fuerza"
 	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	nota.add_theme_color_override("font_color", MUTED)
-	nota.add_theme_font_size_override("font_size", 11)
+	nota.add_theme_font_size_override("font_size", 8)
 	columna.add_child(nota)
 
 	_launch_button = Button.new()
 	_launch_button.text = "LANZAR  ↗"
-	_launch_button.custom_minimum_size.y = 42
+	_launch_button.custom_minimum_size.y = 20
 	_launch_button.add_theme_color_override("font_color", Color("#10272A"))
 	_launch_button.add_theme_stylebox_override("normal", _button_style(ACCENT))
 	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AF3CD")))
@@ -127,29 +130,33 @@ func _construir_interfaz() -> void:
 	columna.add_child(_launch_button)
 
 	var math_button := Button.new()
-	math_button.text = "Ver modelo matemático  ⌄"
+	math_button.text = "Modelo +"
 	math_button.flat = true
 	math_button.add_theme_color_override("font_color", FG)
+	math_button.add_theme_font_size_override("font_size", 8)
 	math_button.pressed.connect(_toggle_math)
 	columna.add_child(math_button)
 
 	_math_panel = PanelContainer.new()
 	_math_panel.name = "MathPanel"
-	_math_panel.position = Vector2(330, 18)
-	_math_panel.custom_minimum_size = Vector2(300, 0)
+	_math_panel.position = Vector2(132, 18)
+	_math_panel.custom_minimum_size = Vector2(150, 0)
 	_math_panel.add_theme_stylebox_override("panel", _panel_style(BG_DARK, 12))
 	root.add_child(_math_panel)
 	var math_col := VBoxContainer.new()
 	_math_panel.add_child(math_col)
 	var math_title := Label.new()
-	math_title.text = "MODELO DEL DISPARO"
+	math_title.text = "MODELO"
+	math_title.add_theme_font_size_override("font_size", 8)
 	math_title.add_theme_color_override("font_color", ACCENT)
 	math_col.add_child(math_title)
 	_math_label = RichTextLabel.new()
-	_math_label.fit_content = true
+	_math_label.fit_content = false
 	_math_label.bbcode_enabled = true
-	_math_label.scroll_active = false
-	_math_label.custom_minimum_size = Vector2(270, 150)
+	_math_label.scroll_active = true
+	_math_label.custom_minimum_size = Vector2(140, 92)
+	_math_label.add_theme_font_size_override("normal_font_size", 7)
+	_math_label.add_theme_font_size_override("bold_font_size", 7)
 	_math_label.add_theme_color_override("default_color", FG)
 	math_col.add_child(_math_label)
 	_math_panel.visible = false
@@ -192,24 +199,22 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	var theta := deg_to_rad(angle_degrees)
 	var vx := velocity_initial.x
 	var vy := velocity_initial.y
-	var texto := "[b]Condiciones iniciales[/b]\n"
-	texto += "θ = %.1f°     potencia = %.0f%%\n" % [angle_degrees, power_percent]
-	texto += "x₀ = %.1f px, y₀ = %.1f px\n" % [position_initial.x, position_initial.y]
-	texto += "v₀ = %.1f px/s\nvₓ = %.1f, vᵧ = %.1f px/s\n\n" % [speed, vx, vy]
+	var texto := "[b]Datos[/b]\n"
+	texto += "θ: %.0f°  P: %.0f%%\n" % [angle_degrees, power_percent]
+	texto += "v₀: %.1f px/s\n" % speed
+	texto += "vₓ: %.1f  vᵧ: %.1f\n" % [vx, vy]
+	texto += "g: %.1f  k: %.3f\n\n" % [gravity, damping]
 	if absf(damping) < 0.00001:
-		texto += "[b]Movimiento parabólico (k = 0)[/b]\n"
-		texto += "x(t) = x₀ + vₓ·t\n"
-		texto += "y(t) = y₀ + vᵧ·t + ½·g·t²\n"
-		texto += "y(x) = y₀ + (vᵧ/vₓ)(x−x₀)\n"
-		texto += "       + g(x−x₀)²/(2vₓ²)\n\n"
-		texto += "[color=#8EABB5]La Y positiva apunta hacia abajo en Godot.[/color]\n"
+		texto += "[b]Parábola[/b]\n"
+		texto += "x = x₀ + vₓ·t\n"
+		texto += "y = y₀ + vᵧ·t + ½gt²\n"
+		texto += "y positiva hacia abajo.\n"
 	else:
-		texto += "[b]Modelo con amortiguamiento[/b]\n"
-		texto += "dx/dt = vₓ     dy/dt = vᵧ\n"
+		texto += "[b]Con rozamiento[/b]\n"
+		texto += "dx/dt = vₓ\n"
+		texto += "dy/dt = vᵧ\n"
 		texto += "dv/dt = (0,g) − k·v\n"
-		texto += "Integración numérica: Runge–Kutta 4.\n\n"
-		texto += "[color=#8EABB5]Con k ≠ 0, la trayectoria no es una parábola exacta.[/color]\n"
-	texto += "\n[b]Parámetros físicos[/b]\ng = %.2f px/s², k = %.4f s⁻¹" % [gravity, damping]
+		texto += "Método RK4.\n"
 	_math_label.text = texto
 
 func _actualizar_lecturas() -> void:

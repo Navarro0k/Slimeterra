@@ -118,7 +118,7 @@ func get_indice_seleccionado() -> int:
 	return _indice
 
 func actualizar_aim(angulo: float, potencia: float) -> void:
-	angulo_objetivo = clampf(angulo, 5.0, 80.0)
+	angulo_objetivo = clampf(angulo, 0.0, 180.0)
 	potencia_objetivo = clampf(potencia, 0.0, 100.0)
 	queue_redraw()
 
@@ -146,7 +146,8 @@ func _on_aim_changed(angulo: float, potencia: float) -> void:
 	if is_instance_valid(_hud):
 		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-		var velocidad := Vector2(cos(deg_to_rad(angulo)), -sin(deg_to_rad(angulo))) * max_stretch * potencia / 100.0 * multiplicador_fuerza
+		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
+		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
 		_hud.set_model_values(holder.global_position, velocidad, gravedad, k)
 
 func _cargar_nuevo_slime() -> void:
@@ -257,7 +258,7 @@ func _actualizar_hud_estado() -> void:
 		_hud.set_launch_enabled(is_instance_valid(slime_actual) and not _esperando_turno)
 		var g: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-		var theta := deg_to_rad(angulo_objetivo)
+		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
 		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
 		_hud.set_model_values(holder.global_position, velocidad, g, k)
 	queue_redraw()
