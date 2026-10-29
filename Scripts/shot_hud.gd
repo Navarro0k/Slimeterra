@@ -13,6 +13,10 @@ var _power_slider: HSlider
 var _angle_label: Label
 var _power_label: Label
 var _math_label: RichTextLabel
+var _equation_panel: PanelContainer
+var _equation_toggle: Button
+var _equation_title: Label
+var _equation_visible := true
 var _launch_button: Button
 var _pause_button: Button
 
@@ -47,7 +51,7 @@ func _label(texto: String, size: int = 9, color: Color = RED) -> Label:
 	l.add_theme_font_size_override("font_size", size)
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
-	l.add_theme_constant_override("outline_size", 1)
+	l.add_theme_constant_override("outline_size", 2)
 	return l
 
 func _panel_contenedor(parent: Control, nombre: String, pos: Vector2, tam: Vector2, color: Color = PANEL) -> PanelContainer:
@@ -67,68 +71,94 @@ func _construir_interfaz() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
-	# Ecuación siempre visible en una tarjeta pequeña, como en el mockup.
-	var ecuacion_panel := _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(214, 82), Color("#17263B"))
+	# Grid de HUD para viewport 480x270:
+	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
+	# El botón de ecuación vive en la cabecera del propio panel.
+	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(150, 82), Color(0.09, 0.15, 0.23, 0.76))
 	var ecuacion_col := VBoxContainer.new()
-	ecuacion_col.add_theme_constant_override("separation", 0)
-	ecuacion_panel.add_child(ecuacion_col)
-	ecuacion_col.add_child(_label("TRAYECTORIA EN TIEMPO REAL", 8))
+	ecuacion_col.add_theme_constant_override("separation", 1)
+	_equation_panel.add_child(ecuacion_col)
+	_equation_title = _label("TRAYECTORIA", 7)
+	ecuacion_col.add_child(_equation_title)
+
 	_math_label = RichTextLabel.new()
 	_math_label.bbcode_enabled = true
 	_math_label.fit_content = false
 	_math_label.scroll_active = false
 	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_math_label.custom_minimum_size = Vector2(204, 62)
-	_math_label.add_theme_font_size_override("normal_font_size", 9)
-	_math_label.add_theme_font_size_override("bold_font_size", 9)
+	_math_label.custom_minimum_size = Vector2(140, 62)
+	_math_label.add_theme_font_size_override("normal_font_size", 7)
+	_math_label.add_theme_font_size_override("bold_font_size", 7)
 	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
+	_math_label.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
+	_math_label.add_theme_constant_override("outline_size", 2)
 	ecuacion_col.add_child(_math_label)
 
-	# Perilla inferior central: el área de interacción permanece compacta.
-	var dial_panel := _panel_contenedor(root, "AnglePanel", Vector2(157, 202), Vector2(104, 63), Color("#17263B"))
+	# El botón es hermano del panel, no hijo: permanece visible para volver a abrirlo.
+	_equation_toggle = Button.new()
+	_equation_toggle.name = "EquationToggle"
+	_equation_toggle.position = Vector2(108, 7)
+	_equation_toggle.custom_minimum_size = Vector2(42, 13)
+	_equation_toggle.text = "OCULTAR"
+	_equation_toggle.add_theme_font_size_override("font_size", 5)
+	_equation_toggle.add_theme_color_override("font_color", RED)
+	_equation_toggle.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
+	_equation_toggle.add_theme_constant_override("outline_size", 2)
+	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.82)))
+	_equation_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.14, 0.23, 0.33, 0.92)))
+	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
+	root.add_child(_equation_toggle)
+
+	# Panel de ángulo centrado en la zona inferior, sin duplicar la lectura.
+	var dial_panel := _panel_contenedor(root, "AnglePanel", Vector2(190, 216), Vector2(96, 49), Color("#17263B"))
 	var dial_col := VBoxContainer.new()
 	dial_col.add_theme_constant_override("separation", 0)
 	dial_panel.add_child(dial_col)
 	var dial_header := HBoxContainer.new()
 	dial_col.add_child(dial_header)
-	dial_header.add_child(_label("ÁNGULO", 8))
-	_angle_label = _label("45°", 10)
+	dial_header.add_child(_label("ÁNGULO", 7))
+	_angle_label = _label("45°", 8)
 	dial_header.add_child(_angle_label)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
-	_angle_dial.custom_minimum_size = Vector2(96, 43)
+	_angle_dial.custom_minimum_size = Vector2(86, 31)
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-	# Potencia y acción de disparo se integran en una sola tarjeta.
-	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(329, 211), Vector2(146, 54), Color("#17263B"))
+	# Potencia y botón de disparo en la esquina inferior derecha.
+	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(365, 211), Vector2(110, 54), Color("#17263B"))
 	var power_col := VBoxContainer.new()
-	power_col.add_theme_constant_override("separation", 1)
+	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(_label("POTENCIA", 8))
-	_power_label = _label("65%", 9)
+	power_header.add_child(_label("POTENCIA", 7))
+	_power_label = _label("65%", 8)
 	power_header.add_child(_power_label)
 	_power_slider = HSlider.new()
 	_power_slider.min_value = 0
 	_power_slider.max_value = 100
 	_power_slider.step = 1
 	_power_slider.value = power_percent
-	_power_slider.custom_minimum_size = Vector2(126, 10)
+	_power_slider.custom_minimum_size = Vector2(94, 7)
 	_power_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_power_slider.value_changed.connect(_on_power_changed)
 	power_col.add_child(_power_slider)
 	_launch_button = Button.new()
-	_launch_button.text = "CLIC PARA DISPARAR  ↗"
-	_launch_button.custom_minimum_size = Vector2(130, 19)
-	_launch_button.add_theme_font_size_override("font_size", 8)
+	_launch_button.text = "DISPARAR ↗"
+	_launch_button.custom_minimum_size = Vector2(94, 14)
+	_launch_button.add_theme_font_size_override("font_size", 7)
 	_launch_button.add_theme_color_override("font_color", Color("#102338"))
 	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#62D9C7")))
 	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AEBDD")))
 	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#3CAFA6")))
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
+
+func _on_equation_toggle_pressed() -> void:
+	_equation_visible = not _equation_visible
+	_equation_panel.visible = _equation_visible
+	_equation_toggle.text = "OCULTAR" if _equation_visible else "VER EQ."
 
 func _button_style(color: Color) -> StyleBoxFlat:
 	var s := _panel_style(color)
@@ -159,24 +189,19 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	if not is_instance_valid(_math_label):
 		return
 
-	# La forma parabólica se calcula a partir del estado actual del disparo.
-	# Con rozamiento la simulación es numérica (RK4); se muestra también la
-	# parábola balística ideal, cuyos coeficientes cambian con ángulo y potencia.
+	# Mostrar únicamente la ecuación y sus coeficientes actuales.
+	# Slingshoot llama esta función al cambiar el ángulo o la potencia.
 	var modelo: Dictionary = ModeloDisparo.ecuacion_parabolica(position_initial, velocity_initial, gravity)
-	var texto := "[color=#62D9C7][b]TRAYECTORIA · TIEMPO REAL[/b][/color]\\n"
-	texto += "[color=#F0F6FF]θ=%d°   P=%d%%   v₀=%.1f[/color]\\n" % [roundi(angle_degrees), roundi(power_percent), velocity_initial.length()]
+	var texto := ""
+	texto += "[color=#FFFFFF]y(x) = ax² + bx + c[/color]\n"
 	if bool(modelo.get("valida", false)):
 		var a: float = float(modelo["a"])
 		var b: float = float(modelo["b"])
 		var c: float = float(modelo["c"])
-		texto += "[b]y(x) = ax[sup]2[/sup] + bx + c[/b]\\n"
-		texto += "a=%.4f   b=%.3f   c=%.2f\\n" % [a, b, c]
-		texto += "[color=#62D9C7]y(x)=%.4fx[sup]2[/sup] %s %.3fx %s %.2f[/color]" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
+		texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
+		texto += "[color=#FFFFFF]y(x) = %.4fx² %s %.4fx %s %.2f[/color]" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
 	else:
-		texto += "[b]Tiro casi vertical[/b]\\n"
-		texto += "x(t)=%.2f + %.2ft\\n" % [position_initial.x, velocity_initial.x]
-		texto += "y(t)=%.2f %s %.2ft + %.2ft[sup]2[/sup]" % [position_initial.y, "+" if velocity_initial.y >= 0.0 else "−", absf(velocity_initial.y), gravity * 0.5]
-	texto += "\\n[color=#A6B8D0]%s[/color]" % ("Simulación con rozamiento: RK4" if damping > 0.00001 else "Modelo balístico parabólico")
+		texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
 	_math_label.text = texto
 
 func _actualizar_lecturas() -> void:

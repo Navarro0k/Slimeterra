@@ -6,8 +6,8 @@ extends CanvasLayer
 ## El jugador eligió el tipo en la posición `indice` del inventario.
 signal slime_elegido(indice: int)
 
-@export var tamano_slot: Vector2 = Vector2(44, 42)
-@export var tamano_fuente: int = 10
+@export var tamano_slot: Vector2 = Vector2(38, 38)
+@export var tamano_fuente: int = 8
 
 @onready var _slots_box: HBoxContainer = %Slots
 

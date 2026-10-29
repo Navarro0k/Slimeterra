@@ -17,7 +17,7 @@ const TEXT_COLOR := Color("#F0F6FF")
 const MUTED := Color("#A6B8D0")
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(96, 43)
+	custom_minimum_size = Vector2(82, 31)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	queue_redraw()
 
@@ -58,4 +58,4 @@ func _draw() -> void:
 	var direccion_aguja := Vector2(cos(theta_aguja), -sin(theta_aguja))
 	draw_line(centro, centro + direccion_aguja * (radio - 4.0), ACCENT, 1.5, true)
 	draw_circle(centro, 2.0, TEXT_COLOR)
-	draw_string(ThemeDB.fallback_font, Vector2(centro.x - 10.0, 9.0), "%d°" % roundi(angle), HORIZONTAL_ALIGNMENT_CENTER, 20, 8, TEXT_COLOR)
+	draw_string(ThemeDB.fallback_font, Vector2(centro.x - 8.0, 8.0), "%d°" % roundi(angle), HORIZONTAL_ALIGNMENT_CENTER, 16, 7, TEXT_COLOR)
