@@ -1,6 +1,6 @@
 extends CanvasLayer
 class_name ShotHUD
-## HUD construido por código: ángulo, potencia, ecuaciones y botón de lanzamiento.
+## HUD compacto para viewport 480x270. Mantiene las señales públicas usadas por Slingshoot.
 
 signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
@@ -14,33 +14,51 @@ var _angle_label: Label
 var _power_label: Label
 var _math_label: RichTextLabel
 var _launch_button: Button
-var _math_panel: PanelContainer
+var _pause_button: Button
 
-const BG := Color("#172B36")
-const BG_DARK := Color("#12242D")
-const BORDER := Color("#41616C")
-const ACCENT := Color("#65E6B5")
-const FG := Color("#EAF7F5")
-const MUTED := Color("#8EABB5")
+const PANEL := Color("#292D32")
+const PANEL_LIGHT := Color("#777777")
+const RED := Color("#A00020")
+const TEXT := Color("#F7F7F7")
+const EDGE := Color("#BDBDBD")
 
 func _ready() -> void:
 	layer = 10
+	process_mode = Node.PROCESS_MODE_ALWAYS
 	_construir_interfaz()
 	_actualizar_lecturas()
+	aim_changed.emit(angle_degrees, power_percent)
 
-func _panel_style(color: Color, radius: int = 16) -> StyleBoxFlat:
-	var estilo := StyleBoxFlat.new()
-	estilo.bg_color = color
-	estilo.border_color = BORDER
-	estilo.set_border_width_all(1)
-	estilo.set_corner_radius_all(radius)
-	estilo.content_margin_left = 4
-	estilo.content_margin_right = 4
-	estilo.content_margin_top = 3
-	estilo.content_margin_bottom = 3
-	estilo.shadow_color = Color(0, 0, 0, 0.25)
-	estilo.shadow_size = 0
-	return estilo
+func _panel_style(color: Color = PANEL) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = color
+	s.border_color = EDGE
+	s.set_border_width_all(1)
+	s.set_corner_radius_all(2)
+	s.content_margin_left = 4
+	s.content_margin_right = 4
+	s.content_margin_top = 3
+	s.content_margin_bottom = 3
+	return s
+
+func _label(texto: String, size: int = 9, color: Color = RED) -> Label:
+	var l := Label.new()
+	l.text = texto
+	l.add_theme_font_size_override("font_size", size)
+	l.add_theme_color_override("font_color", color)
+	l.add_theme_color_override("font_outline_color", Color.BLACK)
+	l.add_theme_constant_override("outline_size", 1)
+	return l
+
+func _panel_contenedor(parent: Control, nombre: String, pos: Vector2, tam: Vector2, color: Color = PANEL) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.name = nombre
+	p.position = pos
+	p.size = tam
+	p.custom_minimum_size = tam
+	p.add_theme_stylebox_override("panel", _panel_style(color))
+	parent.add_child(p)
+	return p
 
 func _construir_interfaz() -> void:
 	var root := Control.new()
@@ -49,123 +67,73 @@ func _construir_interfaz() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_PASS
 	add_child(root)
 
-	var panel := PanelContainer.new()
-	panel.name = "AimPanel"
-	panel.add_theme_stylebox_override("panel", _panel_style(BG))
-	panel.position = Vector2(5, 18)
-	panel.custom_minimum_size = Vector2(118, 0)
-	panel.size = Vector2(118, 0)
-	root.add_child(panel)
+	# Ecuación siempre visible en una tarjeta pequeña, como en el mockup.
+	var ecuacion_panel := _panel_contenedor(root, "EquationPanel", Vector2(5, 5), Vector2(150, 43), Color("#F0F0F0"))
+	var ecuacion_col := VBoxContainer.new()
+	ecuacion_col.add_theme_constant_override("separation", 0)
+	ecuacion_panel.add_child(ecuacion_col)
+	ecuacion_col.add_child(_label("TRAYECTORIA EN TIEMPO REAL", 8))
+	_math_label = RichTextLabel.new()
+	_math_label.bbcode_enabled = true
+	_math_label.fit_content = false
+	_math_label.scroll_active = false
+	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_math_label.custom_minimum_size = Vector2(140, 23)
+	_math_label.add_theme_font_size_override("normal_font_size", 9)
+	_math_label.add_theme_font_size_override("bold_font_size", 9)
+	_math_label.add_theme_color_override("default_color", Color("#202020"))
+	ecuacion_col.add_child(_math_label)
 
-	var columna := VBoxContainer.new()
-	columna.add_theme_constant_override("separation", 2)
-	panel.add_child(columna)
-
-	var titulo := Label.new()
-	titulo.text = "DISPARO"
-	titulo.add_theme_color_override("font_color", FG)
-	titulo.add_theme_font_size_override("font_size", 9)
-	columna.add_child(titulo)
-
-	var fila_angulo := HBoxContainer.new()
-	columna.add_child(fila_angulo)
-	var lbl := Label.new()
-	lbl.text = "Ángulo"
-	lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl.add_theme_color_override("font_color", MUTED)
-	lbl.add_theme_font_size_override("font_size", 9)
-	fila_angulo.add_child(lbl)
-	_angle_label = Label.new()
-	_angle_label.add_theme_color_override("font_color", ACCENT)
-	_angle_label.add_theme_font_size_override("font_size", 10)
-	fila_angulo.add_child(_angle_label)
-
-	var dial_frame := PanelContainer.new()
-	dial_frame.add_theme_stylebox_override("panel", _panel_style(BG_DARK, 12))
-	dial_frame.custom_minimum_size = Vector2(108, 64)
-	columna.add_child(dial_frame)
+	# Perilla inferior central: el área de interacción permanece compacta.
+	var dial_panel := _panel_contenedor(root, "AnglePanel", Vector2(155, 202), Vector2(104, 63), Color("#E8E8E8"))
+	var dial_col := VBoxContainer.new()
+	dial_col.add_theme_constant_override("separation", 0)
+	dial_panel.add_child(dial_col)
+	var dial_header := HBoxContainer.new()
+	dial_col.add_child(dial_header)
+	dial_header.add_child(_label("ÁNGULO", 8))
+	_angle_label = _label("45°", 10)
+	dial_header.add_child(_angle_label)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
-	dial_frame.add_child(_angle_dial)
+	_angle_dial.custom_minimum_size = Vector2(96, 43)
+	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-	var fila_potencia := HBoxContainer.new()
-	columna.add_child(fila_potencia)
-	var lbl_potencia := Label.new()
-	lbl_potencia.text = "Potencia"
-	lbl_potencia.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl_potencia.add_theme_color_override("font_color", MUTED)
-	lbl_potencia.add_theme_font_size_override("font_size", 9)
-	fila_potencia.add_child(lbl_potencia)
-	_power_label = Label.new()
-	_power_label.add_theme_color_override("font_color", ACCENT)
-	_power_label.add_theme_font_size_override("font_size", 9)
-	fila_potencia.add_child(_power_label)
-
+	# Potencia y acción de disparo se integran en una sola tarjeta.
+	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(333, 214), Vector2(140, 51), Color("#F0F0F0"))
+	var power_col := VBoxContainer.new()
+	power_col.add_theme_constant_override("separation", 1)
+	power_panel.add_child(power_col)
+	var power_header := HBoxContainer.new()
+	power_col.add_child(power_header)
+	power_header.add_child(_label("POTENCIA", 8))
+	_power_label = _label("65%", 9)
+	power_header.add_child(_power_label)
 	_power_slider = HSlider.new()
 	_power_slider.min_value = 0
 	_power_slider.max_value = 100
 	_power_slider.step = 1
 	_power_slider.value = power_percent
-	_power_slider.custom_minimum_size.y = 10
+	_power_slider.custom_minimum_size = Vector2(126, 10)
 	_power_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_power_slider.value_changed.connect(_on_power_changed)
-	columna.add_child(_power_slider)
-
-	var nota := Label.new()
-	nota.text = "Ángulo y fuerza"
-	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nota.add_theme_color_override("font_color", MUTED)
-	nota.add_theme_font_size_override("font_size", 8)
-	columna.add_child(nota)
-
+	power_col.add_child(_power_slider)
 	_launch_button = Button.new()
-	_launch_button.text = "LANZAR  ↗"
-	_launch_button.custom_minimum_size.y = 20
-	_launch_button.add_theme_color_override("font_color", Color("#10272A"))
-	_launch_button.add_theme_stylebox_override("normal", _button_style(ACCENT))
-	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AF3CD")))
-	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#43B995")))
+	_launch_button.text = "CLIC PARA DISPARAR  ↗"
+	_launch_button.custom_minimum_size = Vector2(130, 19)
+	_launch_button.add_theme_font_size_override("font_size", 8)
+	_launch_button.add_theme_color_override("font_color", Color.WHITE)
+	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#970020")))
+	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#C32342")))
+	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#650016")))
 	_launch_button.pressed.connect(_on_launch_pressed)
-	columna.add_child(_launch_button)
-
-	var math_button := Button.new()
-	math_button.text = "Modelo +"
-	math_button.flat = true
-	math_button.add_theme_color_override("font_color", FG)
-	math_button.add_theme_font_size_override("font_size", 8)
-	math_button.pressed.connect(_toggle_math)
-	columna.add_child(math_button)
-
-	_math_panel = PanelContainer.new()
-	_math_panel.name = "MathPanel"
-	_math_panel.position = Vector2(132, 18)
-	_math_panel.custom_minimum_size = Vector2(150, 0)
-	_math_panel.add_theme_stylebox_override("panel", _panel_style(BG_DARK, 12))
-	root.add_child(_math_panel)
-	var math_col := VBoxContainer.new()
-	_math_panel.add_child(math_col)
-	var math_title := Label.new()
-	math_title.text = "MODELO"
-	math_title.add_theme_font_size_override("font_size", 8)
-	math_title.add_theme_color_override("font_color", ACCENT)
-	math_col.add_child(math_title)
-	_math_label = RichTextLabel.new()
-	_math_label.fit_content = false
-	_math_label.bbcode_enabled = true
-	_math_label.scroll_active = true
-	_math_label.custom_minimum_size = Vector2(140, 92)
-	_math_label.add_theme_font_size_override("normal_font_size", 7)
-	_math_label.add_theme_font_size_override("bold_font_size", 7)
-	_math_label.add_theme_color_override("default_color", FG)
-	math_col.add_child(_math_label)
-	_math_panel.visible = false
+	power_col.add_child(_launch_button)
 
 func _button_style(color: Color) -> StyleBoxFlat:
-	var estilo := _panel_style(color, 10)
-	estilo.border_color = color
-	estilo.shadow_size = 0
-	return estilo
+	var s := _panel_style(color)
+	s.border_color = color
+	return s
 
 func _on_angle_changed(valor: float) -> void:
 	angle_degrees = valor
@@ -178,43 +146,30 @@ func _on_power_changed(valor: float) -> void:
 	aim_changed.emit(angle_degrees, power_percent)
 
 func _on_launch_pressed() -> void:
-	if not _can_launch or power_percent <= 0.0:
-		return
-	launch_requested.emit(angle_degrees, power_percent)
-
-func _toggle_math() -> void:
-	_math_panel.visible = not _math_panel.visible
-	_actualizar_lecturas()
+	if _can_launch and power_percent > 0.0:
+		launch_requested.emit(angle_degrees, power_percent)
 
 func set_launch_enabled(enabled: bool) -> void:
 	_can_launch = enabled
 	if is_instance_valid(_launch_button):
 		_launch_button.disabled = not enabled or power_percent <= 0.0
-		_launch_button.text = "LANZAR  ↗" if enabled else "ESPERANDO…"
+		_launch_button.text = "CLIC PARA DISPARAR" if enabled else "ESPERANDO SLIME..."
 
 func set_model_values(position_initial: Vector2, velocity_initial: Vector2, gravity: float, damping: float) -> void:
 	if not is_instance_valid(_math_label):
 		return
-	var speed := velocity_initial.length()
-	var theta := deg_to_rad(angle_degrees)
-	var vx := velocity_initial.x
-	var vy := velocity_initial.y
-	var texto := "[b]Datos[/b]\n"
-	texto += "θ: %.0f°  P: %.0f%%\n" % [angle_degrees, power_percent]
-	texto += "v₀: %.1f px/s\n" % speed
-	texto += "vₓ: %.1f  vᵧ: %.1f\n" % [vx, vy]
-	texto += "g: %.1f  k: %.3f\n\n" % [gravity, damping]
-	if absf(damping) < 0.00001:
-		texto += "[b]Parábola[/b]\n"
-		texto += "x = x₀ + vₓ·t\n"
-		texto += "y = y₀ + vᵧ·t + ½gt²\n"
-		texto += "y positiva hacia abajo.\n"
+	var modelo := ModeloDisparo.ecuacion_parabolica(position_initial, velocity_initial, gravity)
+	var texto := "[color=#A00020][b]y(x) = "
+	if bool(modelo.get("valida", false)) and absf(damping) < 0.00001:
+		var a: float = float(modelo["a"])
+		var b: float = float(modelo["b"])
+		var c: float = float(modelo["c"])
+		texto += "%.3fx[sup]2[/sup] %s %.3fx %s %.2f" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
+	elif absf(velocity_initial.x) < 0.0001:
+		texto += "x = %.1f (vertical)" % position_initial.x
 	else:
-		texto += "[b]Con rozamiento[/b]\n"
-		texto += "dx/dt = vₓ\n"
-		texto += "dy/dt = vᵧ\n"
-		texto += "dv/dt = (0,g) − k·v\n"
-		texto += "Método RK4.\n"
+		texto += "modelo RK4 (rozamiento)"
+	texto += "[/b][/color]"
 	_math_label.text = texto
 
 func _actualizar_lecturas() -> void:

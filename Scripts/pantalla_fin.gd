@@ -135,11 +135,14 @@ func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String, estrellas: int 
 
 func _construir() -> void:
 	# Botón de pausa de la pantalla de juego (esquina superior derecha).
-	_btn_pausa = _crear_boton("Pausa", alternar_pausa)
-	_btn_pausa.custom_minimum_size = Vector2(0, 0)
+	_btn_pausa = _crear_boton("Ⅱ PAUSA", alternar_pausa)
+	_btn_pausa.custom_minimum_size = Vector2(70, 20)
+	_btn_pausa.add_theme_font_size_override("font_size", 9)
 	_btn_pausa.focus_mode = Control.FOCUS_NONE # Que Espacio/Enter no lo activen por accidente.
 	add_child(_btn_pausa)
-	_btn_pausa.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 6)
+	_btn_pausa.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 5)
+	_btn_pausa.offset_left -= 4
+	_btn_pausa.offset_top += 1
 
 	# Overlay de pausa / victoria / derrota.
 	_raiz = Control.new()

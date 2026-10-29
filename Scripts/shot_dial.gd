@@ -17,7 +17,7 @@ const TEXT_COLOR := Color("#EAF7F5")
 const MUTED := Color("#8EABB5")
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(108, 64)
+	custom_minimum_size = Vector2(96, 43)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	queue_redraw()
 
