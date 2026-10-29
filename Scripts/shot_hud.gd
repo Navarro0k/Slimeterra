@@ -111,32 +111,35 @@ func _construir_interfaz() -> void:
 	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
 	root.add_child(_equation_toggle)
 
-	# Panel de ángulo centrado en la zona inferior, sin duplicar la lectura.
-	var dial_panel := _panel_contenedor(root, "AnglePanel", Vector2(190, 216), Vector2(96, 49), Color("#17263B"))
+	# Brújula sin panel de fondo; lectura única del ángulo y dial 20% mayor.
 	var dial_col := VBoxContainer.new()
+	dial_col.name = "AngleControls"
+	dial_col.position = Vector2(184, 218)
+	dial_col.size = Vector2(112, 49)
 	dial_col.add_theme_constant_override("separation", 0)
-	dial_panel.add_child(dial_col)
-	var dial_header := HBoxContainer.new()
-	dial_col.add_child(dial_header)
-	dial_header.add_child(_label("ÁNGULO", 7))
-	_angle_label = _label("45°", 8)
-	dial_header.add_child(_angle_label)
+	root.add_child(dial_col)
+	_angle_label = _label("45°", 9)
+	_angle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	dial_col.add_child(_angle_label)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
-	_angle_dial.custom_minimum_size = Vector2(86, 31)
+	_angle_dial.custom_minimum_size = Vector2(104, 37)
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-	# Potencia y botón de disparo en la esquina inferior derecha.
-	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(365, 211), Vector2(110, 54), Color("#17263B"))
+	# El control representa la velocidad inicial v₀, ajustada mediante el porcentaje
+	# de potencia. v₀ cambia el coeficiente a (curvatura) y el alcance del disparo.
+	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), Color("#17263B"))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(_label("POTENCIA", 7))
+	power_header.add_child(_label("VELOCIDAD INICIAL v₀", 6))
 	_power_label = _label("65%", 8)
 	power_header.add_child(_power_label)
+	var power_hint := _label("v₀ modifica a y el alcance", 5, TEXT)
+	power_col.add_child(power_hint)
 	_power_slider = HSlider.new()
 	_power_slider.min_value = 0
 	_power_slider.max_value = 100
