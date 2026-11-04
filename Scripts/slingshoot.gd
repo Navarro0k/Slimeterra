@@ -329,15 +329,11 @@ func _dibujar_trayectoria() -> void:
 	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 
-	# Prediccion paso a paso con el MISMO integrador (RK4), el MISMO dt (1/60)
-	# y la MISMA logica de area de respeto que el slime real. Asi los puntos caen
-	# exactamente sobre la trayectoria real (en vuelo libre). Se detiene en la
-	# primera colision real (solo fuera del area de respeto y en vuelo).
 	var dt_fisica := 1.0 / 60.0
 	var radio_slime := 6.8108597
 	var respect_radius := max_stretch + margen_respeto + radio_slime
-	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))  # 5 pasos por punto
 	var total_puntos := mini(puntos_trayectoria, 10)
+	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))
 
 	var quema := false
 	if is_instance_valid(slime_actual) and slime_actual.get("tipo_slime") == SlimeCatalogo.Tipo.FUEGO:
@@ -349,14 +345,20 @@ func _dibujar_trayectoria() -> void:
 	var en_vuelo := false
 	var colision_pos := Vector2.ZERO
 	var hubo_colision := false
+	var t_colision := 0.0
+	var t_prev := 0.0
+	var pos_prev := holder.position
 	var pasos_totales := pasos_por_punto * total_puntos
-	var puntos_dibujados := 0
 	var posiciones_puntos: Array[Vector2] = []
+	var puntos_dibujados := 0
 
 	for step in range(pasos_totales):
+		t_prev = step * dt_fisica
+		pos_prev = pos
 		var r: Array = SolverNumerico.paso(SolverNumerico.Metodo.RK4, pos, vel, dt_fisica, gravedad, k)
 		pos = r[0]
 		vel = r[1]
+		var t_now := (step + 1) * dt_fisica
 
 		var fuera_respeto := pos.distance_to(Vector2.ZERO) >= respect_radius
 		var choca := _prediccion_choca_plataforma(pos, quema)
@@ -367,11 +369,22 @@ func _dibujar_trayectoria() -> void:
 				en_vuelo = true
 		else:
 			if choca:
-				colision_pos = pos
+				# Refinamiento sub-paso: buscar el instante exacto de colision
+				# usando la solucion exacta (binaria) entre t_prev y t_now.
+				var t_lo := t_prev
+				var t_hi := t_now
+				for _b in range(10):
+					var t_mid := (t_lo + t_hi) * 0.5
+					var p_mid: Vector2 = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t_mid)
+					if _prediccion_choca_plataforma(p_mid, quema):
+						t_hi = t_mid
+					else:
+						t_lo = t_mid
+				t_colision = t_hi
+				colision_pos = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t_colision)
 				hubo_colision = true
 				break
 
-		# Muestrear un punto cada 'pasos_por_punto' pasos.
 		if (step + 1) % pasos_por_punto == 0 and puntos_dibujados < total_puntos:
 			posiciones_puntos.append(pos)
 			puntos_dibujados += 1
@@ -380,17 +393,14 @@ func _dibujar_trayectoria() -> void:
 	if hubo_colision:
 		ultimo_punto = colision_pos
 
-	# Dibujar los puntos muestreados.
 	for i in range(posiciones_puntos.size()):
 		var pt := posiciones_puntos[i]
 		var alpha := 0.9 - i * 0.08
 		draw_circle(pt, maxf(1.5, 3.0 - i * 0.2), Color(0.91, 1.0, 0.97, alpha))
 
-	# Punto de colision (si hubo): punto rojo.
 	if hubo_colision:
 		draw_circle(colision_pos, maxf(2.0, 3.5), Color(1.0, 0.4, 0.4, 0.95))
 
-	# Punto final visible: el mismo sprite del slime, desvanecido.
 	var textura: Texture2D = null
 	if is_instance_valid(slime_actual):
 		var nodo_sprite := slime_actual.get_node_or_null("Sprite2D") as Sprite2D
@@ -416,7 +426,6 @@ func _prediccion_choca_plataforma(pos_local: Vector2, quema: bool = false) -> bo
 	forma.radius = 6.8108597
 	var consulta := PhysicsShapeQueryParameters2D.new()
 	consulta.shape = forma
-	# El CollisionShape2D del slime tiene offset (0, -1) en slime.tscn.
 	consulta.transform = Transform2D(global_rotation, to_global(pos_local) + Vector2(0, -1))
 	consulta.collision_mask = 1
 	consulta.collide_with_bodies = true
