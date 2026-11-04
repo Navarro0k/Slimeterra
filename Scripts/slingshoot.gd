@@ -345,8 +345,11 @@ func _dibujar_trayectoria() -> void:
 		ultimo_punto = p
 
 		var fuera_respeto := p.distance_to(Vector2.ZERO) >= respect_radius
-		var choca := _prediccion_choca_plataforma(p)
-		var libre := not choca
+	var quema := false
+	if is_instance_valid(slime_actual) and slime_actual.get("tipo_slime") == SlimeCatalogo.Tipo.FUEGO:
+		quema = true
+	var choca := _prediccion_choca_plataforma(p, quema)
+	var libre := not choca
 
 		if not en_vuelo:
 			if fuera_respeto and libre:
@@ -375,7 +378,7 @@ func _dibujar_trayectoria() -> void:
 			color_final = Color(1.0, 0.4, 0.4, 0.4)
 		draw_texture_rect(textura, rect, false, color_final)
 
-func _prediccion_choca_plataforma(pos_local: Vector2) -> bool:
+func _prediccion_choca_plataforma(pos_local: Vector2, quema: bool = false) -> bool:
 	var espacio := get_world_2d()
 	if espacio == null:
 		return false
@@ -390,8 +393,32 @@ func _prediccion_choca_plataforma(pos_local: Vector2) -> bool:
 	consulta.collision_mask = 1
 	consulta.collide_with_bodies = true
 	consulta.collide_with_areas = false
-	var choques := estado_espacio.intersect_shape(consulta, 1)
-	return not choques.is_empty()
+	var choques := estado_espacio.intersect_shape(consulta, 8)
+	for choque in choques:
+		var collider = choque["collider"]
+		if collider is TileMapLayer:
+			var capa: TileMapLayer = collider
+			var local := capa.to_local(to_global(pos_local))
+			var radio := 6.8
+			var celda_min := capa.local_to_map(local - Vector2(radio, radio))
+			var celda_max := capa.local_to_map(local + Vector2(radio, radio))
+			var hay_solido_no_destruible := false
+			for x in range(celda_min.x, celda_max.x + 1):
+				for y in range(celda_min.y, celda_max.y + 1):
+					var celda := Vector2i(x, y)
+					var datos := capa.get_cell_tile_data(celda)
+					if datos == null:
+						continue
+					if datos.get_collision_polygons_count(0) <= 0:
+						continue
+					if quema and bool(datos.get_custom_data("rompible_por_fuego")):
+						continue
+					hay_solido_no_destruible = true
+			if hay_solido_no_destruible:
+				return true
+		else:
+			return true
+	return false
 
 
 func _actualizar_hud_estado() -> void:
