@@ -352,13 +352,13 @@ func _dibujar_trayectoria() -> void:
 		var libre := not choca
 
 		if not en_vuelo:
-				if fuera_respeto and libre:
-					en_vuelo = true
-			else:
-				if choca:
-					draw_circle(p, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
-					detener = true
-					continue
+			if fuera_respeto and libre:
+				en_vuelo = true
+		else:
+			if choca:
+				draw_circle(p, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
+				detener = true
+				continue
 
 		var alpha := 0.9 - punto_idx * 0.08
 		draw_circle(p, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
