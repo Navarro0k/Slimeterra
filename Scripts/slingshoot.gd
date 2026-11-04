@@ -16,6 +16,8 @@ signal slime_cargado(slime: Node2D)
 @export var angulo_desvio_grados: float = 0.0
 ## Modo de ecuación que muestra el HUD: "parabola" (nivel 1) o "matrices" (nivel 2).
 @export var modo_ecuacion: String = "parabola"
+## Límites del nivel (para predecir rebotes en la trayectoria).
+var limites: Rect2 = Rect2()
 
 @export_group("Área de Respeto")
 @export var tiempo_respeto: float = 1.5
@@ -327,15 +329,49 @@ func _dibujar_trayectoria() -> void:
 	var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
 	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-	# Solución exacta (sin error numérico) para que los puntos sean predictivos:
-	# el slime usa RK4 con dt pequeño, que converge a esta solución.
-	var cantidad := mini(puntos_trayectoria, 10)
-	var ultimo_punto := holder.position
-	for i in range(cantidad):
-		var t := paso_tiempo * float(i + 1)
-		var p: Vector2 = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t)
-		ultimo_punto = p
-		draw_circle(p, maxf(1.5, 3.0 - i * 0.2), Color(0.91, 1.0, 0.97, 0.9 - i * 0.08))
+
+	# Predicción paso a paso con el MISMO integrador (RK4), el MISMO dt (1/60)
+	# y los MISMOS rebotes en límites que usa el slime real. Así los puntos
+	# caen exactamente sobre la trayectoria real (mientras no choque con tiles).
+	var dt_fisica := 1.0 / 60.0
+	var rebote := 0.7
+	var radio_slime := 7.0
+	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))
+	var total_puntos := mini(puntos_trayectoria, 10)
+
+	var pos := holder.position
+	var vel := velocidad
+	var ultimo_punto := pos
+	var contador := 0
+	for punto_idx in range(total_puntos):
+		# Avanzar 'pasos_por_punto' pasos de física (RK4 + rebote en límites).
+		for _s in range(pasos_por_punto):
+			var r: Array = SolverNumerico.paso(SolverNumerico.Metodo.RK4, pos, vel, dt_fisica, gravedad, k)
+			pos = r[0]
+			vel = r[1]
+			if limites.has_area():
+				var izq := limites.position.x + radio_slime
+				var der := limites.end.x - radio_slime
+				var arr := limites.position.y + radio_slime
+				var aba := limites.end.y - radio_slime
+				if pos.x < izq:
+					pos.x = izq
+					if vel.x < 0.0: vel.x = -vel.x * rebote
+				elif pos.x > der:
+					pos.x = der
+					if vel.x > 0.0: vel.x = -vel.x * rebote
+				if pos.y < arr:
+					pos.y = arr
+					if vel.y < 0.0: vel.y = -vel.y * rebote
+				elif pos.y > aba:
+					pos.y = aba
+					if vel.y > 0.0: vel.y = -vel.y * rebote
+					if absf(vel.y) < 60.0:
+						# El slime se perdería al tocar el suelo: dejar de predecir.
+						vel = Vector2.ZERO
+		ultimo_punto = pos
+		var alpha := 0.9 - punto_idx * 0.08
+		draw_circle(pos, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
 
 	# Punto final visible: el mismo sprite del slime, desvanecido, en la posición predicha.
 	var textura: Texture2D = null
@@ -343,7 +379,7 @@ func _dibujar_trayectoria() -> void:
 		var nodo_sprite := slime_actual.get_node_or_null("Sprite2D") as Sprite2D
 		if nodo_sprite != null:
 			textura = nodo_sprite.texture
-	if textura != null:
+	if textura != null and vel != Vector2.ZERO:
 		var escala := 0.5
 		var tam := textura.get_size() * escala
 		var rect := Rect2(ultimo_punto - tam * 0.5, tam)
