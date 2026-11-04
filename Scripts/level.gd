@@ -67,8 +67,6 @@ func _ready() -> void:
 	# Límites: la cámara no sale del nivel y el slime rebota en sus bordes.
 	limites_globales = _calcular_limites()
 	camara.aplicar_limites(limites_globales)
-	if is_instance_valid(slingshoot):
-		slingshoot.limites = limites_globales
 	if mostrar_limites:
 		print("%s límites: %s" % [name, limites_globales])
 		_crear_marco_limites()

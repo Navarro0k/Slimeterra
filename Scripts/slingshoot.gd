@@ -16,8 +16,7 @@ signal slime_cargado(slime: Node2D)
 @export var angulo_desvio_grados: float = 0.0
 ## Modo de ecuación que muestra el HUD: "parabola" (nivel 1) o "matrices" (nivel 2).
 @export var modo_ecuacion: String = "parabola"
-## Límites del nivel (para predecir rebotes en la trayectoria).
-var limites: Rect2 = Rect2()
+
 
 @export_group("Área de Respeto")
 @export var tiempo_respeto: float = 1.5
