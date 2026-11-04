@@ -115,7 +115,7 @@ func _input(event: InputEvent) -> void:
 				_aplicar_tension_slime(0.0, Vector2.ZERO)
 				queue_redraw()
 			get_viewport().set_input_as_handled()
-	elif not event.pressed:
+	elif event is InputEventMouseButton and not event.pressed:
 		# Fin de cualquier interacción de apuntado (dial/slider incluidos):
 		# ocultar honda y trayectoria hasta la próxima manipulación.
 		if _mostrar_trayectoria:
