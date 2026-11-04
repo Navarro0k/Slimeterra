@@ -330,10 +330,24 @@ func _dibujar_trayectoria() -> void:
 	# Solución exacta (sin error numérico) para que los puntos sean predictivos:
 	# el slime usa RK4 con dt pequeño, que converge a esta solución.
 	var cantidad := mini(puntos_trayectoria, 10)
+	var ultimo_punto := holder.position
 	for i in range(cantidad):
 		var t := paso_tiempo * float(i + 1)
 		var p: Vector2 = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t)
-		draw_circle(p, maxf(1.0, 2.6 - i * 0.25), Color(0.91, 1.0, 0.97, 0.8 - i * 0.1))
+		ultimo_punto = p
+		draw_circle(p, maxf(1.5, 3.0 - i * 0.2), Color(0.91, 1.0, 0.97, 0.9 - i * 0.08))
+
+	# Punto final visible: el mismo sprite del slime, desvanecido, en la posición predicha.
+	var textura: Texture2D = null
+	if is_instance_valid(slime_actual):
+		var nodo_sprite := slime_actual.get_node_or_null("Sprite2D") as Sprite2D
+		if nodo_sprite != null:
+			textura = nodo_sprite.texture
+	if textura != null:
+		var escala := 0.5
+		var tam := textura.get_size() * escala
+		var rect := Rect2(ultimo_punto - tam * 0.5, tam)
+		draw_texture_rect(textura, rect, false, Color(1.0, 1.0, 1.0, 0.4))
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
