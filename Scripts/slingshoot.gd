@@ -329,40 +329,36 @@ func _dibujar_trayectoria() -> void:
 	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 
-	# Predicción de vuelo libre: mismo integrador (RK4) y mismo dt (1/60) que el
-	# slime real, SIN rebotes en límites (para mantener una curva limpia). Se detiene
-	# si la trayectoria toca una plataforma (el slime chocaría ahí).
-	var dt_fisica := 1.0 / 60.0
-	var radio_slime := 7.0
-	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))
-	var total_puntos := mini(puntos_trayectoria, 10)
+	# Prediccion de vuelo libre con la solucion EXACTA (sin error de discretizacion),
+	# que es la mas precisa. Se detiene si, estando ya en vuelo (fuera del area de
+	# respeto y libre de solidos), la trayectoria toca una plataforma.
 	var respect_radius := max_stretch + margen_respeto
-
-	var pos := holder.position
-	var vel := velocidad
-	var ultimo_punto := pos
+	var total_puntos := mini(puntos_trayectoria, 10)
+	var ultimo_punto := holder.position
+	var en_vuelo := false
 	var detener := false
 	for punto_idx in range(total_puntos):
 		if detener:
 			break
-		for _s in range(pasos_por_punto):
-			var r: Array = SolverNumerico.paso(SolverNumerico.Metodo.RK4, pos, vel, dt_fisica, gravedad, k)
-			pos = r[0]
-			vel = r[1]
-		ultimo_punto = pos
+		var t := paso_tiempo * float(punto_idx + 1)
+		var p: Vector2 = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t)
+		ultimo_punto = p
 
-		# ¿Toca una plataforma? (solo fuera del área de respeto)
-		var fuera_respeto := pos.distance_to(Vector2.ZERO) >= respect_radius
-		var choca_plataforma := false
-		if fuera_respeto:
-			choca_plataforma = _prediccion_choca_plataforma(pos)
+		var fuera_respeto := p.distance_to(Vector2.ZERO) >= respect_radius
+		var choca := _prediccion_choca_plataforma(p)
+		var libre := not choca
+
+		if not en_vuelo:
+			if fuera_respeto and libre:
+				en_vuelo = true
+		else:
+			if choca:
+				draw_circle(p, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
+				detener = true
+				continue
 
 		var alpha := 0.9 - punto_idx * 0.08
-		if choca_plataforma:
-			draw_circle(pos, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
-			detener = true
-		else:
-			draw_circle(pos, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
+		draw_circle(p, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
 
 	# Punto final visible: el mismo sprite del slime, desvanecido.
 	var textura: Texture2D = null
@@ -374,7 +370,10 @@ func _dibujar_trayectoria() -> void:
 		var escala := 0.5
 		var tam := textura.get_size() * escala
 		var rect := Rect2(ultimo_punto - tam * 0.5, tam)
-		draw_texture_rect(textura, rect, false, Color(1.0, 1.0, 1.0, 0.4))
+		var color_final := Color(1.0, 1.0, 1.0, 0.4)
+		if detener:
+			color_final = Color(1.0, 0.4, 0.4, 0.4)
+		draw_texture_rect(textura, rect, false, color_final)
 
 func _prediccion_choca_plataforma(pos_local: Vector2) -> bool:
 	var espacio := get_world_2d()
@@ -384,7 +383,7 @@ func _prediccion_choca_plataforma(pos_local: Vector2) -> bool:
 	if estado_espacio == null:
 		return false
 	var forma := CircleShape2D.new()
-	forma.radius = 6.0
+	forma.radius = 6.8
 	var consulta := PhysicsShapeQueryParameters2D.new()
 	consulta.shape = forma
 	consulta.transform = Transform2D(global_rotation, to_global(pos_local))
@@ -393,6 +392,7 @@ func _prediccion_choca_plataforma(pos_local: Vector2) -> bool:
 	consulta.collide_with_areas = false
 	var choques := estado_espacio.intersect_shape(consulta, 1)
 	return not choques.is_empty()
+
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
