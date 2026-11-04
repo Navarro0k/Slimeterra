@@ -334,7 +334,7 @@ func _dibujar_trayectoria() -> void:
 	# exactamente sobre la trayectoria real (en vuelo libre). Se detiene en la
 	# primera colision real (solo fuera del area de respeto y en vuelo).
 	var dt_fisica := 1.0 / 60.0
-	var radio_slime := 6.8
+	var radio_slime := 6.8108597
 	var respect_radius := max_stretch + margen_respeto + radio_slime
 	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))  # 5 pasos por punto
 	var total_puntos := mini(puntos_trayectoria, 10)
@@ -413,10 +413,11 @@ func _prediccion_choca_plataforma(pos_local: Vector2, quema: bool = false) -> bo
 	if estado_espacio == null:
 		return false
 	var forma := CircleShape2D.new()
-	forma.radius = 6.8
+	forma.radius = 6.8108597
 	var consulta := PhysicsShapeQueryParameters2D.new()
 	consulta.shape = forma
-	consulta.transform = Transform2D(global_rotation, to_global(pos_local))
+	# El CollisionShape2D del slime tiene offset (0, -1) en slime.tscn.
+	consulta.transform = Transform2D(global_rotation, to_global(pos_local) + Vector2(0, -1))
 	consulta.collision_mask = 1
 	consulta.collide_with_bodies = true
 	consulta.collide_with_areas = false
@@ -425,8 +426,8 @@ func _prediccion_choca_plataforma(pos_local: Vector2, quema: bool = false) -> bo
 		var collider = choque["collider"]
 		if collider is TileMapLayer:
 			var capa: TileMapLayer = collider
-			var local := capa.to_local(to_global(pos_local))
-			var radio := 6.8
+			var local := capa.to_local(to_global(pos_local) + Vector2(0, -1))
+			var radio := 6.8108597
 			var celda_min := capa.local_to_map(local - Vector2(radio, radio))
 			var celda_max := capa.local_to_map(local + Vector2(radio, radio))
 			var hay_solido_no_destruible := false
