@@ -330,60 +330,70 @@ func _dibujar_trayectoria() -> void:
 	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 
-	# Predicción paso a paso con el MISMO integrador (RK4), el MISMO dt (1/60)
-	# y los MISMOS rebotes en límites que usa el slime real. Así los puntos
-	# caen exactamente sobre la trayectoria real (mientras no choque con tiles).
+	# Predicción de vuelo libre: mismo integrador (RK4) y mismo dt (1/60) que el
+	# slime real, SIN rebotes en límites (para mantener una curva limpia). Se detiene
+	# si la trayectoria toca una plataforma (el slime chocaría ahí).
 	var dt_fisica := 1.0 / 60.0
-	var rebote := 0.7
 	var radio_slime := 7.0
 	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))
 	var total_puntos := mini(puntos_trayectoria, 10)
+	var respect_radius := max_stretch + margen_respeto
 
 	var pos := holder.position
 	var vel := velocidad
 	var ultimo_punto := pos
-	var contador := 0
+	var detener := false
 	for punto_idx in range(total_puntos):
-		# Avanzar 'pasos_por_punto' pasos de física (RK4 + rebote en límites).
+		if detener:
+			break
 		for _s in range(pasos_por_punto):
 			var r: Array = SolverNumerico.paso(SolverNumerico.Metodo.RK4, pos, vel, dt_fisica, gravedad, k)
 			pos = r[0]
 			vel = r[1]
-			if limites.has_area():
-				var izq := limites.position.x + radio_slime
-				var der := limites.end.x - radio_slime
-				var arr := limites.position.y + radio_slime
-				var aba := limites.end.y - radio_slime
-				if pos.x < izq:
-					pos.x = izq
-					if vel.x < 0.0: vel.x = -vel.x * rebote
-				elif pos.x > der:
-					pos.x = der
-					if vel.x > 0.0: vel.x = -vel.x * rebote
-				if pos.y < arr:
-					pos.y = arr
-					if vel.y < 0.0: vel.y = -vel.y * rebote
-				elif pos.y > aba:
-					pos.y = aba
-					if vel.y > 0.0: vel.y = -vel.y * rebote
-					if absf(vel.y) < 60.0:
-						# El slime se perdería al tocar el suelo: dejar de predecir.
-						vel = Vector2.ZERO
 		ultimo_punto = pos
-		var alpha := 0.9 - punto_idx * 0.08
-		draw_circle(pos, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
 
-	# Punto final visible: el mismo sprite del slime, desvanecido, en la posición predicha.
+		# ¿Toca una plataforma? (solo fuera del área de respeto)
+		var fuera_respeto := pos.distance_to(Vector2.ZERO) >= respect_radius
+		var choca_plataforma := false
+		if fuera_respeto:
+			choca_plataforma = _prediccion_choca_plataforma(pos)
+
+		var alpha := 0.9 - punto_idx * 0.08
+		if choca_plataforma:
+			draw_circle(pos, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
+			detener = true
+		else:
+			draw_circle(pos, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
+
+	# Punto final visible: el mismo sprite del slime, desvanecido.
 	var textura: Texture2D = null
 	if is_instance_valid(slime_actual):
 		var nodo_sprite := slime_actual.get_node_or_null("Sprite2D") as Sprite2D
 		if nodo_sprite != null:
 			textura = nodo_sprite.texture
-	if textura != null and vel != Vector2.ZERO:
+	if textura != null:
 		var escala := 0.5
 		var tam := textura.get_size() * escala
 		var rect := Rect2(ultimo_punto - tam * 0.5, tam)
 		draw_texture_rect(textura, rect, false, Color(1.0, 1.0, 1.0, 0.4))
+
+func _prediccion_choca_plataforma(pos_local: Vector2) -> bool:
+	var espacio := get_world_2d()
+	if espacio == null:
+		return false
+	var estado_espacio := espacio.direct_space_state
+	if estado_espacio == null:
+		return false
+	var forma := CircleShape2D.new()
+	forma.radius = 6.0
+	var consulta := PhysicsShapeQueryParameters2D.new()
+	consulta.shape = forma
+	consulta.transform = Transform2D(global_rotation, to_global(pos_local))
+	consulta.collision_mask = 1
+	consulta.collide_with_bodies = true
+	consulta.collide_with_areas = false
+	var choques := estado_espacio.intersect_shape(consulta, 1)
+	return not choques.is_empty()
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
