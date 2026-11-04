@@ -11,7 +11,7 @@ radius = 6.8108597
 
 [node name="Slime" type="RigidBody2D" unique_id=1874400018]
 script = ExtResource("1_vkoh2")
-tipo_slime = "fuego"
+tipo_slime = 1
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=511180151]
 scale = Vector2(0.6, 0.6)

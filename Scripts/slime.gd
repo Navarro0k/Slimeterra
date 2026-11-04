@@ -10,7 +10,7 @@ extends RigidBody2D
 enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 
 @export var metodo: SolverNumerico.Metodo = SolverNumerico.Metodo.RK4
-@export var tipo_slime: String = "base" # Opciones: "base" o "fuego"
+@export var tipo_slime: SlimeCatalogo.Tipo = SlimeCatalogo.Tipo.BASE
 ## Segundos máximos en vuelo. Si no choca con nada (cae al vacío) se descarta y el turno termina.
 @export var tiempo_vuelo_max: float = 8.0
 ## Margen (px) extra alrededor del slime para considerar que "toca" un bloque rompible.
@@ -91,7 +91,7 @@ func _ready():
 	contact_monitor = true
 	max_contacts_reported = 6
 
-	_quema_bloques = tipo_slime == "fuego"
+	_quema_bloques = tipo_slime == SlimeCatalogo.Tipo.FUEGO
 	var circulo := forma_colision.shape as CircleShape2D
 	if circulo != null:
 		var escala := forma_colision.global_scale

@@ -14,6 +14,8 @@ signal slime_cargado(slime: Node2D)
 @export_range(1, 8, 1) var puntos_trayectoria: int = 10
 @export var paso_tiempo: float = 0.08
 @export var angulo_desvio_grados: float = 0.0
+## Modo de ecuación que muestra el HUD: "parabola" (nivel 1) o "matrices" (nivel 2).
+@export var modo_ecuacion: String = "parabola"
 
 @export_group("Área de Respeto")
 @export var tiempo_respeto: float = 1.5
@@ -43,9 +45,10 @@ var _esperando_turno: bool = false
 var _padre_original: Node
 var _sonido_estirar_sonado: bool = false
 var _hud: ShotHUD
-var _ultimo_vector_disparo: Vector2 = Vector2.ZERO
-var _ultima_posicion_disparo: Vector2 = Vector2.ZERO
 var _arrastrando_slime: bool = false
+## Solo se dibuja la trayectoria predictiva mientras se apunta (arrastrando o moviendo dial/slider).
+var _mostrar_trayectoria: bool = false
+var _tiempo_trayectoria: float = 0.0
 var _posicion_holder_reposo: Vector2 = Vector2.ZERO
 
 var _player_estirar: AudioStreamPlayer
@@ -77,8 +80,15 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	_fijar_slime_al_holder()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	_fijar_slime_al_holder()
+	if _tiempo_trayectoria > 0.0:
+		_tiempo_trayectoria -= delta
+		if _tiempo_trayectoria <= 0.0:
+			_tiempo_trayectoria = 0.0
+			if _mostrar_trayectoria and not _arrastrando_slime:
+				_mostrar_trayectoria = false
+				queue_redraw()
 
 func _input(event: InputEvent) -> void:
 	# Permite jugar con el ratón: pulsar sobre el slime, estirar hacia atrás
@@ -91,12 +101,17 @@ func _input(event: InputEvent) -> void:
 			var radio_captura := maxf(12.0, max_stretch * 0.55)
 			if mouse_global.distance_to(holder.global_position) <= radio_captura:
 				_arrastrando_slime = true
-				_sonido_estirar_sonado = true
+				_mostrar_trayectoria = true
+				if not _sonido_estirar_sonado:
+					_sonido_estirar_sonado = true
+					_reproducir(_player_estirar, volumen_estirar_db, velocidad_inicio)
+				_iniciar_loop()
 				_actualizar_visibilidad(true)
 				_actualizar_arrastre(mouse_global)
 				get_viewport().set_input_as_handled()
 		elif not event.pressed and _arrastrando_slime:
 			_arrastrando_slime = false
+			_mostrar_trayectoria = false
 			var potencia_final := potencia_objetivo
 			var angulo_final := angulo_objetivo
 			if potencia_final > 1.0:
@@ -113,6 +128,7 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 func _actualizar_arrastre(mouse_global: Vector2) -> void:
+	_mostrar_trayectoria = true
 	var centro_global := center_marker.global_position
 	var desplazamiento := mouse_global - centro_global
 	# Arrastre libre en 360°: el slime puede estirarse en cualquier dirección.
@@ -137,12 +153,13 @@ func _actualizar_arrastre(mouse_global: Vector2) -> void:
 func _draw() -> void:
 	if mostrar_area_respeto:
 		draw_arc(center_marker.position, max_stretch + margen_respeto, 0, TAU, 48, Color(1, 0.3, 0.3, 0.5), 0.5)
-	if is_instance_valid(slime_actual) and not _esperando_turno:
+	if _mostrar_trayectoria and is_instance_valid(slime_actual) and not _esperando_turno:
 		_dibujar_trayectoria()
 
 func _crear_hud() -> void:
 	_hud = ShotHUD.new()
 	_hud.name = "ShotHUD"
+	_hud.modo_ecuacion = modo_ecuacion
 	get_tree().current_scene.call_deferred("add_child", _hud)
 	_hud.launch_requested.connect(disparar_con_parametros)
 	_hud.aim_changed.connect(_on_aim_changed)
@@ -189,8 +206,6 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	var vector_tiro := Vector2(cos(theta), -sin(theta)) * max_stretch * intensidad
 	if vector_tiro.length() <= 0.1:
 		return
-	_ultima_posicion_disparo = holder.global_position
-	_ultimo_vector_disparo = vector_tiro * multiplicador_fuerza
 	_esperando_turno = true
 	holder.position = _posicion_holder_reposo
 	actualizar_cuerdas(holder.position)
@@ -202,6 +217,8 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	queue_redraw()
 
 func _on_aim_changed(angulo: float, potencia: float) -> void:
+	_mostrar_trayectoria = true
+	_tiempo_trayectoria = 0.5
 	actualizar_aim(angulo, potencia)
 	if is_instance_valid(_hud):
 		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
@@ -307,10 +324,12 @@ func _dibujar_trayectoria() -> void:
 	var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
 	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-	var puntos := ModeloDisparo.trayectoria(holder.position, velocidad, gravedad, k, paso_tiempo, puntos_trayectoria)
-	# Solo se dibujan unos pocos puntos iniciales, como en Angry Birds.
-	for i in range(mini(puntos.size(), 10)):
-		var p: Vector2 = puntos[i]
+	# Solución exacta (sin error numérico) para que los puntos sean predictivos:
+	# el slime usa RK4 con dt pequeño, que converge a esta solución.
+	var cantidad := mini(puntos_trayectoria, 10)
+	for i in range(cantidad):
+		var t := paso_tiempo * float(i + 1)
+		var p: Vector2 = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t)
 		draw_circle(p, maxf(1.0, 2.6 - i * 0.25), Color(0.91, 1.0, 0.97, 0.8 - i * 0.1))
 
 func _actualizar_hud_estado() -> void:

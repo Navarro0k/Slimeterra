@@ -91,3 +91,15 @@ static func aplicar_matriz_rotacion(vector: Vector2, angulo_radianes: float) -> 
 	var y_rotado = vector.x * sin_a + vector.y * cos_a
 	
 	return Vector2(x_rotado, y_rotado)
+
+
+## Ecuación parabólica y(x) = a x² + b x + c para tiro sin amortiguamiento (nivel 1).
+## Coordenadas de pantalla: Y positiva hacia abajo.
+static func ecuacion_parabolica(posicion_inicial: Vector2, velocidad_inicial: Vector2, gravedad: float) -> Dictionary:
+	if absf(velocidad_inicial.x) < 0.0001:
+		return {"valida": false}
+	var pendiente: float = velocidad_inicial.y / velocidad_inicial.x
+	var a: float = gravedad / (2.0 * velocidad_inicial.x * velocidad_inicial.x)
+	var b: float = pendiente - 2.0 * a * posicion_inicial.x
+	var c: float = posicion_inicial.y - pendiente * posicion_inicial.x + a * posicion_inicial.x * posicion_inicial.x
+	return {"valida": true, "a": a, "b": b, "c": c, "vx": velocidad_inicial.x, "vy": velocidad_inicial.y}

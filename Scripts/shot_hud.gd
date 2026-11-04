@@ -19,6 +19,8 @@ var _equation_title: Label
 var _equation_visible := true
 var _launch_button: Button
 var _pause_button: Button
+## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
+var modo_ecuacion: String = "parabola"
 
 const PANEL := Color("#17263B")
 const PANEL_LIGHT := Color("#243B55")
@@ -205,19 +207,29 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	if not is_instance_valid(_math_label):
 		return
 
-	# Mostrar únicamente la ecuación y sus coeficientes actuales.
-	# Slingshoot llama esta función al cambiar el ángulo o la potencia.
-	var modelo: Dictionary = ModeloDisparo.ecuacion_parabolica(position_initial, velocity_initial, gravity)
+	# El panel muestra la matemática del nivel: parábola (cinemática) en el nivel 1,
+	# y el sistema lineal en espacio de estados (matrices) en el nivel 2, donde el
+	# amortiguamiento hace que el tiro ya no sea una parábola perfecta.
 	var texto := ""
-	texto += "[color=#FFFFFF]y(x) = ax² + bx + c[/color]\n"
-	if bool(modelo.get("valida", false)):
-		var a: float = float(modelo["a"])
-		var b: float = float(modelo["b"])
-		var c: float = float(modelo["c"])
-		texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
-		texto += "[color=#FFFFFF]y(x) = %.4fx² %s %.4fx %s %.2f[/color]" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
+	if modo_ecuacion == "matrices":
+		texto += "[color=#FFFFFF]Espacio de estados[/color]\n"
+		texto += "[code][color=#A6B8D0]s  = [ x    y    vx   vy ]ᵀ[/color]\n"
+		texto += "[color=#62D9C7]s₀ = [%.1f  %.1f  %.1f  %.1f]ᵀ[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
+		texto += "[color=#FFFFFF]ṡ  = A·s + b[/color]\n"
+		texto += "[color=#62D9C7]A  = [ 0   0   1   0 ]\n     [ 0   0   0   1 ]\n     [ 0   0  -k   0 ]\n     [ 0   0   0  -k ][/color]\n"
+		texto += "[color=#62D9C7]b  = [ 0   0   0   g ]ᵀ[/color][/code]\n"
+		texto += "[color=#A6B8D0]k = %.2f   g = %.0f[/color]" % [damping, gravity]
 	else:
-		texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
+		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
+		texto += "[color=#FFFFFF]y(x) = ax² + bx + c[/color]\n"
+		if bool(modelo.get("valida", false)):
+			var a: float = float(modelo["a"])
+			var b: float = float(modelo["b"])
+			var c: float = float(modelo["c"])
+			texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
+			texto += "[color=#FFFFFF]y(x) = %.4fx² %s %.4fx %s %.2f[/color]" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
+		else:
+			texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
 	_math_label.text = texto
 
 func _actualizar_lecturas() -> void:
