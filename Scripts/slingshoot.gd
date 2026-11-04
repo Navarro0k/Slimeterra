@@ -345,20 +345,20 @@ func _dibujar_trayectoria() -> void:
 		ultimo_punto = p
 
 		var fuera_respeto := p.distance_to(Vector2.ZERO) >= respect_radius
-	var quema := false
-	if is_instance_valid(slime_actual) and slime_actual.get("tipo_slime") == SlimeCatalogo.Tipo.FUEGO:
-		quema = true
-	var choca := _prediccion_choca_plataforma(p, quema)
-	var libre := not choca
+		var quema := false
+		if is_instance_valid(slime_actual) and slime_actual.get("tipo_slime") == SlimeCatalogo.Tipo.FUEGO:
+			quema = true
+		var choca := _prediccion_choca_plataforma(p, quema)
+		var libre := not choca
 
 		if not en_vuelo:
-			if fuera_respeto and libre:
-				en_vuelo = true
-		else:
-			if choca:
-				draw_circle(p, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
-				detener = true
-				continue
+				if fuera_respeto and libre:
+					en_vuelo = true
+			else:
+				if choca:
+					draw_circle(p, maxf(2.0, 3.5 - punto_idx * 0.2), Color(1.0, 0.4, 0.4, 0.95))
+					detener = true
+					continue
 
 		var alpha := 0.9 - punto_idx * 0.08
 		draw_circle(p, maxf(1.5, 3.0 - punto_idx * 0.2), Color(0.91, 1.0, 0.97, alpha))
