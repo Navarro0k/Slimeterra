@@ -91,8 +91,9 @@ func _construir_interfaz() -> void:
 	_math_label.scroll_active = false
 	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_math_label.custom_minimum_size = Vector2(150, 68)
-	_math_label.add_theme_font_size_override("normal_font_size", 7)
-	_math_label.add_theme_font_size_override("bold_font_size", 7)
+	_math_label.add_theme_font_size_override("normal_font_size", 6)
+	_math_label.add_theme_font_size_override("bold_font_size", 6)
+	_math_label.add_theme_font_size_override("mono_font_size", 6)
 	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
 	_math_label.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_math_label.add_theme_constant_override("outline_size", 2)
@@ -213,12 +214,12 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	var texto := ""
 	if modo_ecuacion == "matrices":
 		texto += "[color=#FFFFFF]Espacio de estados[/color]\n"
-		texto += "[code][color=#A6B8D0]s  = [ x    y    vx   vy ]ᵀ[/color]\n"
-		texto += "[color=#62D9C7]s₀ = [%.1f  %.1f  %.1f  %.1f]ᵀ[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
-		texto += "[color=#FFFFFF]ṡ  = A·s + b[/color]\n"
-		texto += "[color=#62D9C7]A  = [ 0   0   1   0 ]\n     [ 0   0   0   1 ]\n     [ 0   0  -k   0 ]\n     [ 0   0   0  -k ][/color]\n"
-		texto += "[color=#62D9C7]b  = [ 0   0   0   g ]ᵀ[/color][/code]\n"
-		texto += "[color=#A6B8D0]k = %.2f   g = %.0f[/color]" % [damping, gravity]
+		texto += "[color=#A6B8D0]s=[x y vx vy]ᵀ[/color]\n"
+		texto += "[color=#62D9C7]s₀=[%.0f %.0f %.0f %.0f]ᵀ[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
+		texto += "[color=#FFFFFF]ṡ=A·s+b[/color]\n"
+		texto += "[color=#62D9C7]A=[0 0 1 0;0 0 0 1;0 0 -k 0;0 0 0 -k][/color]\n"
+		texto += "[color=#62D9C7]b=[0 0 0 g]ᵀ[/color]\n"
+		texto += "[color=#A6B8D0]k=%.2f g=%.0f[/color]" % [damping, gravity]
 	else:
 		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
 		texto += "[color=#FFFFFF]y(x) = ax² + bx + c[/color]\n"

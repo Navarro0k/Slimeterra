@@ -48,7 +48,6 @@ var _hud: ShotHUD
 var _arrastrando_slime: bool = false
 ## Solo se dibuja la trayectoria predictiva mientras se apunta (arrastrando o moviendo dial/slider).
 var _mostrar_trayectoria: bool = false
-var _tiempo_trayectoria: float = 0.0
 var _posicion_holder_reposo: Vector2 = Vector2.ZERO
 
 var _player_estirar: AudioStreamPlayer
@@ -80,15 +79,8 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	_fijar_slime_al_holder()
 
-func _process(delta: float) -> void:
+func _process(_delta: float) -> void:
 	_fijar_slime_al_holder()
-	if _tiempo_trayectoria > 0.0:
-		_tiempo_trayectoria -= delta
-		if _tiempo_trayectoria <= 0.0:
-			_tiempo_trayectoria = 0.0
-			if _mostrar_trayectoria and not _arrastrando_slime:
-				_mostrar_trayectoria = false
-				queue_redraw()
 
 func _input(event: InputEvent) -> void:
 	# Permite jugar con el ratón: pulsar sobre el slime, estirar hacia atrás
@@ -123,6 +115,13 @@ func _input(event: InputEvent) -> void:
 				_aplicar_tension_slime(0.0, Vector2.ZERO)
 				queue_redraw()
 			get_viewport().set_input_as_handled()
+	elif not event.pressed:
+		# Fin de cualquier interacción de apuntado (dial/slider incluidos):
+		# ocultar honda y trayectoria hasta la próxima manipulación.
+		if _mostrar_trayectoria:
+			_mostrar_trayectoria = false
+			_actualizar_visibilidad(false)
+			queue_redraw()
 	elif event is InputEventMouseMotion and _arrastrando_slime:
 		_actualizar_arrastre(get_global_mouse_position())
 		get_viewport().set_input_as_handled()
@@ -182,6 +181,8 @@ func seleccionar(idx: int) -> void:
 		if not _esperando_turno and is_instance_valid(slime_actual):
 			_quitar_slime()
 			_instanciar_slime(_indice)
+			_mostrar_trayectoria = false
+			_actualizar_visibilidad(false)
 	_actualizar_hud_estado()
 	inventario_cambiado.emit(_inventario, _indice)
 
@@ -210,7 +211,7 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	holder.position = _posicion_holder_reposo
 	actualizar_cuerdas(holder.position)
 	_detener_sonidos_estirar()
-	_actualizar_visibilidad(true)
+	_actualizar_visibilidad(false)
 	_aplicar_tension_slime(0.0, Vector2.ZERO)
 	_ejecutar_disparo(vector_tiro)
 	_actualizar_hud_estado()
@@ -218,7 +219,7 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 
 func _on_aim_changed(angulo: float, potencia: float) -> void:
 	_mostrar_trayectoria = true
-	_tiempo_trayectoria = 0.5
+	_actualizar_visibilidad(true)
 	actualizar_aim(angulo, potencia)
 	if is_instance_valid(_hud):
 		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
@@ -229,6 +230,8 @@ func _on_aim_changed(angulo: float, potencia: float) -> void:
 
 func _cargar_nuevo_slime() -> void:
 	_esperando_turno = false
+	_mostrar_trayectoria = false
+	_actualizar_visibilidad(false)
 	if is_instance_valid(slime_actual):
 		_actualizar_hud_estado()
 		return
