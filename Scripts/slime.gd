@@ -165,7 +165,10 @@ func _actualizar_salida(delta: float) -> void:
 		estado = Estado.EN_VUELO
 		_activar_colisiones(true)
 	elif agotado:
-		_descartar()
+		# Forzar la activación de colisiones en lugar de descartar: evita que
+		# el slime atraviese plataformas cuando va paralelo a ellas.
+		estado = Estado.EN_VUELO
+		_activar_colisiones(true)
 
 func _fuera_del_circulo() -> bool:
 	if _zona == null or not is_instance_valid(_zona):

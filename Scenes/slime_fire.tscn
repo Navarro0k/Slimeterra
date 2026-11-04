@@ -30,5 +30,4 @@ color_ramp = SubResource("Gradient_wn07x")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=996152424]
 position = Vector2(0, 0.9999999)
-scale = Vector2(0.85332835, 0.7234592)
 shape = SubResource("CircleShape2D_wn07x")
