@@ -270,17 +270,17 @@ func _construir_cartilla() -> void:
 func _actualizar_cartilla() -> void:
 	if modo_ecuacion == "matrices":
 		if _cartilla_pagina == 0:
-			_cartilla_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x[sup]2[/sup] + b x + c.\n\nUsamos un sistema lineal: [b]s' = A * s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica."
+			_cartilla_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x² + b x + c.\n\nUsamos un sistema lineal: [b]s' = A * s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica."
 			_cartilla_btn.text = "Continuar"
 		else:
 			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\ns0 = [ x0  y0  vx0  vy0 ]^T\n\nA =\n[  0   0   1   0  ]\n[  0   0   0   1  ]\n[  0   0  -k   0  ]\n[  0   0   0  -k  ]\n\nb = [ 0  0  0  g ]^T\n\nk = 0.10     g = 980\n\nAjusta angulo y potencia: s0 cambia en tiempo real y la trayectoria se recalcula."
 			_cartilla_btn.text = "Cerrar"
 	else:
 		if _cartilla_pagina == 0:
-			_cartilla_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x[sup]2[/sup] + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nAjusta angulo y potencia para alcanzar la meta."
+			_cartilla_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x² + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nAjusta angulo y potencia para alcanzar la meta."
 			_cartilla_btn.text = "Continuar"
 		else:
-			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\na = g / (2 * vx[sup]2[/sup])\nb = vy / vx - 2 * a * x0\nc = y0 - b * x0 + a * x0[sup]2[/sup]\n\nCon vx, vy de la velocidad inicial.\nCambia angulo y potencia: a, b, c se actualizan en tiempo real."
+			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\na = g / (2 * vx²)\nb = vy / vx - 2 * a * x0\nc = y0 - b * x0 + a * x0²\n\nCon vx, vy de la velocidad inicial.\nCambia angulo y potencia: a, b, c se actualizan en tiempo real."
 			_cartilla_btn.text = "Cerrar"
 
 func _avanzar_cartilla() -> void:
@@ -352,13 +352,13 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 		texto += "[color=#A6B8D0]k=%.2f   g=%.0f[/color]" % [damping, gravity]
 	else:
 		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
-		texto += "[color=#FFFFFF]y(x) = a x[sup]2[/sup] + b x + c[/color]\n"
+		texto += "[color=#FFFFFF]y(x) = a x\u00b2 + b x + c[/color]\n"
 		if bool(modelo.get("valida", false)):
 			var a: float = float(modelo["a"])
 			var b: float = float(modelo["b"])
 			var c: float = float(modelo["c"])
 			texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
-			texto += "[color=#FFFFFF]y(x) = %.4f x[sup]2[/sup] %s %.4f x %s %.2f[/color]" % [a, "+" if b >= 0.0 else "-", absf(b), "+" if c >= 0.0 else "-", absf(c)]
+			texto += "[color=#FFFFFF]y(x) = %.4f x\u00b2 %s %.4f x %s %.2f[/color]" % [a, "+" if b >= 0.0 else "-", absf(b), "+" if c >= 0.0 else "-", absf(c)]
 		else:
 			texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
 	_math_label.text = texto
