@@ -434,6 +434,7 @@ func _buscar_superficie_pegajosa(nodo: Node) -> Node:
 # ---------------------------------------------------------------------------
 
 func _quemar_bloques(delta: float) -> void:
+	print("Slime fuego: _quemar_bloques llamado, quema_bloques=", _quema_bloques)
 	var radio := _radio + margen_quema
 	_quemar_en(global_position, radio)
 	_quemar_en(global_position + v_motor * delta, radio)
