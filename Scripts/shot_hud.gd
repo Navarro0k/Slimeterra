@@ -22,7 +22,7 @@ var _pause_button: Button
 ## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
 var modo_ecuacion: String = "parabola"
 ## Fuente pixel para ecuaciones y cartilla.
-var _fuente_pixel: FontFile
+var _fuente_ecuaciones: FontFile
 ## Cartilla de explicacion (bloc de notas amarillo).
 var _cartilla: PanelContainer
 
@@ -35,7 +35,7 @@ const EDGE := Color("#3C6680")
 func _ready() -> void:
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	_fuente_pixel = load("res://Assets/fonts/tinypixel.otf") as FontFile
+	_fuente_ecuaciones = load("res://Assets/fonts/JetBrainsMono-Regular.ttf") as FontFile
 	_construir_interfaz()
 	_construir_cartilla()
 	_actualizar_lecturas()
@@ -60,8 +60,8 @@ func _label(texto: String, size: int = 9, color: Color = RED) -> Label:
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 2)
-	if _fuente_pixel != null:
-		l.add_theme_font_override("font", _fuente_pixel)
+	if _fuente_ecuaciones != null:
+		l.add_theme_font_override("font", _fuente_ecuaciones)
 	return l
 
 func _panel_contenedor(parent: Control, nombre: String, pos: Vector2, tam: Vector2, color: Color = PANEL) -> PanelContainer:
@@ -113,10 +113,10 @@ func _construir_interfaz() -> void:
 	_math_label.add_theme_font_size_override("normal_font_size", 8)
 	_math_label.add_theme_font_size_override("bold_font_size", 8)
 	_math_label.add_theme_font_size_override("mono_font_size", 8)
-	if _fuente_pixel != null:
-		_math_label.add_theme_font_override("normal_font", _fuente_pixel)
-		_math_label.add_theme_font_override("bold_font", _fuente_pixel)
-		_math_label.add_theme_font_override("mono_font", _fuente_pixel)
+	if _fuente_ecuaciones != null:
+		_math_label.add_theme_font_override("normal_font", _fuente_ecuaciones)
+		_math_label.add_theme_font_override("bold_font", _fuente_ecuaciones)
+		_math_label.add_theme_font_override("mono_font", _fuente_ecuaciones)
 	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
 	_math_label.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_math_label.add_theme_constant_override("outline_size", 2)
@@ -132,8 +132,8 @@ func _construir_interfaz() -> void:
 	_equation_toggle.add_theme_color_override("font_color", RED)
 	_equation_toggle.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_equation_toggle.add_theme_constant_override("outline_size", 2)
-	if _fuente_pixel != null:
-		_equation_toggle.add_theme_font_override("font", _fuente_pixel)
+	if _fuente_ecuaciones != null:
+		_equation_toggle.add_theme_font_override("font", _fuente_ecuaciones)
 	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.58)))
 	_equation_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.14, 0.23, 0.33, 0.92)))
 	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
@@ -181,8 +181,8 @@ func _construir_interfaz() -> void:
 	_launch_button.text = "DISPARAR ↗"
 	_launch_button.custom_minimum_size = Vector2(94, 14)
 	_launch_button.add_theme_font_size_override("font_size", 7)
-	if _fuente_pixel != null:
-		_launch_button.add_theme_font_override("font", _fuente_pixel)
+	if _fuente_ecuaciones != null:
+		_launch_button.add_theme_font_override("font", _fuente_ecuaciones)
 	_launch_button.add_theme_color_override("font_color", Color("#102338"))
 	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#62D9C7")))
 	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AEBDD")))
@@ -190,53 +190,81 @@ func _construir_interfaz() -> void:
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
 
-func _construir_cartilla() -> void:
-	# Bloc de notas amarillo con la explicacion de la ecuacion del nivel.
-	var texto_cartilla := ""
-	if modo_ecuacion == "matrices":
-		texto_cartilla = "Nivel 2: Espacio de estados\nLa trayectoria con amortiguamiento ya no es una parabola.\nUsamos matrices: s' = A*s + b.\nAjusta angulo y potencia."
-	else:
-		texto_cartilla = "Nivel 1: Trayectoria parabolica\ny(x) = a x^2 + b x + c\nAjusta el angulo y la potencia para alcanzar la meta."
+var _cartilla_lbl: Label
+var _cartilla_btn: Button
+var _cartilla_pagina: int = 0
 
+func _construir_cartilla() -> void:
+	# Bloc de notas amarillo (cuaderno) con explicacion detallada + boton Continuar.
 	_cartilla = PanelContainer.new()
 	_cartilla.name = "Cartilla"
 	var estilo := StyleBoxFlat.new()
-	estilo.bg_color = Color(1.0, 0.95, 0.55, 0.92)
-	estilo.border_color = Color(0.7, 0.6, 0.2)
-	estilo.set_border_width_all(2)
-	estilo.set_corner_radius_all(4)
-	estilo.content_margin_left = 6
-	estilo.content_margin_right = 6
-	estilo.content_margin_top = 4
-	estilo.content_margin_bottom = 4
+	estilo.bg_color = Color(1.0, 0.96, 0.62, 0.95)
+	estilo.border_color = Color(0.55, 0.4, 0.15)
+	estilo.set_border_width_all(3)
+	estilo.set_corner_radius_all(6)
+	estilo.content_margin_left = 10
+	estilo.content_margin_right = 10
+	estilo.content_margin_top = 8
+	estilo.content_margin_bottom = 8
 	_cartilla.add_theme_stylebox_override("panel", estilo)
-	_cartilla.position = Vector2(160, 95)
-	_cartilla.custom_minimum_size = Vector2(160, 70)
-	_cartilla.size = Vector2(160, 70)
+	_cartilla.position = Vector2(120, 50)
+	_cartilla.custom_minimum_size = Vector2(240, 170)
+	_cartilla.size = Vector2(240, 170)
 
-	var lbl := Label.new()
-	lbl.text = texto_cartilla
-	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lbl.custom_minimum_size = Vector2(148, 0)
-	lbl.add_theme_font_size_override("font_size", 8)
-	lbl.add_theme_color_override("font_color", Color(0.15, 0.1, 0.0))
-	if _fuente_pixel != null:
-		lbl.add_theme_font_override("font", _fuente_pixel)
-	_cartilla.add_child(lbl)
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 6)
+	_cartilla.add_child(vbox)
+
+	_cartilla_lbl = Label.new()
+	_cartilla_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_cartilla_lbl.custom_minimum_size = Vector2(220, 120)
+	_cartilla_lbl.add_theme_font_size_override("font_size", 9)
+	_cartilla_lbl.add_theme_color_override("font_color", Color(0.12, 0.08, 0.0))
+	if _fuente_ecuaciones != null:
+		_cartilla_lbl.add_theme_font_override("font", _fuente_ecuaciones)
+	vbox.add_child(_cartilla_lbl)
+
+	_cartilla_btn = Button.new()
+	_cartilla_btn.text = "Continuar"
+	_cartilla_btn.custom_minimum_size = Vector2(90, 22)
+	_cartilla_btn.add_theme_font_size_override("font_size", 9)
+	_cartilla_btn.add_theme_color_override("font_color", Color(0.12, 0.08, 0.0))
+	if _fuente_ecuaciones != null:
+		_cartilla_btn.add_theme_font_override("font", _fuente_ecuaciones)
+	_cartilla_btn.pressed.connect(_avanzar_cartilla)
+	vbox.add_child(_cartilla_btn)
 
 	add_child(_cartilla)
 	_cartilla.mouse_filter = Control.MOUSE_FILTER_STOP
-	_cartilla.gui_input.connect(func(event):
-		if event is InputEventMouseButton and event.pressed:
-			_cartilla.visible = false
-	)
 
-	# Auto-ocultar tras 6 segundos.
-	var timer := get_tree().create_timer(6.0)
-	timer.timeout.connect(func():
+	# Mostrar pagina 1.
+	_cartilla_pagina = 0
+	_actualizar_cartilla()
+
+func _actualizar_cartilla() -> void:
+	if modo_ecuacion == "matrices":
+		if _cartilla_pagina == 0:
+			_cartilla_lbl.text = "Por que matrices?\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, así la curva se deforma y ya no es y=ax^2+bx+c.\nUsamos un sistema lineal: s' = A*s + b, donde s=[x,y,vx,vy]."
+			_cartilla_btn.text = "Continuar"
+		else:
+			_cartilla_lbl.text = "Formula y aplicacion:\ns0 = [x0 y0 vx0 vy0]^T\nA = [[0,0,1,0],[0,0,0,1],[0,0,-k,0],[0,0,0,-k]]\nb = [0,0,0,g]^T\nAjusta angulo y potencia: s0 cambia en tiempo real y la trayectoria se recalcula."
+			_cartilla_btn.text = "Cerrar"
+	else:
+		if _cartilla_pagina == 0:
+			_cartilla_lbl.text = "Por que una parabola?\nSin amortiguamiento, el tiro sigue y(x)=a x^2 + b x + c. La gravedad es constante y no hay rozamiento, así la curva es simetrica.\nAjusta angulo y potencia para alcanzar la meta."
+			_cartilla_btn.text = "Continuar"
+		else:
+			_cartilla_lbl.text = "Formula y aplicacion:\na = g/(2*vx^2)\nb = vy/vx - 2*a*x0\nc = y0 - b*x0 + a*x0^2\nCon vx, vy de la velocidad inicial. Cambia angulo/potencia y a,b,c se actualizan en tiempo real."
+			_cartilla_btn.text = "Cerrar"
+
+func _avanzar_cartilla() -> void:
+	if _cartilla_pagina == 0:
+		_cartilla_pagina = 1
+		_actualizar_cartilla()
+	else:
 		if is_instance_valid(_cartilla):
 			_cartilla.visible = false
-	)
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
