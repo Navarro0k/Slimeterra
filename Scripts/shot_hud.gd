@@ -196,8 +196,13 @@ var _cartilla: Node
 var cartilla_activa: bool = true
 
 func _construir_cartilla() -> void:
-	_cartilla = preload("res://Scenes/UI/Cartilla.tscn").instantiate()
+	var escena_cartilla := load("res://Scenes/UI/Cartilla.tscn")
+	if escena_cartilla == null:
+		cartilla_activa = false
+		return
+	_cartilla = escena_cartilla.instantiate()
 	if _cartilla == null:
+		cartilla_activa = false
 		return
 	_cartilla.set("modo_ecuacion", modo_ecuacion)
 	_cartilla.connect("cerrada", _on_cartilla_cerrada)
