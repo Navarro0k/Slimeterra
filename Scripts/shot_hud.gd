@@ -209,9 +209,9 @@ func _construir_cartilla() -> void:
 	estilo.content_margin_top = 10
 	estilo.content_margin_bottom = 10
 	_cartilla.add_theme_stylebox_override("panel", estilo)
-	_cartilla.position = Vector2(80, 30)
-	_cartilla.custom_minimum_size = Vector2(320, 210)
-	_cartilla.size = Vector2(320, 210)
+	_cartilla.position = Vector2(70, 20)
+	_cartilla.custom_minimum_size = Vector2(340, 230)
+	_cartilla.size = Vector2(340, 230)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -220,9 +220,9 @@ func _construir_cartilla() -> void:
 	_cartilla_lbl = RichTextLabel.new()
 	_cartilla_lbl.bbcode_enabled = true
 	_cartilla_lbl.fit_content = false
-	_cartilla_lbl.scroll_active = false
+	_cartilla_lbl.scroll_active = true
 	_cartilla_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_cartilla_lbl.custom_minimum_size = Vector2(296, 160)
+	_cartilla_lbl.custom_minimum_size = Vector2(300, 180)
 	_cartilla_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_cartilla_lbl.add_theme_font_size_override("normal_font_size", 10)
 	_cartilla_lbl.add_theme_font_size_override("bold_font_size", 10)
@@ -256,7 +256,10 @@ func _construir_cartilla() -> void:
 
 	# Musica de fondo explicativa (libre de copyright).
 	_musica_cartilla = AudioStreamPlayer.new()
-	_musica_cartilla.stream = load("res://Assets/Audio/sound_effects/CartillaBg.mp3") as AudioStream
+	var stream := load("res://Assets/Audio/sound_effects/CartillaBg.mp3") as AudioStreamMP3
+	if stream != null:
+		stream.loop = true
+	_musica_cartilla.stream = stream
 	_musica_cartilla.volume_db = -10.0
 	_musica_cartilla.bus = &"Master"
 	add_child(_musica_cartilla)
@@ -270,17 +273,17 @@ func _construir_cartilla() -> void:
 func _actualizar_cartilla() -> void:
 	if modo_ecuacion == "matrices":
 		if _cartilla_pagina == 0:
-			_cartilla_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x² + b x + c.\n\nUsamos un sistema lineal: [b]s' = A * s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica."
+			_cartilla_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x² + b x + c.\n\nUsamos un sistema lineal: [b]s' = A*s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica.\n\nLa matriz A encode la gravedad y el amortiguamiento; b encode la gravedad constante. La solucion es s(t) = e^(A t) * s0 + integral(e^(A tau) b dtau)."
 			_cartilla_btn.text = "Continuar"
 		else:
-			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\ns0 = [ x0  y0  vx0  vy0 ]^T\n\nA =\n[  0   0   1   0  ]\n[  0   0   0   1  ]\n[  0   0  -k   0  ]\n[  0   0   0  -k  ]\n\nb = [ 0  0  0  g ]^T\n\nk = 0.10     g = 980\n\nAjusta angulo y potencia: s0 cambia en tiempo real y la trayectoria se recalcula."
+			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\ns0 = [ x0  y0  vx0  vy0 ]^T\n\nA =\n[  0   0   1   0  ]\n[  0   0   0   1  ]\n[  0   0  -k   0  ]\n[  0   0   0  -k  ]\n\nb = [ 0  0  0  g ]^T\n\nk = 0.10     g = 980\n\nAjusta angulo y potencia: s0 cambia en tiempo real y la trayectoria se recalcula.\n\n[b]Ahora juega y observa como la matriz cambia la trayectoria![/b]"
 			_cartilla_btn.text = "Cerrar"
 	else:
 		if _cartilla_pagina == 0:
-			_cartilla_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x² + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nAjusta angulo y potencia para alcanzar la meta."
+			_cartilla_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x² + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nLos coeficientes son:\na = g / (2 * vx²)  (curvatura, depende de la velocidad horizontal)\nb = vy / vx - 2 * a * x0  (pendiente inicial)\nc = y0 - b * x0 + a * x0²  (posicion inicial)\n\nAjusta angulo y potencia para alcanzar la meta."
 			_cartilla_btn.text = "Continuar"
 		else:
-			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\na = g / (2 * vx²)\nb = vy / vx - 2 * a * x0\nc = y0 - b * x0 + a * x0²\n\nCon vx, vy de la velocidad inicial.\nCambia angulo y potencia: a, b, c se actualizan en tiempo real."
+			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\na = g / (2 * vx²)\nb = vy / vx - 2 * a * x0\nc = y0 - b * x0 + a * x0²\n\nCon vx, vy de la velocidad inicial.\n\nCambia angulo y potencia: a, b, c se actualizan en tiempo real en el panel superior.\n\n[b]Ahora juega y observa como cambian los coeficientes![/b]"
 			_cartilla_btn.text = "Cerrar"
 
 func _avanzar_cartilla() -> void:
