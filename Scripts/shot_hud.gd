@@ -203,18 +203,19 @@ func _construir_cartilla() -> void:
 	_cartilla = PanelContainer.new()
 	_cartilla.name = "Cartilla"
 	var estilo := StyleBoxFlat.new()
-	estilo.bg_color = Color(1.0, 0.96, 0.62, 0.96)
-	estilo.border_color = Color(0.55, 0.4, 0.15)
+	# Bloc de notas: papel crema con lineas horizontales.
+	estilo.bg_color = Color(0.98, 0.95, 0.82, 0.97)
+	estilo.border_color = Color(0.45, 0.3, 0.12)
 	estilo.set_border_width_all(3)
-	estilo.set_corner_radius_all(6)
-	estilo.content_margin_left = 12
-	estilo.content_margin_right = 12
-	estilo.content_margin_top = 10
-	estilo.content_margin_bottom = 10
+	estilo.set_corner_radius_all(8)
+	estilo.content_margin_left = 14
+	estilo.content_margin_right = 14
+	estilo.content_margin_top = 12
+	estilo.content_margin_bottom = 12
 	_cartilla.add_theme_stylebox_override("panel", estilo)
-	_cartilla.position = Vector2(70, 20)
-	_cartilla.custom_minimum_size = Vector2(340, 230)
-	_cartilla.size = Vector2(340, 230)
+	_cartilla.position = Vector2(60, 15)
+	_cartilla.custom_minimum_size = Vector2(360, 240)
+	_cartilla.size = Vector2(360, 240)
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -250,7 +251,7 @@ func _construir_cartilla() -> void:
 	add_child(_cartilla)
 	_cartilla.mouse_filter = Control.MOUSE_FILTER_STOP
 	_cartilla.gui_input.connect(func(event):
-		if event is InputEventMouseButton and event.pressed:
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			_cerrar_cartilla()
 	)
 
