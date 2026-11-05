@@ -88,6 +88,8 @@ func _input(event: InputEvent) -> void:
 	# y soltar para disparar. Los controles del HUD siguen sincronizados.
 	if _esperando_turno or not is_instance_valid(slime_actual):
 		return
+	if is_instance_valid(_hud) and _hud.cartilla_activa:
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed and not _arrastrando_slime:
 			var mouse_global := get_global_mouse_position()
@@ -163,6 +165,7 @@ func _crear_hud() -> void:
 	get_tree().current_scene.call_deferred("add_child", _hud)
 	_hud.launch_requested.connect(disparar_con_parametros)
 	_hud.aim_changed.connect(_on_aim_changed)
+	_hud.cartilla_cerrada.connect(_actualizar_hud_estado)
 	_hud.set_launch_enabled(is_instance_valid(slime_actual))
 
 func configurar(slimes: Dictionary) -> void:
@@ -201,6 +204,8 @@ func actualizar_aim(angulo: float, potencia: float) -> void:
 func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	_arrastrando_slime = false
 	if _esperando_turno or not is_instance_valid(slime_actual) or potencia <= 0.0:
+		return
+	if is_instance_valid(_hud) and _hud.cartilla_activa:
 		return
 	actualizar_aim(angulo, potencia)
 	var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
@@ -375,7 +380,10 @@ func _dibujar_trayectoria() -> void:
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
-		_hud.set_launch_enabled(is_instance_valid(slime_actual) and not _esperando_turno)
+		var puede := is_instance_valid(slime_actual) and not _esperando_turno
+		if _hud.cartilla_activa:
+			puede = false
+		_hud.set_launch_enabled(puede)
 		var g: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)

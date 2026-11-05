@@ -4,6 +4,7 @@ class_name ShotHUD
 
 signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
+signal cartilla_cerrada()
 
 var angle_degrees: float = 45.0
 var power_percent: float = 65.0
@@ -194,6 +195,8 @@ var _cartilla_lbl: RichTextLabel
 var _cartilla_btn: Button
 var _cartilla_pagina: int = 0
 var _musica_cartilla: AudioStreamPlayer
+## True mientras la cartilla esta abierta: bloquea el juego.
+var cartilla_activa: bool = true
 
 func _construir_cartilla() -> void:
 	# Bloc de notas amarillo (cuaderno) grande con explicacion detallada + boton Continuar.
@@ -248,10 +251,7 @@ func _construir_cartilla() -> void:
 	_cartilla.mouse_filter = Control.MOUSE_FILTER_STOP
 	_cartilla.gui_input.connect(func(event):
 		if event is InputEventMouseButton and event.pressed:
-			if is_instance_valid(_cartilla):
-				_cartilla.visible = false
-			if is_instance_valid(_musica_cartilla):
-				_musica_cartilla.stop()
+			_cerrar_cartilla()
 	)
 
 	# Musica de fondo explicativa (libre de copyright).
@@ -263,6 +263,12 @@ func _construir_cartilla() -> void:
 	_musica_cartilla.volume_db = -10.0
 	_musica_cartilla.bus = &"Master"
 	add_child(_musica_cartilla)
+
+	# Pausar la musica del nivel mientras se muestra la cartilla.
+	for m in get_tree().get_nodes_in_group("musica_nivel"):
+		if m is AudioStreamPlayer:
+			(m as AudioStreamPlayer).stream_paused = true
+
 	if _musica_cartilla.stream != null:
 		_musica_cartilla.play()
 
@@ -291,10 +297,19 @@ func _avanzar_cartilla() -> void:
 		_cartilla_pagina = 1
 		_actualizar_cartilla()
 	else:
-		if is_instance_valid(_cartilla):
-			_cartilla.visible = false
-		if is_instance_valid(_musica_cartilla):
-			_musica_cartilla.stop()
+		_cerrar_cartilla()
+
+func _cerrar_cartilla() -> void:
+	cartilla_activa = false
+	if is_instance_valid(_cartilla):
+		_cartilla.visible = false
+	if is_instance_valid(_musica_cartilla):
+		_musica_cartilla.stop()
+	# Reanudar la musica del nivel.
+	for m in get_tree().get_nodes_in_group("musica_nivel"):
+		if m is AudioStreamPlayer:
+			(m as AudioStreamPlayer).stream_paused = false
+	cartilla_cerrada.emit()
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
