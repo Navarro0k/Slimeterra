@@ -11,9 +11,16 @@ signal cerrada
 @onready var btn: Button = $Panel/VBox/BtnContinuar
 @onready var musica: AudioStreamPlayer = $Musica
 
+var _fuente: FontFile
 var _pagina: int = 0
 
 func _ready() -> void:
+	_fuente = load("res://Assets/fonts/JetBrainsMono-Regular.ttf") as FontFile
+	if _fuente != null:
+		lbl.add_theme_font_override("normal_font", _fuente)
+		lbl.add_theme_font_override("bold_font", _fuente)
+		lbl.add_theme_font_override("mono_font", _fuente)
+		btn.add_theme_font_override("font", _fuente)
 	# Pausar la musica del nivel mientras se muestra la cartilla.
 	for m in get_tree().get_nodes_in_group("musica_nivel"):
 		if m is AudioStreamPlayer:
