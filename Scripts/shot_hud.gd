@@ -33,7 +33,7 @@ const TEXT := Color("#F0F6FF")
 const EDGE := Color("#3C6680")
 
 func _ready() -> void:
-	layer = 10
+	layer = 45
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_fuente_ecuaciones = load("res://Assets/fonts/JetBrainsMono-Regular.ttf") as FontFile
 	_construir_interfaz()
