@@ -195,11 +195,11 @@ var _cartilla: Node
 var cartilla_activa: bool = true
 
 func _construir_cartilla() -> void:
-	var escena_cartilla := load("res://Scenes/UI/Cartilla.tscn")
-	if escena_cartilla == null:
+	var script_cartilla := load("res://Scripts/cartilla.gd")
+	if script_cartilla == null:
 		cartilla_activa = false
 		return
-	_cartilla = escena_cartilla.instantiate()
+	_cartilla = script_cartilla.new()
 	if _cartilla == null:
 		cartilla_activa = false
 		return
@@ -209,7 +209,6 @@ func _construir_cartilla() -> void:
 
 func _on_cartilla_cerrada() -> void:
 	cartilla_activa = false
-	_actualizar_hud_estado()
 	cartilla_cerrada.emit()
 
 func _on_equation_toggle_pressed() -> void:
