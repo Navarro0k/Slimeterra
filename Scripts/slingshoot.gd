@@ -175,16 +175,25 @@ func configurar(slimes: Dictionary) -> void:
 	inventario_cambiado.emit(_inventario, _indice)
 
 func seleccionar(idx: int) -> void:
-	if idx < 0 or idx >= _inventario.size() or _inventario[idx]["cantidad"] <= 0:
-		inventario_cambiado.emit(_inventario, _indice)
+	# Validar que el índice exista y tenga munición.
+	if idx < 0 or idx >= _inventario.size():
 		return
-	if idx != _indice:
-		_indice = idx
-		if not _esperando_turno and is_instance_valid(slime_actual):
-			_quitar_slime()
-			_instanciar_slime(_indice)
-			_mostrar_trayectoria = false
-			_actualizar_visibilidad(false)
+	if _inventario[idx]["cantidad"] <= 0:
+		return
+	# Si ya está seleccionado, no hacer nada.
+	if idx == _indice:
+		return
+	# Actualizar el índice seleccionado.
+	_indice = idx
+	# Si hay un slime cargado, reemplazarlo.
+	if is_instance_valid(slime_actual):
+		_quitar_slime()
+		_instanciar_slime(_indice)
+	# Si no hay slime en vuelo, cargar el seleccionado.
+	elif not _esperando_turno:
+		_instanciar_slime(_indice)
+	_mostrar_trayectoria = false
+	_actualizar_visibilidad(false)
 	_actualizar_hud_estado()
 	inventario_cambiado.emit(_inventario, _indice)
 

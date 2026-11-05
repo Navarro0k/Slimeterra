@@ -78,7 +78,7 @@ func _construir_interfaz() -> void:
 	var root := Control.new()
 	root.name = "Root"
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_PASS
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
 	# Grid de HUD para viewport 480x270:

@@ -110,5 +110,4 @@ func _slot_style(color: Color, border: Color = Color("#62D9C7")) -> StyleBoxFlat
 	return estilo
 
 func _on_slot_pressed(indice: int) -> void:
-	# Confirmar selección en UI inmediatamente; la resortera devuelve el estado real.
 	slime_elegido.emit(indice)
