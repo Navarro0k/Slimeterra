@@ -27,8 +27,6 @@ func _ready() -> void:
 			(m as AudioStreamPlayer).stream_paused = true
 	# Reproducir musica de fondo explicativa.
 	if musica != null and musica.stream != null:
-		if musica.stream is AudioStreamMP3:
-			(musica.stream as AudioStreamMP3).loop = true
 		musica.play()
 	_actualizar()
 
