@@ -311,43 +311,24 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	var dt: float = state.step
 	var gravedad: float = ProjectSettings.get_setting("physics/2d/default_gravity")
 
-	# Sincronizar velocidad si la física cambió (colisión).
 	if state.linear_velocity.distance_to(v_motor) > 0.01:
 		vel_sim = state.linear_velocity
 
 	var pos: Vector2 = state.transform.origin
-	var hay_contacto := state.get_contact_count() > 0
+	var r: Array = SolverNumerico.paso(metodo, pos, vel_sim, dt, gravedad, arrastre)
+	var nueva_pos: Vector2 = r[0]
+	var nueva_vel: Vector2 = r[1]
 
-	if hay_contacto:
-		# Colisión: aplicar gravedad/amortiguamiento manualmente y dejar que el
-		# motor de física integre la posición y resuelva la colisión (rebote/empuje).
-		# NO usar RK4 aquí, porque RK4 ignora las colisiones y atraviesa paredes.
-		var a := Vector2(0.0, gravedad) - vel_sim * arrastre
-		vel_sim += a * dt
-		if limites.has_area():
-			var rebote := _rebotar_en_limites(pos, vel_sim)
-			if estado == Estado.TERMINADO:
-				return
-			vel_sim = rebote[1]
-		v_motor = vel_sim
-		state.linear_velocity = v_motor
-	else:
-		# Vuelo libre: RK4 (coincide con los puntos de trayectoria).
-		var r: Array = SolverNumerico.paso(metodo, pos, vel_sim, dt, gravedad, arrastre)
-		var nueva_pos: Vector2 = r[0]
-		var nueva_vel: Vector2 = r[1]
+	if limites.has_area():
+		var rebote := _rebotar_en_limites(nueva_pos, nueva_vel)
+		if estado == Estado.TERMINADO:
+			return
+		nueva_pos = rebote[0]
+		nueva_vel = rebote[1]
 
-		if limites.has_area():
-			var rebote := _rebotar_en_limites(nueva_pos, nueva_vel)
-			if estado == Estado.TERMINADO:
-				return
-			nueva_pos = rebote[0]
-			nueva_vel = rebote[1]
-
-		vel_sim = nueva_vel
-		v_motor = (nueva_pos - pos) / dt
-		state.linear_velocity = v_motor
-		state.transform.origin = nueva_pos
+	vel_sim = nueva_vel
+	v_motor = (nueva_pos - pos) / dt
+	state.linear_velocity = v_motor
 
 func _rebotar_en_limites(pos: Vector2, vel: Vector2) -> Array:
 	var izquierda := limites.position.x + _radio
