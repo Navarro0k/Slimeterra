@@ -475,6 +475,7 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 # Efecto visual y sonoro al quemar un bloque
 # ---------------------------------------------------------------------------
 func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
+	print("Slime fuego: quemando celda ", celda, " sonido_quemar=", sonido_quemar)
 	# Efecto visual: particulas de fuego en la posicion del bloque.
 	var centro_local := capa.map_to_local(celda)
 	var centro_global := capa.to_global(centro_local)
@@ -510,9 +511,11 @@ func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
 	if sonido_quemar != null and escena != null:
 		var reproductor := AudioStreamPlayer.new()
 		reproductor.stream = sonido_quemar
-		reproductor.volume_db = -4.0
+		reproductor.volume_db = 0.0
 		reproductor.pitch_scale = 1.0 + randf_range(-0.1, 0.1)
-		reproductor.bus = bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
+		reproductor.bus = &"Master"
 		escena.add_child(reproductor)
 		reproductor.finished.connect(reproductor.queue_free)
 		reproductor.play()
+	else:
+		print("Slime: sonido_quemar es null o escena es null. sonido_quemar=", sonido_quemar, " escena=", escena)
