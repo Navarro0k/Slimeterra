@@ -463,7 +463,10 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 		for y in range(celda_min.y, celda_max.y + 1):
 			var celda := Vector2i(x, y)
 			var datos := capa.get_cell_tile_data(celda)
-			if datos == null or not datos.get_custom_data("rompible_por_fuego"):
+			if datos == null:
+				continue
+			var es_rompible := datos.get_custom_data("rompible_por_fuego")
+			if not es_rompible:
 				continue
 			var d := (local - capa.map_to_local(celda)).abs() - mitad
 			var fuera := Vector2(maxf(d.x, 0.0), maxf(d.y, 0.0)).length()
