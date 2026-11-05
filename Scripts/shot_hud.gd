@@ -191,130 +191,21 @@ func _construir_interfaz() -> void:
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
 
-var _cartilla_lbl: RichTextLabel
-var _cartilla_btn: Button
-var _cartilla_pagina: int = 0
-var _musica_cartilla: AudioStreamPlayer
+var _cartilla: Cartilla
 ## True mientras la cartilla esta abierta: bloquea el juego.
 var cartilla_activa: bool = true
 
 func _construir_cartilla() -> void:
-	# Bloc de notas amarillo (cuaderno) grande con explicacion detallada + boton Continuar.
-	_cartilla = PanelContainer.new()
-	_cartilla.name = "Cartilla"
-	var estilo := StyleBoxFlat.new()
-	# Bloc de notas: amarillo (color anterior, mas inmersivo).
-	estilo.bg_color = Color(1.0, 0.95, 0.55, 0.95)
-	estilo.border_color = Color(0.7, 0.6, 0.2)
-	estilo.set_border_width_all(3)
-	estilo.set_corner_radius_all(6)
-	estilo.content_margin_left = 16
-	estilo.content_margin_right = 16
-	estilo.content_margin_top = 14
-	estilo.content_margin_bottom = 14
-	_cartilla.add_theme_stylebox_override("panel", estilo)
-	# Ocupar toda la pantalla como overlay.
-	_cartilla.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_cartilla.offset_left = 20
-	_cartilla.offset_top = 20
-	_cartilla.offset_right = -20
-	_cartilla.offset_bottom = -20
-
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 8)
-	_cartilla.add_child(vbox)
-
-	_cartilla_lbl = RichTextLabel.new()
-	_cartilla_lbl.bbcode_enabled = true
-	_cartilla_lbl.fit_content = false
-	_cartilla_lbl.scroll_active = true
-	_cartilla_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_cartilla_lbl.custom_minimum_size = Vector2(400, 200)
-	_cartilla_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_cartilla_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_cartilla_lbl.add_theme_font_size_override("normal_font_size", 10)
-	_cartilla_lbl.add_theme_font_size_override("bold_font_size", 10)
-	_cartilla_lbl.add_theme_font_size_override("mono_font_size", 10)
-	_cartilla_lbl.add_theme_color_override("default_color", Color(0.12, 0.08, 0.0))
-	if _fuente_ecuaciones != null:
-		_cartilla_lbl.add_theme_font_override("normal_font", _fuente_ecuaciones)
-		_cartilla_lbl.add_theme_font_override("bold_font", _fuente_ecuaciones)
-		_cartilla_lbl.add_theme_font_override("mono_font", _fuente_ecuaciones)
-	vbox.add_child(_cartilla_lbl)
-
-	_cartilla_btn = Button.new()
-	_cartilla_btn.text = "Continuar"
-	_cartilla_btn.custom_minimum_size = Vector2(100, 26)
-	_cartilla_btn.add_theme_font_size_override("font_size", 10)
-	_cartilla_btn.add_theme_color_override("font_color", Color(0.12, 0.08, 0.0))
-	if _fuente_ecuaciones != null:
-		_cartilla_btn.add_theme_font_override("font", _fuente_ecuaciones)
-	_cartilla_btn.pressed.connect(_avanzar_cartilla)
-	vbox.add_child(_cartilla_btn)
-
+	_cartilla = preload("res://Scenes/UI/Cartilla.tscn").instantiate() as Cartilla
+	if _cartilla == null:
+		return
+	_cartilla.modo_ecuacion = modo_ecuacion
+	_cartilla.cerrada.connect(_on_cartilla_cerrada)
 	add_child(_cartilla)
-	_cartilla.mouse_filter = Control.MOUSE_FILTER_STOP
-	_cartilla.gui_input.connect(func(event):
-		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-			_cerrar_cartilla()
-	)
 
-	# Musica de fondo explicativa (libre de copyright).
-	_musica_cartilla = AudioStreamPlayer.new()
-	var stream := load("res://Assets/Audio/sound_effects/CartillaBg.mp3") as AudioStreamMP3
-	if stream != null:
-		stream.loop = true
-	_musica_cartilla.stream = stream
-	_musica_cartilla.volume_db = -10.0
-	_musica_cartilla.bus = &"Master"
-	add_child(_musica_cartilla)
-
-	# Pausar la musica del nivel mientras se muestra la cartilla.
-	for m in get_tree().get_nodes_in_group("musica_nivel"):
-		if m is AudioStreamPlayer:
-			(m as AudioStreamPlayer).stream_paused = true
-
-	if _musica_cartilla.stream != null:
-		_musica_cartilla.play()
-
-	# Mostrar pagina 1.
-	_cartilla_pagina = 0
-	_actualizar_cartilla()
-
-func _actualizar_cartilla() -> void:
-	if modo_ecuacion == "matrices":
-		if _cartilla_pagina == 0:
-			_cartilla_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x² + b x + c.\n\nUsamos un sistema lineal: [b]s' = A*s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica.\n\nLa matriz A encode la gravedad y el amortiguamiento; b encode la gravedad constante. La solucion es s(t) = e^(A t) * s0 + integral(e^(A tau) b dtau)."
-			_cartilla_btn.text = "Continuar"
-		else:
-			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\ns0 = [ x0  y0  vx0  vy0 ]^T\n\nA =\n[  0   0   1   0  ]\n[  0   0   0   1  ]\n[  0   0  -k   0  ]\n[  0   0   0  -k  ]\n\nb = [ 0  0  0  g ]^T\n\nk = 0.10     g = 980\n\nAjusta angulo y potencia: s0 cambia en tiempo real y la trayectoria se recalcula.\n\n[b]Ahora juega y observa como la matriz cambia la trayectoria![/b]"
-			_cartilla_btn.text = "Cerrar"
-	else:
-		if _cartilla_pagina == 0:
-			_cartilla_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x² + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nLos coeficientes son:\na = g / (2 * vx²)  (curvatura, depende de la velocidad horizontal)\nb = vy / vx - 2 * a * x0  (pendiente inicial)\nc = y0 - b * x0 + a * x0²  (posicion inicial)\n\nAjusta angulo y potencia para alcanzar la meta."
-			_cartilla_btn.text = "Continuar"
-		else:
-			_cartilla_lbl.text = "[b]Formula y aplicacion:[/b]\n\na = g / (2 * vx²)\nb = vy / vx - 2 * a * x0\nc = y0 - b * x0 + a * x0²\n\nCon vx, vy de la velocidad inicial.\n\nCambia angulo y potencia: a, b, c se actualizan en tiempo real en el panel superior.\n\n[b]Ahora juega y observa como cambian los coeficientes![/b]"
-			_cartilla_btn.text = "Cerrar"
-
-func _avanzar_cartilla() -> void:
-	if _cartilla_pagina == 0:
-		_cartilla_pagina = 1
-		_actualizar_cartilla()
-	else:
-		_cerrar_cartilla()
-
-func _cerrar_cartilla() -> void:
+func _on_cartilla_cerrada() -> void:
 	cartilla_activa = false
-	if is_instance_valid(_cartilla):
-		_cartilla.visible = false
-	if is_instance_valid(_musica_cartilla):
-		_musica_cartilla.stop()
-	# Reanudar la musica del nivel.
-	for m in get_tree().get_nodes_in_group("musica_nivel"):
-		if m is AudioStreamPlayer:
-			(m as AudioStreamPlayer).stream_paused = false
-	cartilla_cerrada.emit()
+	_actualizar_hud_estado()
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
