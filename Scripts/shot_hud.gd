@@ -21,6 +21,10 @@ var _launch_button: Button
 var _pause_button: Button
 ## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
 var modo_ecuacion: String = "parabola"
+## Fuente pixel para ecuaciones y cartilla.
+var _fuente_pixel: FontFile
+## Cartilla de explicacion (bloc de notas amarillo).
+var _cartilla: PanelContainer
 
 const PANEL := Color("#17263B")
 const PANEL_LIGHT := Color("#243B55")
@@ -31,7 +35,9 @@ const EDGE := Color("#3C6680")
 func _ready() -> void:
 	layer = 10
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_fuente_pixel = load("res://Assets/fonts/tinypixel.otf") as FontFile
 	_construir_interfaz()
+	_construir_cartilla()
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
 
@@ -54,6 +60,8 @@ func _label(texto: String, size: int = 9, color: Color = RED) -> Label:
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 2)
+	if _fuente_pixel != null:
+		l.add_theme_font_override("font", _fuente_pixel)
 	return l
 
 func _panel_contenedor(parent: Control, nombre: String, pos: Vector2, tam: Vector2, color: Color = PANEL) -> PanelContainer:
@@ -76,7 +84,18 @@ func _construir_interfaz() -> void:
 	# Grid de HUD para viewport 480x270:
 	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
 	# El botón de ecuación vive en la cabecera del propio panel.
-	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0.09, 0.15, 0.23, 0.38))
+	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0, 0, 0, 0))
+	# Panel transparente: solo texto, sin recuadro visible.
+	var estilo_transparente := StyleBoxFlat.new()
+	estilo_transparente.bg_color = Color(0, 0, 0, 0)
+	estilo_transparente.border_color = Color(0, 0, 0, 0)
+	estilo_transparente.set_border_width_all(0)
+	estilo_transparente.set_corner_radius_all(0)
+	estilo_transparente.content_margin_left = 4
+	estilo_transparente.content_margin_right = 4
+	estilo_transparente.content_margin_top = 3
+	estilo_transparente.content_margin_bottom = 3
+	_equation_panel.add_theme_stylebox_override("panel", estilo_transparente)
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.position = Vector2(4, 18)
 	ecuacion_col.size = Vector2(150, 69)
@@ -91,9 +110,13 @@ func _construir_interfaz() -> void:
 	_math_label.scroll_active = false
 	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_math_label.custom_minimum_size = Vector2(150, 68)
-	_math_label.add_theme_font_size_override("normal_font_size", 6)
-	_math_label.add_theme_font_size_override("bold_font_size", 6)
-	_math_label.add_theme_font_size_override("mono_font_size", 6)
+	_math_label.add_theme_font_size_override("normal_font_size", 8)
+	_math_label.add_theme_font_size_override("bold_font_size", 8)
+	_math_label.add_theme_font_size_override("mono_font_size", 8)
+	if _fuente_pixel != null:
+		_math_label.add_theme_font_override("normal_font", _fuente_pixel)
+		_math_label.add_theme_font_override("bold_font", _fuente_pixel)
+		_math_label.add_theme_font_override("mono_font", _fuente_pixel)
 	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
 	_math_label.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_math_label.add_theme_constant_override("outline_size", 2)
@@ -109,6 +132,8 @@ func _construir_interfaz() -> void:
 	_equation_toggle.add_theme_color_override("font_color", RED)
 	_equation_toggle.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_equation_toggle.add_theme_constant_override("outline_size", 2)
+	if _fuente_pixel != null:
+		_equation_toggle.add_theme_font_override("font", _fuente_pixel)
 	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.58)))
 	_equation_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.14, 0.23, 0.33, 0.92)))
 	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
@@ -156,12 +181,62 @@ func _construir_interfaz() -> void:
 	_launch_button.text = "DISPARAR ↗"
 	_launch_button.custom_minimum_size = Vector2(94, 14)
 	_launch_button.add_theme_font_size_override("font_size", 7)
+	if _fuente_pixel != null:
+		_launch_button.add_theme_font_override("font", _fuente_pixel)
 	_launch_button.add_theme_color_override("font_color", Color("#102338"))
 	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#62D9C7")))
 	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AEBDD")))
 	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#3CAFA6")))
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
+
+func _construir_cartilla() -> void:
+	# Bloc de notas amarillo con la explicacion de la ecuacion del nivel.
+	var texto_cartilla := ""
+	if modo_ecuacion == "matrices":
+		texto_cartilla = "Nivel 2: Espacio de estados\nLa trayectoria con amortiguamiento ya no es una parabola.\nUsamos matrices: s' = A*s + b.\nAjusta angulo y potencia."
+	else:
+		texto_cartilla = "Nivel 1: Trayectoria parabolica\ny(x) = a x^2 + b x + c\nAjusta el angulo y la potencia para alcanzar la meta."
+
+	_cartilla = PanelContainer.new()
+	_cartilla.name = "Cartilla"
+	var estilo := StyleBoxFlat.new()
+	estilo.bg_color = Color(1.0, 0.95, 0.55, 0.92)
+	estilo.border_color = Color(0.7, 0.6, 0.2)
+	estilo.set_border_width_all(2)
+	estilo.set_corner_radius_all(4)
+	estilo.content_margin_left = 6
+	estilo.content_margin_right = 6
+	estilo.content_margin_top = 4
+	estilo.content_margin_bottom = 4
+	_cartilla.add_theme_stylebox_override("panel", estilo)
+	_cartilla.position = Vector2(160, 95)
+	_cartilla.custom_minimum_size = Vector2(160, 70)
+	_cartilla.size = Vector2(160, 70)
+
+	var lbl := Label.new()
+	lbl.text = texto_cartilla
+	lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	lbl.custom_minimum_size = Vector2(148, 0)
+	lbl.add_theme_font_size_override("font_size", 8)
+	lbl.add_theme_color_override("font_color", Color(0.15, 0.1, 0.0))
+	if _fuente_pixel != null:
+		lbl.add_theme_font_override("font", _fuente_pixel)
+	_cartilla.add_child(lbl)
+
+	add_child(_cartilla)
+	_cartilla.mouse_filter = Control.MOUSE_FILTER_STOP
+	_cartilla.gui_input.connect(func(event):
+		if event is InputEventMouseButton and event.pressed:
+			_cartilla.visible = false
+	)
+
+	# Auto-ocultar tras 6 segundos.
+	var timer := get_tree().create_timer(6.0)
+	timer.timeout.connect(func():
+		if is_instance_valid(_cartilla):
+			_cartilla.visible = false
+	)
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
@@ -214,12 +289,12 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	var texto := ""
 	if modo_ecuacion == "matrices":
 		texto += "[color=#FFFFFF]Espacio de estados[/color]\n"
-		texto += "[color=#A6B8D0]s=[x y vx vy]ᵀ[/color]\n"
-		texto += "[color=#62D9C7]s₀=[%.0f %.0f %.0f %.0f]ᵀ[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
-		texto += "[color=#FFFFFF]ṡ=A·s+b[/color]\n"
-		texto += "[color=#62D9C7]A=[0 0 1 0;0 0 0 1;0 0 -k 0;0 0 0 -k][/color]\n"
-		texto += "[color=#62D9C7]b=[0 0 0 g]ᵀ[/color]\n"
-		texto += "[color=#A6B8D0]k=%.2f g=%.0f[/color]" % [damping, gravity]
+		texto += "[color=#A6B8D0]s  = [ x  y  vx  vy ]^T[/color]\n"
+		texto += "[color=#62D9C7]s0 = [%.0f  %.0f  %.0f  %.0f]^T[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
+		texto += "[color=#FFFFFF]s' = A s + b[/color]\n"
+		texto += "[color=#62D9C7]A = [ 0  0  1  0 ]\n    [ 0  0  0  1 ]\n    [ 0  0 -k  0 ]\n    [ 0  0  0 -k ][/color]\n"
+		texto += "[color=#62D9C7]b = [ 0  0  0  g ]^T[/color]\n"
+		texto += "[color=#A6B8D0]k=%.2f   g=%.0f[/color]" % [damping, gravity]
 	else:
 		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
 		texto += "[color=#FFFFFF]y(x) = ax² + bx + c[/color]\n"
