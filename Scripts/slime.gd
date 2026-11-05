@@ -10,7 +10,7 @@ extends RigidBody2D
 enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 
 @export var metodo: SolverNumerico.Metodo = SolverNumerico.Metodo.RK4
-@export var tipo_slime: String = "base" # Opciones: "base" o "fuego"
+@export var tipo_slime: SlimeCatalogo.Tipo = SlimeCatalogo.Tipo.BASE
 ## Segundos máximos en vuelo. Si no choca con nada (cae al vacío) se descarta y el turno termina.
 @export var tiempo_vuelo_max: float = 8.0
 ## Margen (px) extra alrededor del slime para considerar que "toca" un bloque rompible.
@@ -33,6 +33,8 @@ enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 @export_group("Sonido")
 ## Sonido al pegarse a una superficie (tile o plataforma).
 @export var sonido_pegado: AudioStream
+## Sonido al quemar (destruir) un bloque (solo slime de fuego).
+@export var sonido_quemar: AudioStream
 ## Volumen (dB) del sonido de pegado.
 @export var volumen_pegado_db: float = -2.0
 ## Velocidad de reproducción (también cambia el tono): 1.0 = original.
@@ -91,7 +93,26 @@ func _ready():
 	contact_monitor = true
 	max_contacts_reported = 6
 
-	_quema_bloques = tipo_slime == "fuego"
+	_quema_bloques = tipo_slime == SlimeCatalogo.Tipo.FUEGO
+	if _quema_bloques:
+		color_burbujas = Color(1.0, 0.6, 0.2)
+	# Configurar las particulas de rastro para que sean visibles al disparar.
+	var degradado_rastro := Gradient.new()
+	degradado_rastro.offsets = PackedFloat32Array([0.0, 1.0])
+	degradado_rastro.colors = PackedColorArray([Color(color_burbujas, 0.9), Color(color_burbujas, 0.0)])
+	particulas_rastro.color_ramp = degradado_rastro
+	particulas_rastro.local_coords = false  # Las particulas se quedan en el mundo (estela), no siguen al slime.
+	particulas_rastro.amount = 12
+	particulas_rastro.lifetime = 0.6
+	particulas_rastro.scale_amount_min = 0.6
+	particulas_rastro.scale_amount_max = 1.0
+	particulas_rastro.initial_velocity_min = 0.0
+	particulas_rastro.initial_velocity_max = 0.0
+	particulas_rastro.gravity = Vector2(0, 20)  # Ligera caida para que la estela se disperse.
+	particulas_rastro.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINT
+	particulas_rastro.spread = 15.0
+	particulas_rastro.show_behind_parent = false
+	particulas_rastro.z_index = 5  # Visible por encima de tiles y resortera.
 	var circulo := forma_colision.shape as CircleShape2D
 	if circulo != null:
 		var escala := forma_colision.global_scale
@@ -104,8 +125,6 @@ func _ready():
 	arrastre = linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
 
 	_escala_base = sprite.scale
-	if _quema_bloques:
-		color_burbujas = Color(1.0, 0.6, 0.2)
 	_crear_brillo()
 	_crear_burbujas()
 
@@ -441,9 +460,88 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 		for y in range(celda_min.y, celda_max.y + 1):
 			var celda := Vector2i(x, y)
 			var datos := capa.get_cell_tile_data(celda)
-			if datos == null or not datos.get_custom_data("rompible_por_fuego"):
+			if datos == null:
+				continue
+			var es_rompible: bool = datos.get_custom_data("rompible_por_fuego")
+			if not es_rompible:
 				continue
 			var d := (local - capa.map_to_local(celda)).abs() - mitad
 			var fuera := Vector2(maxf(d.x, 0.0), maxf(d.y, 0.0)).length()
 			if fuera <= radio:
 				capa.erase_cell(celda)
+				_efecto_quemar(capa, celda)
+
+# ---------------------------------------------------------------------------
+# Efecto visual y sonoro al quemar un bloque
+# ---------------------------------------------------------------------------
+func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
+	# Efecto visual: particulas de fuego en la posicion del bloque.
+	var centro_local := capa.map_to_local(celda)
+	var centro_global := capa.to_global(centro_local)
+	var particulas := CPUParticles2D.new()
+	particulas.global_position = centro_global
+	particulas.emitting = true
+	particulas.one_shot = true
+	particulas.explosiveness = 0.9
+	particulas.amount = 12
+	particulas.lifetime = 0.5
+	particulas.local_coords = false
+	particulas.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	particulas.emission_sphere_radius = 4.0
+	particulas.direction = Vector2(0, -1)
+	particulas.spread = 180.0
+	particulas.gravity = Vector2(0, -40)
+	particulas.initial_velocity_min = 10.0
+	particulas.initial_velocity_max = 30.0
+	particulas.scale_amount_min = 0.5
+	particulas.scale_amount_max = 1.5
+	var degradado := Gradient.new()
+	degradado.offsets = PackedFloat32Array([0.0, 1.0])
+	degradado.colors = PackedColorArray([Color(1.0, 0.6, 0.2, 1.0), Color(1.0, 0.2, 0.0, 0.0)])
+	particulas.color_ramp = degradado
+	var escena := get_tree().current_scene
+	if escena != null:
+		escena.add_child(particulas)
+		# Auto-limpiar.
+		var timer := get_tree().create_timer(1.0)
+		timer.timeout.connect(particulas.queue_free)
+
+	# Sonido de quemado: crash/explosion generado proceduralmente.
+	if escena != null:
+		var mix_rate := 22050.0
+		var duracion := 0.25
+		var generador := AudioStreamGenerator.new()
+		generador.mix_rate = mix_rate
+		generador.buffer_length = duracion
+		var reproductor := AudioStreamPlayer.new()
+		reproductor.stream = generador
+		reproductor.volume_db = 2.0
+		reproductor.bus = &"Master"
+		escena.add_child(reproductor)
+		reproductor.play()
+		var playback := reproductor.get_stream_playback() as AudioStreamGeneratorPlayback
+		if playback != null:
+			var frames := int(mix_rate * duracion)
+			var buffer := PackedVector2Array()
+			buffer.resize(frames)
+			for i in range(frames):
+				var t := float(i) / mix_rate
+				# Envolvente: ataque instantaneo, decaimiento exponencial rapido.
+				var env := exp(-t * 18.0)
+				# Componente grave (golpe).
+				var grave := sin(t * TAU * 55.0) * env * 0.6
+				# Componente medio (cuerpo del crash).
+				var medio := sin(t * TAU * 110.0) * env * 0.3
+				# Ruido (textura de impacto/cristal roto).
+				var ruido := (randf() * 2.0 - 1.0) * env * env * 0.4
+				# Chasquido inicial (transiente).
+				var chasquido := 0.0
+				if t < 0.005:
+					chasquido = (randf() * 2.0 - 1.0) * (1.0 - t / 0.005) * 0.8
+				var sample := grave + medio + ruido + chasquido
+				sample = clampf(sample, -1.0, 1.0)
+				buffer[i] = Vector2(sample, sample)
+			playback.push_buffer(buffer)
+		# Auto-limpiar.
+		var timer := get_tree().create_timer(duracion + 0.1)
+		timer.timeout.connect(reproductor.queue_free)

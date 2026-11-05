@@ -1,0 +1,74 @@
+[gd_scene format=3 uid="uid://cartilla00001"]
+
+[ext_resource type="Script" path="res://Scripts/cartilla.gd" id="1_cartilla"]
+[ext_resource type="FontFile" path="res://Assets/fonts/JetBrainsMono-Regular.ttf" id="2_font"]
+[ext_resource type="AudioStream" path="res://Assets/Audio/sound_effects/CartillaBg.mp3" id="3_musica"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_cartilla"]
+bg_color = Color(1.0, 0.95, 0.55, 0.95)
+border_color = Color(0.7, 0.6, 0.2)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+content_margin_left = 16.0
+content_margin_top = 14.0
+content_margin_right = 16.0
+content_margin_bottom = 14.0
+
+[node name="Cartilla" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_cartilla")
+
+[node name="Panel" type="PanelContainer" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_cartilla")
+
+[node name="VBox" type="VBoxContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Label" type="RichTextLabel" parent="Panel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+size_flags_horizontal = 3
+bbcode_enabled = true
+fit_content = false
+scroll_active = true
+autowrap_mode = 3
+theme_override_font_sizes/normal_font_size = 11
+theme_override_font_sizes/bold_font_size = 11
+theme_override_font_sizes/mono_font_size = 11
+theme_override_colors/default_color = Color(0.12, 0.08, 0.0, 1)
+
+[node name="BtnContinuar" type="Button" parent="Panel/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(120, 28)
+text = "Continuar"
+theme_override_font_sizes/font_size = 11
+
+[node name="Musica" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_musica")
+volume_db = -10.0
+bus = &"Master"
+
+[connection signal="pressed" from="Panel/VBox/BtnContinuar" to="." method="_on_continuar"]
+[connection signal="gui_input" from="Panel" to="." method="_on_gui_input"]

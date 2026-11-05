@@ -60,6 +60,13 @@ func _ready() -> void:
 
 	# Meta(s) del nivel: cualquier nodo Meta en la escena se encuentra por su grupo.
 	var metas := get_tree().get_nodes_in_group("meta")
+
+	# La musica del nivel se agrupa para que la cartilla pueda pausarla.
+	var musicos := get_tree().get_nodes_in_group("musica_nivel")
+	if musicos.is_empty():
+		var audio_nodes := find_children("*", "AudioStreamPlayer", true, false)
+		for a in audio_nodes:
+			a.add_to_group("musica_nivel")
 	if metas.is_empty():
 		push_warning("Este nivel no tiene ninguna Meta (instancia Scenes/Meta.tscn): no se podrá ganar.")
 	for meta in metas:

@@ -4,6 +4,7 @@ class_name ShotHUD
 
 signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
+signal cartilla_cerrada()
 
 var angle_degrees: float = 45.0
 var power_percent: float = 65.0
@@ -19,6 +20,11 @@ var _equation_title: Label
 var _equation_visible := true
 var _launch_button: Button
 var _pause_button: Button
+## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
+var modo_ecuacion: String = "parabola"
+## Fuente pixel para ecuaciones y cartilla.
+var _fuente_ecuaciones: FontFile
+## Cartilla de explicacion (bloc de notas amarillo).
 
 const PANEL := Color("#17263B")
 const PANEL_LIGHT := Color("#243B55")
@@ -27,9 +33,11 @@ const TEXT := Color("#F0F6FF")
 const EDGE := Color("#3C6680")
 
 func _ready() -> void:
-	layer = 10
+	layer = 45
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_fuente_ecuaciones = load("res://Assets/fonts/JetBrainsMono-Regular.ttf") as FontFile
 	_construir_interfaz()
+	_construir_cartilla()
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
 
@@ -52,6 +60,8 @@ func _label(texto: String, size: int = 9, color: Color = RED) -> Label:
 	l.add_theme_color_override("font_color", color)
 	l.add_theme_color_override("font_outline_color", Color.BLACK)
 	l.add_theme_constant_override("outline_size", 2)
+	if _fuente_ecuaciones != null:
+		l.add_theme_font_override("font", _fuente_ecuaciones)
 	return l
 
 func _panel_contenedor(parent: Control, nombre: String, pos: Vector2, tam: Vector2, color: Color = PANEL) -> PanelContainer:
@@ -74,7 +84,18 @@ func _construir_interfaz() -> void:
 	# Grid de HUD para viewport 480x270:
 	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
 	# El botón de ecuación vive en la cabecera del propio panel.
-	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0.09, 0.15, 0.23, 0.38))
+	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0, 0, 0, 0))
+	# Panel transparente: solo texto, sin recuadro visible.
+	var estilo_transparente := StyleBoxFlat.new()
+	estilo_transparente.bg_color = Color(0, 0, 0, 0)
+	estilo_transparente.border_color = Color(0, 0, 0, 0)
+	estilo_transparente.set_border_width_all(0)
+	estilo_transparente.set_corner_radius_all(0)
+	estilo_transparente.content_margin_left = 4
+	estilo_transparente.content_margin_right = 4
+	estilo_transparente.content_margin_top = 3
+	estilo_transparente.content_margin_bottom = 3
+	_equation_panel.add_theme_stylebox_override("panel", estilo_transparente)
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.position = Vector2(4, 18)
 	ecuacion_col.size = Vector2(150, 69)
@@ -89,8 +110,13 @@ func _construir_interfaz() -> void:
 	_math_label.scroll_active = false
 	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_math_label.custom_minimum_size = Vector2(150, 68)
-	_math_label.add_theme_font_size_override("normal_font_size", 7)
-	_math_label.add_theme_font_size_override("bold_font_size", 7)
+	_math_label.add_theme_font_size_override("normal_font_size", 8)
+	_math_label.add_theme_font_size_override("bold_font_size", 8)
+	_math_label.add_theme_font_size_override("mono_font_size", 8)
+	if _fuente_ecuaciones != null:
+		_math_label.add_theme_font_override("normal_font", _fuente_ecuaciones)
+		_math_label.add_theme_font_override("bold_font", _fuente_ecuaciones)
+		_math_label.add_theme_font_override("mono_font", _fuente_ecuaciones)
 	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
 	_math_label.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_math_label.add_theme_constant_override("outline_size", 2)
@@ -106,6 +132,8 @@ func _construir_interfaz() -> void:
 	_equation_toggle.add_theme_color_override("font_color", RED)
 	_equation_toggle.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
 	_equation_toggle.add_theme_constant_override("outline_size", 2)
+	if _fuente_ecuaciones != null:
+		_equation_toggle.add_theme_font_override("font", _fuente_ecuaciones)
 	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.58)))
 	_equation_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.14, 0.23, 0.33, 0.92)))
 	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
@@ -127,18 +155,18 @@ func _construir_interfaz() -> void:
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-	# El control representa la velocidad inicial v₀, ajustada mediante el porcentaje
-	# de potencia. v₀ cambia el coeficiente a (curvatura) y el alcance del disparo.
+	# El control representa la velocidad inicial v0, ajustada mediante el porcentaje
+	# de potencia. v0 cambia el coeficiente a (curvatura) y el alcance del disparo.
 	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), Color("#17263B"))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(_label("VELOCIDAD INICIAL v₀", 6))
+	power_header.add_child(_label("VELOCIDAD INICIAL v0", 6))
 	_power_label = _label("65%", 8)
 	power_header.add_child(_power_label)
-	var power_hint := _label("v₀ modifica a y el alcance", 5, TEXT)
+	var power_hint := _label("v0 modifica a y el alcance", 5, TEXT)
 	power_col.add_child(power_hint)
 	_power_slider = HSlider.new()
 	_power_slider.min_value = 0
@@ -150,15 +178,38 @@ func _construir_interfaz() -> void:
 	_power_slider.value_changed.connect(_on_power_changed)
 	power_col.add_child(_power_slider)
 	_launch_button = Button.new()
-	_launch_button.text = "DISPARAR ↗"
+	_launch_button.text = "DISPARAR ->"
 	_launch_button.custom_minimum_size = Vector2(94, 14)
 	_launch_button.add_theme_font_size_override("font_size", 7)
+	if _fuente_ecuaciones != null:
+		_launch_button.add_theme_font_override("font", _fuente_ecuaciones)
 	_launch_button.add_theme_color_override("font_color", Color("#102338"))
 	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#62D9C7")))
 	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AEBDD")))
 	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#3CAFA6")))
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
+
+var _cartilla: Node
+## True mientras la cartilla esta abierta: bloquea el juego.
+var cartilla_activa: bool = true
+
+func _construir_cartilla() -> void:
+	var script_cartilla := load("res://Scripts/cartilla.gd")
+	if script_cartilla == null:
+		cartilla_activa = false
+		return
+	_cartilla = script_cartilla.new()
+	if _cartilla == null:
+		cartilla_activa = false
+		return
+	_cartilla.set("modo_ecuacion", modo_ecuacion)
+	_cartilla.connect("cerrada", _on_cartilla_cerrada)
+	add_child(_cartilla)
+
+func _on_cartilla_cerrada() -> void:
+	cartilla_activa = false
+	cartilla_cerrada.emit()
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
@@ -205,19 +256,29 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	if not is_instance_valid(_math_label):
 		return
 
-	# Mostrar únicamente la ecuación y sus coeficientes actuales.
-	# Slingshoot llama esta función al cambiar el ángulo o la potencia.
-	var modelo: Dictionary = ModeloDisparo.ecuacion_parabolica(position_initial, velocity_initial, gravity)
+	# El panel muestra la matemática del nivel: parábola (cinemática) en el nivel 1,
+	# y el sistema lineal en espacio de estados (matrices) en el nivel 2, donde el
+	# amortiguamiento hace que el tiro ya no sea una parábola perfecta.
 	var texto := ""
-	texto += "[color=#FFFFFF]y(x) = ax² + bx + c[/color]\n"
-	if bool(modelo.get("valida", false)):
-		var a: float = float(modelo["a"])
-		var b: float = float(modelo["b"])
-		var c: float = float(modelo["c"])
-		texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
-		texto += "[color=#FFFFFF]y(x) = %.4fx² %s %.4fx %s %.2f[/color]" % [a, "+" if b >= 0.0 else "−", absf(b), "+" if c >= 0.0 else "−", absf(c)]
+	if modo_ecuacion == "matrices":
+		texto += "[color=#FFFFFF][b]Espacio de estados[/b][/color]\n"
+		texto += "[color=#A6B8D0]s  = [ x  y  vx  vy ]^T[/color]\n"
+		texto += "[color=#62D9C7]s0 = [%.0f  %.0f  %.0f  %.0f]^T[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
+		texto += "[color=#FFFFFF]s' = A s + b[/color]\n"
+		texto += "[color=#62D9C7][b]A[/b] = [ 0  0  1  0 ]\n    [ 0  0  0  1 ]\n    [ 0  0 -k  0 ]\n    [ 0  0  0 -k ][/color]\n"
+		texto += "[color=#62D9C7][b]b[/b] = [ 0  0  0  g ]^T[/color]\n"
+		texto += "[color=#A6B8D0]k=%.2f   g=%.0f[/color]" % [damping, gravity]
 	else:
-		texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
+		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
+		texto += "[color=#FFFFFF]y(x) = a x\u00b2 + b x + c[/color]\n"
+		if bool(modelo.get("valida", false)):
+			var a: float = float(modelo["a"])
+			var b: float = float(modelo["b"])
+			var c: float = float(modelo["c"])
+			texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
+			texto += "[color=#FFFFFF]y(x) = %.4f x\u00b2 %s %.4f x %s %.2f[/color]" % [a, "+" if b >= 0.0 else "-", absf(b), "+" if c >= 0.0 else "-", absf(c)]
+		else:
+			texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
 	_math_label.text = texto
 
 func _actualizar_lecturas() -> void:

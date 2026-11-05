@@ -3771,6 +3771,7 @@ tile_set = SubResource("TileSet_k5mtd")
 
 [node name="Slingshoot" parent="." unique_id=280816846 instance=ExtResource("3_qsfqn")]
 position = Vector2(-64, 15)
+modo_ecuacion = "matrices"
 
 [node name="SlimeSelectorUI" parent="." unique_id=488396557 instance=ExtResource("10_5sjxy")]
 

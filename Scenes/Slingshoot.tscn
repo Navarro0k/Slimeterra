@@ -61,4 +61,4 @@ theme_override_constants/outline_size = 1
 theme_override_fonts/font = ExtResource("7_smq0e")
 theme_override_font_sizes/font_size = 6
 
-[connection signal="input_event" from="Holder" to="." method="_on_holder_input_event"]
+
