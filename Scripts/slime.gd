@@ -33,6 +33,8 @@ enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 @export_group("Sonido")
 ## Sonido al pegarse a una superficie (tile o plataforma).
 @export var sonido_pegado: AudioStream
+## Sonido al quemar (destruir) un bloque (solo slime de fuego).
+@export var sonido_quemar: AudioStream
 ## Volumen (dB) del sonido de pegado.
 @export var volumen_pegado_db: float = -2.0
 ## Velocidad de reproducción (también cambia el tono): 1.0 = original.
@@ -467,3 +469,50 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 			var fuera := Vector2(maxf(d.x, 0.0), maxf(d.y, 0.0)).length()
 			if fuera <= radio:
 				capa.erase_cell(celda)
+				_efecto_quemar(capa, celda)
+
+# ---------------------------------------------------------------------------
+# Efecto visual y sonoro al quemar un bloque
+# ---------------------------------------------------------------------------
+func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
+	# Efecto visual: particulas de fuego en la posicion del bloque.
+	var centro_local := capa.map_to_local(celda)
+	var centro_global := capa.to_global(centro_local)
+	var particulas := CPUParticles2D.new()
+	particulas.global_position = centro_global
+	particulas.emitting = true
+	particulas.one_shot = true
+	particulas.explosiveness = 0.9
+	particulas.amount = 12
+	particulas.lifetime = 0.5
+	particulas.local_coords = false
+	particulas.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+	particulas.emission_sphere_radius = 4.0
+	particulas.direction = Vector2(0, -1)
+	particulas.spread = 180.0
+	particulas.gravity = Vector2(0, -40)
+	particulas.initial_velocity_min = 10.0
+	particulas.initial_velocity_max = 30.0
+	particulas.scale_amount_min = 0.5
+	particulas.scale_amount_max = 1.5
+	var degradado := Gradient.new()
+	degradado.offsets = PackedFloat32Array([0.0, 1.0])
+	degradado.colors = PackedColorArray([Color(1.0, 0.6, 0.2, 1.0), Color(1.0, 0.2, 0.0, 0.0)])
+	particulas.color_ramp = degradado
+	var escena := get_tree().current_scene
+	if escena != null:
+		escena.add_child(particulas)
+		# Auto-limpiar.
+		var timer := get_tree().create_timer(1.0)
+		timer.timeout.connect(particulas.queue_free)
+
+	# Sonido de quemado.
+	if sonido_quemar != null and escena != null:
+		var reproductor := AudioStreamPlayer.new()
+		reproductor.stream = sonido_quemar
+		reproductor.volume_db = -4.0
+		reproductor.pitch_scale = 1.0 + randf_range(-0.1, 0.1)
+		reproductor.bus = bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
+		escena.add_child(reproductor)
+		reproductor.finished.connect(reproductor.queue_free)
+		reproductor.play()

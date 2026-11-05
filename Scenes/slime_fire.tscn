@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://phqojg0jfj1h" path="res://Scripts/slime.gd" id="1_vkoh2"]
 [ext_resource type="Texture2D" uid="uid://bjap0mpkq3bo7" path="res://Assets/pngs/slime_fuego.png" id="2_vkoh2"]
 [ext_resource type="Texture2D" uid="uid://cqhbnr02o5lph" path="res://Assets/pngs/fuego drop.png" id="3_l24vj"]
+[ext_resource type="AudioStream" uid="uid://fireburn00001" path="res://Assets/Audio/sound_effects/FireBurn.mp3" id="4_fireburn"]
 
 [sub_resource type="Gradient" id="Gradient_wn07x"]
 
@@ -12,6 +13,7 @@ radius = 6.8108597
 [node name="Slime" type="RigidBody2D" unique_id=1874400018]
 script = ExtResource("1_vkoh2")
 tipo_slime = 1
+sonido_quemar = ExtResource("4_fireburn")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=511180151]
 scale = Vector2(0.6, 0.6)
