@@ -1,5 +1,4 @@
 extends CanvasLayer
-class_name Cartilla
 ## Cartilla explicativa independiente (escena reutilizable en nivel 1 y 2).
 ## Se muestra como overlay de pantalla completa con musica de fondo.
 

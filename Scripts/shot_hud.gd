@@ -191,21 +191,22 @@ func _construir_interfaz() -> void:
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
 
-var _cartilla: Cartilla
+var _cartilla: Node
 ## True mientras la cartilla esta abierta: bloquea el juego.
 var cartilla_activa: bool = true
 
 func _construir_cartilla() -> void:
-	_cartilla = preload("res://Scenes/UI/Cartilla.tscn").instantiate() as Cartilla
+	_cartilla = preload("res://Scenes/UI/Cartilla.tscn").instantiate()
 	if _cartilla == null:
 		return
-	_cartilla.modo_ecuacion = modo_ecuacion
-	_cartilla.cerrada.connect(_on_cartilla_cerrada)
+	_cartilla.set("modo_ecuacion", modo_ecuacion)
+	_cartilla.connect("cerrada", _on_cartilla_cerrada)
 	add_child(_cartilla)
 
 func _on_cartilla_cerrada() -> void:
 	cartilla_activa = false
 	_actualizar_hud_estado()
+	cartilla_cerrada.emit()
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
