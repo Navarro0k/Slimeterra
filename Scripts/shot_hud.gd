@@ -294,7 +294,6 @@ func _avanzar_cartilla() -> void:
 			_musica_cartilla.stop()
 
 func _on_equation_toggle_pressed() -> void:
-func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
 	_equation_panel.visible = _equation_visible
 	_equation_toggle.text = "OCULTAR" if _equation_visible else "VER EQ."
