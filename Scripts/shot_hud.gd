@@ -156,18 +156,18 @@ func _construir_interfaz() -> void:
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-	# El control representa la velocidad inicial v₀, ajustada mediante el porcentaje
-	# de potencia. v₀ cambia el coeficiente a (curvatura) y el alcance del disparo.
+	# El control representa la velocidad inicial v0, ajustada mediante el porcentaje
+	# de potencia. v0 cambia el coeficiente a (curvatura) y el alcance del disparo.
 	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), Color("#17263B"))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(_label("VELOCIDAD INICIAL v₀", 6))
+	power_header.add_child(_label("VELOCIDAD INICIAL v0", 6))
 	_power_label = _label("65%", 8)
 	power_header.add_child(_power_label)
-	var power_hint := _label("v₀ modifica a y el alcance", 5, TEXT)
+	var power_hint := _label("v0 modifica a y el alcance", 5, TEXT)
 	power_col.add_child(power_hint)
 	_power_slider = HSlider.new()
 	_power_slider.min_value = 0
@@ -179,7 +179,7 @@ func _construir_interfaz() -> void:
 	_power_slider.value_changed.connect(_on_power_changed)
 	power_col.add_child(_power_slider)
 	_launch_button = Button.new()
-	_launch_button.text = "DISPARAR ↗"
+	_launch_button.text = "DISPARAR ->"
 	_launch_button.custom_minimum_size = Vector2(94, 14)
 	_launch_button.add_theme_font_size_override("font_size", 7)
 	if _fuente_ecuaciones != null:
