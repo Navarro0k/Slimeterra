@@ -434,7 +434,6 @@ func _buscar_superficie_pegajosa(nodo: Node) -> Node:
 # ---------------------------------------------------------------------------
 
 func _quemar_bloques(delta: float) -> void:
-	print("Slime fuego: _quemar_bloques llamado, quema_bloques=", _quema_bloques)
 	var radio := _radio + margen_quema
 	_quemar_en(global_position, radio)
 	_quemar_en(global_position + v_motor * delta, radio)
@@ -479,7 +478,6 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 # Efecto visual y sonoro al quemar un bloque
 # ---------------------------------------------------------------------------
 func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
-	print("QUEMANDO: ", celda, " sonido=", sonido_quemar != null)
 	# Efecto visual: particulas de fuego en la posicion del bloque.
 	var centro_local := capa.map_to_local(celda)
 	var centro_global := capa.to_global(centro_local)
@@ -521,5 +519,3 @@ func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
 		escena.add_child(reproductor)
 		reproductor.finished.connect(reproductor.queue_free)
 		reproductor.play()
-	else:
-		print("Slime: sonido_quemar es null o escena es null. sonido_quemar=", sonido_quemar, " escena=", escena)
