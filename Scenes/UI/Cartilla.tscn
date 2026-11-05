@@ -20,8 +20,13 @@ content_margin_top = 14.0
 content_margin_right = 16.0
 content_margin_bottom = 14.0
 
-[node name="Cartilla" type="CanvasLayer"]
-layer = 20
+[node name="Cartilla" type="Control"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
 script = ExtResource("1_cartilla")
 
 [node name="Panel" type="PanelContainer" parent="."]
