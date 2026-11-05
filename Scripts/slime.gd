@@ -509,13 +509,29 @@ func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
 		var timer := get_tree().create_timer(1.0)
 		timer.timeout.connect(particulas.queue_free)
 
-	# Sonido de quemado.
-	if sonido_quemar != null and escena != null:
+	# Sonido de quemado: usar AudioStreamGenerator para generar un beep.
+	if escena != null:
+		var generador := AudioStreamGenerator.new()
+		generador.mix_rate = 22050
+		generador.buffer_length = 0.2
 		var reproductor := AudioStreamPlayer.new()
-		reproductor.stream = sonido_quemar
+		reproductor.stream = generador
 		reproductor.volume_db = 0.0
-		reproductor.pitch_scale = 1.0 + randf_range(-0.1, 0.1)
 		reproductor.bus = &"Master"
 		escena.add_child(reproductor)
-		reproductor.finished.connect(reproductor.queue_free)
 		reproductor.play()
+		# Generar un beep simple.
+		var playback := reproductor.get_stream_playback() as AudioStreamGeneratorPlayback
+		if playback != null:
+			var frames := 22050 * 0.15
+			var buffer := PackedVector2Array()
+			buffer.resize(int(frames))
+			for i in range(int(frames)):
+				var t := float(i) / 22050.0
+				var env := 1.0 - t / 0.15
+				var sample := sin(t * TAU * 440.0) * env * 0.5
+				buffer[i] = Vector2(sample, sample)
+			playback.push_buffer(buffer)
+		# Auto-limpiar.
+		var timer := get_tree().create_timer(0.3)
+		timer.timeout.connect(reproductor.queue_free)
