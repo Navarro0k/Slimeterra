@@ -330,77 +330,35 @@ func _dibujar_trayectoria() -> void:
 	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 
 	var dt_fisica := 1.0 / 60.0
-	var radio_slime := 6.8108597
-	var respect_radius := max_stretch + margen_respeto + radio_slime
 	var total_puntos := mini(puntos_trayectoria, 10)
 	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))
-
-	var quema := false
-	if is_instance_valid(slime_actual) and slime_actual.get("tipo_slime") == SlimeCatalogo.Tipo.FUEGO:
-		quema = true
 
 	var pos := holder.position
 	var vel := velocidad
 	var ultimo_punto := pos
-	var en_vuelo := false
-	var colision_pos := Vector2.ZERO
-	var hubo_colision := false
-	var t_colision := 0.0
-	var t_prev := 0.0
-	var pos_prev := holder.position
 	var pasos_totales := pasos_por_punto * total_puntos
 	var posiciones_puntos: Array[Vector2] = []
 	var puntos_dibujados := 0
 
 	for step in range(pasos_totales):
-		t_prev = step * dt_fisica
-		pos_prev = pos
 		var r: Array = SolverNumerico.paso(SolverNumerico.Metodo.RK4, pos, vel, dt_fisica, gravedad, k)
 		pos = r[0]
 		vel = r[1]
-		var t_now := (step + 1) * dt_fisica
-
-		var fuera_respeto := pos.distance_to(Vector2.ZERO) >= respect_radius
-		var choca := _prediccion_choca_plataforma(pos, quema)
-		var libre := not choca
-
-		if not en_vuelo:
-			if fuera_respeto and libre:
-				en_vuelo = true
-		else:
-			if choca:
-				# Refinamiento sub-paso: buscar el instante exacto de colision
-				# usando la solucion exacta (binaria) entre t_prev y t_now.
-				var t_lo := t_prev
-				var t_hi := t_now
-				for _b in range(10):
-					var t_mid := (t_lo + t_hi) * 0.5
-					var p_mid: Vector2 = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t_mid)
-					if _prediccion_choca_plataforma(p_mid, quema):
-						t_hi = t_mid
-					else:
-						t_lo = t_mid
-				t_colision = t_hi
-				colision_pos = SolverNumerico.solucion_exacta(holder.position, velocidad, gravedad, k, t_colision)
-				hubo_colision = true
-				break
 
 		if (step + 1) % pasos_por_punto == 0 and puntos_dibujados < total_puntos:
 			posiciones_puntos.append(pos)
 			puntos_dibujados += 1
 
 	ultimo_punto = pos
-	if hubo_colision:
-		ultimo_punto = colision_pos
 
+	# Dibujar los puntos como pixeles (2x2 para visibilidad).
 	for i in range(posiciones_puntos.size()):
 		var pt := posiciones_puntos[i]
 		var alpha := 0.9 - i * 0.08
-		draw_circle(pt, maxf(1.5, 3.0 - i * 0.2), Color(0.91, 1.0, 0.97, alpha))
+		var color_px := Color(0.91, 1.0, 0.97, alpha)
+		draw_rect(Rect2(pt - Vector2(1, 1), Vector2(2, 2)), color_px)
 
-	if hubo_colision:
-		draw_circle(colision_pos, maxf(2.0, 3.5), Color(1.0, 0.4, 0.4, 0.95))
-
+	# Punto final visible: el mismo sprite del slime, desvanecido.
 	var textura: Texture2D = null
 	if is_instance_valid(slime_actual):
 		var nodo_sprite := slime_actual.get_node_or_null("Sprite2D") as Sprite2D
@@ -410,52 +368,9 @@ func _dibujar_trayectoria() -> void:
 		var escala := 0.5
 		var tam := textura.get_size() * escala
 		var rect := Rect2(ultimo_punto - tam * 0.5, tam)
-		var color_final := Color(1.0, 1.0, 1.0, 0.4)
-		if hubo_colision:
-			color_final = Color(1.0, 0.4, 0.4, 0.4)
-		draw_texture_rect(textura, rect, false, color_final)
+		draw_texture_rect(textura, rect, false, Color(1.0, 1.0, 1.0, 0.4))
 
-func _prediccion_choca_plataforma(pos_local: Vector2, quema: bool = false) -> bool:
-	var espacio := get_world_2d()
-	if espacio == null:
-		return false
-	var estado_espacio := espacio.direct_space_state
-	if estado_espacio == null:
-		return false
-	var forma := CircleShape2D.new()
-	forma.radius = 6.8108597
-	var consulta := PhysicsShapeQueryParameters2D.new()
-	consulta.shape = forma
-	consulta.transform = Transform2D(global_rotation, to_global(pos_local) + Vector2(0, -1))
-	consulta.collision_mask = 1
-	consulta.collide_with_bodies = true
-	consulta.collide_with_areas = false
-	var choques := estado_espacio.intersect_shape(consulta, 8)
-	for choque in choques:
-		var collider = choque["collider"]
-		if collider is TileMapLayer:
-			var capa: TileMapLayer = collider
-			var local := capa.to_local(to_global(pos_local) + Vector2(0, -1))
-			var radio := 6.8108597
-			var celda_min := capa.local_to_map(local - Vector2(radio, radio))
-			var celda_max := capa.local_to_map(local + Vector2(radio, radio))
-			var hay_solido_no_destruible := false
-			for x in range(celda_min.x, celda_max.x + 1):
-				for y in range(celda_min.y, celda_max.y + 1):
-					var celda := Vector2i(x, y)
-					var datos := capa.get_cell_tile_data(celda)
-					if datos == null:
-						continue
-					if datos.get_collision_polygons_count(0) <= 0:
-						continue
-					if quema and bool(datos.get_custom_data("rompible_por_fuego")):
-						continue
-					hay_solido_no_destruible = true
-			if hay_solido_no_destruible:
-				return true
-		else:
-			return true
-	return false
+
 
 
 func _actualizar_hud_estado() -> void:

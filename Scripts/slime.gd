@@ -92,6 +92,20 @@ func _ready():
 	max_contacts_reported = 6
 
 	_quema_bloques = tipo_slime == SlimeCatalogo.Tipo.FUEGO
+	if _quema_bloques:
+		color_burbujas = Color(1.0, 0.6, 0.2)
+	# Configurar las particulas de rastro para que sean visibles al disparar.
+	var degradado_rastro := Gradient.new()
+	degradado_rastro.offsets = PackedFloat32Array([0.0, 1.0])
+	degradado_rastro.colors = PackedColorArray([Color(color_burbujas, 0.9), Color(color_burbujas, 0.0)])
+	particulas_rastro.color_ramp = degradado_rastro
+	particulas_rastro.amount = 16
+	particulas_rastro.lifetime = 0.5
+	particulas_rastro.scale_amount_min = 0.8
+	particulas_rastro.scale_amount_max = 1.2
+	particulas_rastro.initial_velocity_min = 0.0
+	particulas_rastro.initial_velocity_max = 0.0
+	particulas_rastro.gravity = Vector2(0, 0)
 	var circulo := forma_colision.shape as CircleShape2D
 	if circulo != null:
 		var escala := forma_colision.global_scale
@@ -104,8 +118,6 @@ func _ready():
 	arrastre = linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
 
 	_escala_base = sprite.scale
-	if _quema_bloques:
-		color_burbujas = Color(1.0, 0.6, 0.2)
 	_crear_brillo()
 	_crear_burbujas()
 
