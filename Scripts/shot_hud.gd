@@ -25,7 +25,6 @@ var modo_ecuacion: String = "parabola"
 ## Fuente pixel para ecuaciones y cartilla.
 var _fuente_ecuaciones: FontFile
 ## Cartilla de explicacion (bloc de notas amarillo).
-var _cartilla: PanelContainer
 
 const PANEL := Color("#17263B")
 const PANEL_LIGHT := Color("#243B55")
