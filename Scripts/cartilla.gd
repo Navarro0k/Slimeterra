@@ -98,14 +98,14 @@ func _ready() -> void:
 func _actualizar() -> void:
 	if modo_ecuacion == "matrices":
 		if _pagina == 0:
-			_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x^2 + b x + c.\n\nUsamos un sistema lineal: [b]s' = A*s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica.\n\nLa matriz A encode la gravedad y el amortiguamiento; b encode la gravedad constante. La solucion es s(t) = e^(A t) * s0 + integral(e^(A tau) b dtau)."
+			_lbl.text = "[b]Por que matrices?[/b]\n\nEn el nivel 1 la trayectoria es una parabola perfecta porque no hay amortiguamiento. Aqui el aire frena al slime, asi la curva se deforma y ya no es y = a x² + b x + c.\n\nUsamos un sistema lineal: [b]s' = A*s + b[/b], donde s = [x, y, vx, vy].\n\nEl estado del slime se actualiza con matrices, lo que permite modelar el rozamiento del aire de forma dinamica.\n\nLa matriz A encode la gravedad y el amortiguamiento; b encode la gravedad constante. La solucion es s(t) = e^(A t) * s0 + integral(e^(A tau) b dtau)."
 			_btn.text = "Continuar"
 		else:
 			_lbl.text = "[b]Formula y aplicacion:[/b]\n\ns0 = [ x0  y0  vx0  vy0 ]^T\n\nA =\n[  0   0   1   0  ]\n[  0   0   0   1  ]\n[  0   0  -k   0  ]\n[  0   0   0  -k  ]\n\nb = [ 0  0  0  g ]^T\n\nk = 0.10     g = 980\n\nAjusta angulo y potencia: s0 cambia en tiempo real y la trayectoria se recalcula.\n\n[b]Ahora juega y observa como la matriz cambia la trayectoria![/b]"
 			_btn.text = "Cerrar"
 	else:
 		if _pagina == 0:
-			_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x^2 + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nLos coeficientes son:\na = g / (2 * vx^2)  (curvatura, depende de la velocidad horizontal)\nb = vy / vx - 2 * a * x0  (pendiente inicial)\nc = y0 - b * x0 + a * x0^2  (posicion inicial)\n\nAjusta angulo y potencia para alcanzar la meta."
+			_lbl.text = "[b]Por que una parabola?[/b]\n\nSin amortiguamiento, el tiro sigue [b]y(x) = a x² + b x + c[/b]. La gravedad es constante y no hay rozamiento, asi la curva es simetrica.\n\nLos coeficientes son:\na = g / (2 * vx²)  (curvatura, depende de la velocidad horizontal)\nb = vy / vx - 2 * a * x0  (pendiente inicial)\nc = y0 - b * x0 + a * x0²  (posicion inicial)\n\nAjusta angulo y potencia para alcanzar la meta."
 			_btn.text = "Continuar"
 		else:
 			_lbl.text = "[b]Formula y aplicacion:[/b]\n\na = g / (2 * vx^2)\nb = vy / vx - 2 * a * x0\nc = y0 - b * x0 + a * x0^2\n\nCon vx, vy de la velocidad inicial.\n\nCambia angulo y potencia: a, b, c se actualizan en tiempo real en el panel superior.\n\n[b]Ahora juega y observa como cambian los coeficientes![/b]"

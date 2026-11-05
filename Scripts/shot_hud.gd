@@ -261,12 +261,12 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 	# amortiguamiento hace que el tiro ya no sea una parábola perfecta.
 	var texto := ""
 	if modo_ecuacion == "matrices":
-		texto += "[color=#FFFFFF]Espacio de estados[/color]\n"
+		texto += "[color=#FFFFFF][b]Espacio de estados[/b][/color]\n"
 		texto += "[color=#A6B8D0]s  = [ x  y  vx  vy ]^T[/color]\n"
 		texto += "[color=#62D9C7]s0 = [%.0f  %.0f  %.0f  %.0f]^T[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
 		texto += "[color=#FFFFFF]s' = A s + b[/color]\n"
-		texto += "[color=#62D9C7]A = [ 0  0  1  0 ]\n    [ 0  0  0  1 ]\n    [ 0  0 -k  0 ]\n    [ 0  0  0 -k ][/color]\n"
-		texto += "[color=#62D9C7]b = [ 0  0  0  g ]^T[/color]\n"
+		texto += "[color=#62D9C7][b]A[/b] = [ 0  0  1  0 ]\n    [ 0  0  0  1 ]\n    [ 0  0 -k  0 ]\n    [ 0  0  0 -k ][/color]\n"
+		texto += "[color=#62D9C7][b]b[/b] = [ 0  0  0  g ]^T[/color]\n"
 		texto += "[color=#A6B8D0]k=%.2f   g=%.0f[/color]" % [damping, gravity]
 	else:
 		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
