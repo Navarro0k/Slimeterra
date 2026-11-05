@@ -28,6 +28,7 @@ func _ready() -> void:
 	# Reproducir musica de fondo explicativa.
 	if musica != null and musica.stream != null:
 		musica.play()
+		musica.finished.connect(func(): if is_instance_valid(musica) and visible: musica.play())
 	_actualizar()
 
 func _actualizar() -> void:
