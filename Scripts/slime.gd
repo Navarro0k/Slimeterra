@@ -475,7 +475,7 @@ func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
 # Efecto visual y sonoro al quemar un bloque
 # ---------------------------------------------------------------------------
 func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
-	print("Slime fuego: quemando celda ", celda, " sonido_quemar=", sonido_quemar)
+	print("QUEMANDO: ", celda, " sonido=", sonido_quemar != null)
 	# Efecto visual: particulas de fuego en la posicion del bloque.
 	var centro_local := capa.map_to_local(celda)
 	var centro_global := capa.to_global(centro_local)
