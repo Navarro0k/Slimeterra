@@ -509,29 +509,42 @@ func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
 		var timer := get_tree().create_timer(1.0)
 		timer.timeout.connect(particulas.queue_free)
 
-	# Sonido de quemado: usar AudioStreamGenerator para generar un beep.
+	# Sonido de quemado: crash/explosion generado proceduralmente.
 	if escena != null:
+		var mix_rate := 22050.0
+		var duracion := 0.25
 		var generador := AudioStreamGenerator.new()
-		generador.mix_rate = 22050
-		generador.buffer_length = 0.2
+		generador.mix_rate = mix_rate
+		generador.buffer_length = duracion
 		var reproductor := AudioStreamPlayer.new()
 		reproductor.stream = generador
-		reproductor.volume_db = 0.0
+		reproductor.volume_db = 2.0
 		reproductor.bus = &"Master"
 		escena.add_child(reproductor)
 		reproductor.play()
-		# Generar un beep simple.
 		var playback := reproductor.get_stream_playback() as AudioStreamGeneratorPlayback
 		if playback != null:
-			var frames := 22050 * 0.15
+			var frames := int(mix_rate * duracion)
 			var buffer := PackedVector2Array()
-			buffer.resize(int(frames))
-			for i in range(int(frames)):
-				var t := float(i) / 22050.0
-				var env := 1.0 - t / 0.15
-				var sample := sin(t * TAU * 440.0) * env * 0.5
+			buffer.resize(frames)
+			for i in range(frames):
+				var t := float(i) / mix_rate
+				# Envolvente: ataque instantaneo, decaimiento exponencial rapido.
+				var env := exp(-t * 18.0)
+				# Componente grave (golpe).
+				var grave := sin(t * TAU * 55.0) * env * 0.6
+				# Componente medio (cuerpo del crash).
+				var medio := sin(t * TAU * 110.0) * env * 0.3
+				# Ruido (textura de impacto/cristal roto).
+				var ruido := (randf() * 2.0 - 1.0) * env * env * 0.4
+				# Chasquido inicial (transiente).
+				var chasquido := 0.0
+				if t < 0.005:
+					chasquido = (randf() * 2.0 - 1.0) * (1.0 - t / 0.005) * 0.8
+				var sample := grave + medio + ruido + chasquido
+				sample = clampf(sample, -1.0, 1.0)
 				buffer[i] = Vector2(sample, sample)
 			playback.push_buffer(buffer)
 		# Auto-limpiar.
-		var timer := get_tree().create_timer(0.3)
+		var timer := get_tree().create_timer(duracion + 0.1)
 		timer.timeout.connect(reproductor.queue_free)
