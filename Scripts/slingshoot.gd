@@ -83,9 +83,7 @@ func _physics_process(_delta: float) -> void:
 func _process(_delta: float) -> void:
 	_fijar_slime_al_holder()
 
-func _input(event: InputEvent) -> void:
-	# Permite jugar con el ratón: pulsar sobre el slime, estirar hacia atrás
-	# y soltar para disparar. Los controles del HUD siguen sincronizados.
+func _unhandled_input(event: InputEvent) -> void:
 	if _esperando_turno or not is_instance_valid(slime_actual):
 		return
 	if is_instance_valid(_hud) and _hud.cartilla_activa:
