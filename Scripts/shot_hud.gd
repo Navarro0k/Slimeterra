@@ -203,19 +203,22 @@ func _construir_cartilla() -> void:
 	_cartilla = PanelContainer.new()
 	_cartilla.name = "Cartilla"
 	var estilo := StyleBoxFlat.new()
-	# Bloc de notas: papel crema con lineas horizontales.
-	estilo.bg_color = Color(0.98, 0.95, 0.82, 0.97)
-	estilo.border_color = Color(0.45, 0.3, 0.12)
+	# Bloc de notas: amarillo (color anterior, mas inmersivo).
+	estilo.bg_color = Color(1.0, 0.95, 0.55, 0.95)
+	estilo.border_color = Color(0.7, 0.6, 0.2)
 	estilo.set_border_width_all(3)
-	estilo.set_corner_radius_all(8)
-	estilo.content_margin_left = 14
-	estilo.content_margin_right = 14
-	estilo.content_margin_top = 12
-	estilo.content_margin_bottom = 12
+	estilo.set_corner_radius_all(6)
+	estilo.content_margin_left = 16
+	estilo.content_margin_right = 16
+	estilo.content_margin_top = 14
+	estilo.content_margin_bottom = 14
 	_cartilla.add_theme_stylebox_override("panel", estilo)
-	_cartilla.position = Vector2(60, 15)
-	_cartilla.custom_minimum_size = Vector2(360, 240)
-	_cartilla.size = Vector2(360, 240)
+	# Ocupar toda la pantalla como overlay.
+	_cartilla.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_cartilla.offset_left = 20
+	_cartilla.offset_top = 20
+	_cartilla.offset_right = -20
+	_cartilla.offset_bottom = -20
 
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 8)
@@ -226,8 +229,9 @@ func _construir_cartilla() -> void:
 	_cartilla_lbl.fit_content = false
 	_cartilla_lbl.scroll_active = true
 	_cartilla_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_cartilla_lbl.custom_minimum_size = Vector2(300, 180)
+	_cartilla_lbl.custom_minimum_size = Vector2(400, 200)
 	_cartilla_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_cartilla_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_cartilla_lbl.add_theme_font_size_override("normal_font_size", 10)
 	_cartilla_lbl.add_theme_font_size_override("bold_font_size", 10)
 	_cartilla_lbl.add_theme_font_size_override("mono_font_size", 10)
