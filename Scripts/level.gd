@@ -31,6 +31,8 @@ var slimes_nivel: Dictionary = {
 var limites_globales: Rect2 = Rect2()
 var tiempo_transcurrido: float = 0.0
 var _etiqueta_tiempo: Label
+## false mientras el tablero explicativo está abierto: el nivel aún no ha comenzado.
+var _explicacion_completada: bool = false
 
 @onready var slingshoot: Node2D = $Slingshoot
 @onready var ui: SlimeSelectorUI = $SlimeSelectorUI
@@ -51,6 +53,8 @@ func _ready() -> void:
 	# Resortera -> Cámara: sigue al slime en vuelo y vuelve a la resortera al recargar.
 	slingshoot.slime_lanzado.connect(_on_slime_lanzado)
 	slingshoot.slime_cargado.connect(_on_slime_cargado)
+	# Resortera -> Nivel: el tablero explicativo inicial ya se leyó por completo.
+	slingshoot.explicacion_completada.connect(_on_explicacion_completada)
 
 	pantalla = get_node_or_null("PantallaFin") as PantallaFin
 	if pantalla == null:
@@ -88,11 +92,27 @@ func _ready() -> void:
 
 	_crear_hud_tiempo()
 
+	# Mientras se lee el tablero no se puede pausar ni contar tiempo: el nivel
+	# empieza realmente cuando la cartilla emite su cierre.
+	pantalla.bloquear_pausa(true)
+
+
 func _process(delta: float) -> void:
-	if _terminado or _etiqueta_tiempo == null:
+	if _terminado or not _explicacion_completada or _etiqueta_tiempo == null:
 		return
 	tiempo_transcurrido += delta
 	_etiqueta_tiempo.text = _formatear_tiempo(tiempo_transcurrido)
+
+
+func _on_explicacion_completada() -> void:
+	if _explicacion_completada:
+		return
+	_explicacion_completada = true
+	tiempo_transcurrido = 0.0
+	if _etiqueta_tiempo != null:
+		_etiqueta_tiempo.text = _formatear_tiempo(0.0)
+	if pantalla != null:
+		pantalla.bloquear_pausa(false)
 
 # ---------------------------------------------------------------------------
 # Contador de tiempo y estrellas

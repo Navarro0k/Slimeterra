@@ -190,25 +190,48 @@ func _construir_interfaz() -> void:
 	_launch_button.pressed.connect(_on_launch_pressed)
 	power_col.add_child(_launch_button)
 
-var _cartilla: Node
+var _cartilla: Control
 ## True mientras la cartilla esta abierta: bloquea el juego.
 var cartilla_activa: bool = true
+## Ultimo modelo fisico recibido. Se reenvia a la cartilla cuando esta ya existe.
+var _modelo_pos: Vector2 = Vector2.ZERO
+var _modelo_vel: Vector2 = Vector2.ZERO
+var _modelo_gravedad: float = 980.0
+var _modelo_amortiguamiento: float = 0.0
+var _hay_modelo: bool = false
 
 func _construir_cartilla() -> void:
-	var script_cartilla := load("res://Scripts/cartilla.gd")
-	if script_cartilla == null:
-		cartilla_activa = false
+	var escena := load("res://Scenes/UI/Cartilla.tscn") as PackedScene
+	if escena == null:
+		_omitir_cartilla()
 		return
-	_cartilla = script_cartilla.new()
+	_cartilla = escena.instantiate() as Control
 	if _cartilla == null:
-		cartilla_activa = false
+		_omitir_cartilla()
 		return
 	_cartilla.set("modo_ecuacion", modo_ecuacion)
-	_cartilla.connect("cerrada", _on_cartilla_cerrada)
+	if _cartilla.has_signal("cerrada"):
+		_cartilla.connect("cerrada", _on_cartilla_cerrada)
+	else:
+		_omitir_cartilla()
+		_cartilla.queue_free()
+		_cartilla = null
+		return
 	add_child(_cartilla)
+	if _hay_modelo and _cartilla.has_method("set_model_values"):
+		_cartilla.call("set_model_values", _modelo_pos, _modelo_vel, _modelo_gravedad, _modelo_amortiguamiento)
+
+## Sin cartilla (escena ausente o rota) el nivel no debe quedar bloqueado.
+func _omitir_cartilla() -> void:
+	cartilla_activa = false
+	_emitir_cartilla_cerrada.call_deferred()
+
+func _emitir_cartilla_cerrada() -> void:
+	cartilla_cerrada.emit()
 
 func _on_cartilla_cerrada() -> void:
 	cartilla_activa = false
+	_cartilla = null
 	cartilla_cerrada.emit()
 
 func _on_equation_toggle_pressed() -> void:
@@ -253,6 +276,13 @@ func set_launch_enabled(enabled: bool) -> void:
 		_launch_button.text = "CLIC PARA DISPARAR" if enabled else "ESPERANDO SLIME..."
 
 func set_model_values(position_initial: Vector2, velocity_initial: Vector2, gravity: float, damping: float) -> void:
+	_modelo_pos = position_initial
+	_modelo_vel = velocity_initial
+	_modelo_gravedad = gravity
+	_modelo_amortiguamiento = damping
+	_hay_modelo = true
+	if is_instance_valid(_cartilla) and _cartilla.has_method("set_model_values"):
+		_cartilla.call("set_model_values", position_initial, velocity_initial, gravity, damping)
 	if not is_instance_valid(_math_label):
 		return
 
