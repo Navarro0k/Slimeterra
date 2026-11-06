@@ -55,6 +55,10 @@ var _btn_reiniciar: Button
 var _btn_siguiente: Button
 var _btn_inicio: Button
 
+## Cuando es true, el botón de pausa y Esc quedan deshabilitados (por ejemplo,
+## mientras se lee el tablero explicativo inicial).
+var pausa_bloqueada: bool = false
+
 func _ready() -> void:
 	layer = 50
 	# Tiene que seguir funcionando con el árbol en pausa.
@@ -63,9 +67,18 @@ func _ready() -> void:
 	_raiz.visible = false
 
 func _unhandled_input(event: InputEvent) -> void:
+	if pausa_bloqueada:
+		return
 	if event.is_action_pressed("ui_cancel") and (modo == Modo.OCULTA or modo == Modo.PAUSA):
 		get_viewport().set_input_as_handled()
 		alternar_pausa()
+
+## Permite que el nivel impida abrir la pausa mientras el jugador está leyendo
+## el tablero explicativo.
+func bloquear_pausa(bloqueada: bool) -> void:
+	pausa_bloqueada = bloqueada
+	if is_instance_valid(_btn_pausa):
+		_btn_pausa.visible = not bloqueada and modo == Modo.OCULTA
 
 # ---------------------------------------------------------------------------
 # API pública
@@ -87,7 +100,7 @@ func mostrar_derrota(mensaje: String = "") -> void:
 func continuar() -> void:
 	modo = Modo.OCULTA
 	_raiz.visible = false
-	_btn_pausa.visible = true
+	_btn_pausa.visible = not pausa_bloqueada
 	get_tree().paused = false
 
 func reiniciar() -> void:

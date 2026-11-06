@@ -4,6 +4,8 @@ signal inventario_cambiado(inventario: Array, indice_seleccionado: int)
 signal sin_municion
 signal slime_lanzado(slime: Node2D)
 signal slime_cargado(slime: Node2D)
+## El jugador terminó de leer el tablero explicativo inicial: el nivel puede arrancar.
+signal explicacion_completada
 
 @export_group("Física y Tiro")
 @export var multiplicador_fuerza: float = 15.0
@@ -157,10 +159,20 @@ func _crear_hud() -> void:
 	_hud.name = "ShotHUD"
 	_hud.modo_ecuacion = modo_ecuacion
 	get_tree().current_scene.call_deferred("add_child", _hud)
+	_hud.ready.connect(_al_hud_listo)
 	_hud.launch_requested.connect(disparar_con_parametros)
 	_hud.aim_changed.connect(_on_aim_changed)
-	_hud.cartilla_cerrada.connect(_actualizar_hud_estado)
+	_hud.cartilla_cerrada.connect(_on_cartilla_cerrada)
 	_hud.set_launch_enabled(is_instance_valid(slime_actual))
+
+func _al_hud_listo() -> void:
+	# La cartilla se crea dentro de ShotHUD._ready; recién aquí existen sus nodos.
+	_actualizar_modelo_hud()
+	_actualizar_hud_estado()
+
+func _on_cartilla_cerrada() -> void:
+	_actualizar_hud_estado()
+	explicacion_completada.emit()
 
 func configurar(slimes: Dictionary) -> void:
 	_quitar_slime()
