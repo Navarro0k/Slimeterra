@@ -354,14 +354,6 @@ func _arrastre_fisico() -> float:
 			return float(valor)
 	return float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 
-## Método de integración que realmente usa el slime (RK4 por defecto).
-func _metodo_fisico() -> SolverNumerico.Metodo:
-	if is_instance_valid(slime_actual):
-		var valor: Variant = slime_actual.get("metodo")
-		if valor != null:
-			return int(valor) as SolverNumerico.Metodo
-	return SolverNumerico.Metodo.RK4
-
 ## Paso de simulación real del motor de física (el mismo que recibe slime.gd en state.step).
 func _dt_fisica() -> float:
 	return 1.0 / maxf(float(Engine.physics_ticks_per_second), 1.0)
@@ -376,7 +368,6 @@ func _dibujar_trayectoria() -> void:
 	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
 	var gravedad := _gravedad_fisica()
 	var k := _arrastre_fisico()
-	var metodo := _metodo_fisico()
 	var dt := _dt_fisica()
 
 	var total_puntos := mini(puntos_trayectoria, 10)
@@ -385,13 +376,13 @@ func _dibujar_trayectoria() -> void:
 
 	# La simulación corre en coordenadas GLOBALES, desde el mismo punto donde
 	# arrancará el slime (holder.global_position), con el mismo dt y el mismo
-	# integrador. Solo al dibujar se pasa a coordenadas locales de este nodo.
+	# integrador RK4. Solo al dibujar se pasa a coordenadas locales de este nodo.
 	var pos := holder.global_position
 	var vel := velocidad
 	var posiciones_puntos: Array[Vector2] = []
 
 	for step in range(pasos_totales):
-		var r: Array = SolverNumerico.paso(metodo, pos, vel, dt, gravedad, k)
+		var r: Array = SolverNumerico.paso(pos, vel, dt, gravedad, k)
 		pos = r[0]
 		vel = r[1]
 		if (step + 1) % pasos_por_punto == 0:

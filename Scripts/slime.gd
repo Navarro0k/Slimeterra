@@ -9,7 +9,6 @@ extends RigidBody2D
 ##   TERMINADO -> se pegó o se descartó; ya no reacciona a nada.
 enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 
-@export var metodo: SolverNumerico.Metodo = SolverNumerico.Metodo.RK4
 @export var tipo_slime: SlimeCatalogo.Tipo = SlimeCatalogo.Tipo.BASE
 ## Segundos máximos en vuelo. Si no choca con nada (cae al vacío) se descarta y el turno termina.
 @export var tiempo_vuelo_max: float = 8.0
@@ -312,7 +311,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 		vel_sim = state.linear_velocity
 
 	var pos: Vector2 = state.transform.origin
-	var r: Array = SolverNumerico.paso(metodo, pos, vel_sim, dt, gravedad, arrastre)
+	var r: Array = SolverNumerico.paso(pos, vel_sim, dt, gravedad, arrastre)
 	var nueva_pos: Vector2 = r[0]
 	var nueva_vel: Vector2 = r[1]
 
