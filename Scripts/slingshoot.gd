@@ -143,11 +143,7 @@ func _actualizar_arrastre(mouse_global: Vector2) -> void:
 	_aplicar_tension_slime(potencia_objetivo / 100.0, desplazamiento.normalized())
 	if is_instance_valid(_hud):
 		_hud.set_aim_from_drag(angulo_objetivo, potencia_objetivo)
-		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
-		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
-		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
-		_hud.set_model_values(holder.global_position, velocidad, gravedad, k)
+		_actualizar_modelo_hud()
 	queue_redraw()
 
 func _draw() -> void:
@@ -215,18 +211,20 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	if is_instance_valid(_hud) and _hud.cartilla_activa:
 		return
 	actualizar_aim(angulo, potencia)
-	var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
-	var intensidad := potencia_objetivo / 100.0
-	var vector_tiro := Vector2(cos(theta), -sin(theta)) * max_stretch * intensidad
-	if vector_tiro.length() <= 0.1:
+	# Misma función que usa la vista previa: una sola fuente de verdad para la velocidad inicial.
+	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
+	if velocidad.length() <= 0.1:
 		return
+	# CORRECCIÓN: el slime sale desde donde está sujeto AHORA (el mismo punto donde la
+	# vista previa empieza a dibujar), no desde el punto de reposo de la honda.
+	var origen_global := holder.global_position
 	_esperando_turno = true
 	holder.position = _posicion_holder_reposo
 	actualizar_cuerdas(holder.position)
 	_detener_sonidos_estirar()
 	_actualizar_visibilidad(false)
 	_aplicar_tension_slime(0.0, Vector2.ZERO)
-	_ejecutar_disparo(vector_tiro)
+	_ejecutar_disparo(velocidad, origen_global)
 	_actualizar_hud_estado()
 	queue_redraw()
 
@@ -234,12 +232,7 @@ func _on_aim_changed(angulo: float, potencia: float) -> void:
 	_mostrar_trayectoria = true
 	_actualizar_visibilidad(true)
 	actualizar_aim(angulo, potencia)
-	if is_instance_valid(_hud):
-		var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
-		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
-		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
-		_hud.set_model_values(holder.global_position, velocidad, gravedad, k)
+	_actualizar_modelo_hud()
 
 func _cargar_nuevo_slime() -> void:
 	_esperando_turno = false
@@ -274,10 +267,12 @@ func _quitar_slime() -> void:
 		slime_actual.queue_free()
 	slime_actual = null
 
-func _ejecutar_disparo(vector_tiro: Vector2) -> void:
+## velocidad_inicial: velocidad real en px/s (ya incluye multiplicador_fuerza).
+## origen_global: punto exacto de partida (el mismo que usa la vista previa).
+func _ejecutar_disparo(velocidad_inicial: Vector2, origen_global: Vector2) -> void:
 	if not is_instance_valid(slime_actual):
 		return
-	slime_actual.global_position = holder.global_position
+	slime_actual.global_position = origen_global
 	slime_actual.reparent(get_tree().current_scene)
 	slime_actual.freeze = false
 	if slime_actual.has_signal("slime_pegado"):
@@ -286,7 +281,7 @@ func _ejecutar_disparo(vector_tiro: Vector2) -> void:
 		slime_actual.turno_terminado.connect(func(): _cargar_nuevo_slime.call_deferred())
 	if slime_actual.has_method("lanzar"):
 		var radio: float = max_stretch * absf(global_scale.x) + margen_respeto
-		slime_actual.lanzar(vector_tiro * multiplicador_fuerza, tiempo_respeto, center_marker, radio)
+		slime_actual.lanzar(velocidad_inicial, tiempo_respeto, center_marker, radio)
 	_reproducir(_player_lanzar, volumen_lanzar_db, velocidad_lanzar)
 	slime_lanzado.emit(slime_actual)
 	slime_actual = null
@@ -335,37 +330,78 @@ func _dibujar_curva(linea: Line2D, p_ini: Vector2, p_fin: Vector2, tension: floa
 		medio.y += lerpf(caida_reposo, 0.0, tension)
 		linea.points = [p_ini, medio, p_fin]
 
+# ---------------------------------------------------------------------------
+# Parámetros físicos compartidos entre la vista previa y el slime real.
+# Todo lo que influye en la trayectoria sale de AQUÍ, para que lo dibujado
+# y lo simulado por slime.gd no puedan divergir.
+# ---------------------------------------------------------------------------
+
+## Velocidad inicial (px/s, coordenadas globales) para un ángulo/potencia dados.
+func _velocidad_inicial(angulo: float, potencia: float) -> Vector2:
+	var theta := deg_to_rad(fposmod(angulo, 360.0) + angulo_desvio_grados)
+	var intensidad := clampf(potencia, 0.0, 100.0) / 100.0
+	return Vector2(cos(theta), -sin(theta)) * max_stretch * intensidad * multiplicador_fuerza
+
+func _gravedad_fisica() -> float:
+	# slime.gd integra con esta misma configuración (ignora gravity_scale).
+	return float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
+
+## Amortiguamiento que realmente usa el slime (linear_damp + global, o solo el propio).
+func _arrastre_fisico() -> float:
+	if is_instance_valid(slime_actual):
+		var valor: Variant = slime_actual.get("arrastre")
+		if valor != null:
+			return float(valor)
+	return float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+
+## Método de integración que realmente usa el slime (RK4 por defecto).
+func _metodo_fisico() -> SolverNumerico.Metodo:
+	if is_instance_valid(slime_actual):
+		var valor: Variant = slime_actual.get("metodo")
+		if valor != null:
+			return int(valor) as SolverNumerico.Metodo
+	return SolverNumerico.Metodo.RK4
+
+## Paso de simulación real del motor de física (el mismo que recibe slime.gd en state.step).
+func _dt_fisica() -> float:
+	return 1.0 / maxf(float(Engine.physics_ticks_per_second), 1.0)
+
+func _actualizar_modelo_hud() -> void:
+	if not is_instance_valid(_hud):
+		return
+	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
+	_hud.set_model_values(holder.global_position, velocidad, _gravedad_fisica(), _arrastre_fisico())
+
 func _dibujar_trayectoria() -> void:
-	var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
-	var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
-	var gravedad: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
-	var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
+	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
+	var gravedad := _gravedad_fisica()
+	var k := _arrastre_fisico()
+	var metodo := _metodo_fisico()
+	var dt := _dt_fisica()
 
-	var dt_fisica := 1.0 / 60.0
 	var total_puntos := mini(puntos_trayectoria, 10)
-	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt_fisica))
-
-	var pos := holder.position
-	var vel := velocidad
-	var ultimo_punto := pos
+	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt))
 	var pasos_totales := pasos_por_punto * total_puntos
+
+	# La simulación corre en coordenadas GLOBALES, desde el mismo punto donde
+	# arrancará el slime (holder.global_position), con el mismo dt y el mismo
+	# integrador. Solo al dibujar se pasa a coordenadas locales de este nodo.
+	var pos := holder.global_position
+	var vel := velocidad
 	var posiciones_puntos: Array[Vector2] = []
-	var puntos_dibujados := 0
 
 	for step in range(pasos_totales):
-		var r: Array = SolverNumerico.paso(SolverNumerico.Metodo.RK4, pos, vel, dt_fisica, gravedad, k)
+		var r: Array = SolverNumerico.paso(metodo, pos, vel, dt, gravedad, k)
 		pos = r[0]
 		vel = r[1]
-
-		if (step + 1) % pasos_por_punto == 0 and puntos_dibujados < total_puntos:
+		if (step + 1) % pasos_por_punto == 0:
 			posiciones_puntos.append(pos)
-			puntos_dibujados += 1
 
-	ultimo_punto = pos
+	var ultimo_punto: Vector2 = pos
 
 	# Dibujar los puntos como pixeles (2x2 para visibilidad).
 	for i in range(posiciones_puntos.size()):
-		var pt := posiciones_puntos[i]
+		var pt := to_local(posiciones_puntos[i])
 		var alpha := 0.9 - i * 0.08
 		var color_px := Color(0.91, 1.0, 0.97, alpha)
 		draw_rect(Rect2(pt - Vector2(1, 1), Vector2(2, 2)), color_px)
@@ -379,11 +415,8 @@ func _dibujar_trayectoria() -> void:
 	if textura != null:
 		var escala := 0.5
 		var tam := textura.get_size() * escala
-		var rect := Rect2(ultimo_punto - tam * 0.5, tam)
+		var rect := Rect2(to_local(ultimo_punto) - tam * 0.5, tam)
 		draw_texture_rect(textura, rect, false, Color(1.0, 1.0, 1.0, 0.4))
-
-
-
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
@@ -391,11 +424,7 @@ func _actualizar_hud_estado() -> void:
 		if _hud.cartilla_activa:
 			puede = false
 		_hud.set_launch_enabled(puede)
-		var g: float = float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
-		var k: float = float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
-		var theta := deg_to_rad(angulo_objetivo + angulo_desvio_grados)
-		var velocidad := Vector2(cos(theta), -sin(theta)) * max_stretch * potencia_objetivo / 100.0 * multiplicador_fuerza
-		_hud.set_model_values(holder.global_position, velocidad, g, k)
+		_actualizar_modelo_hud()
 	queue_redraw()
 
 func _crear_reproductores() -> void:
