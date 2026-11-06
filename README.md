@@ -12,6 +12,7 @@ La lógica se separa en:
 - `Slime` (RigidBody2D con máquina de estados: cargado → saliendo → en vuelo → terminado).
 - `SlimeCatalogo` / `SlimeInventario` (tipos y cantidades de slimes).
 - `ShotHUD` (ángulo, potencia, ecuación y botón de disparo).
+- `Cartilla` (tablero explicativo en escena propia: bloquea el inicio del nivel hasta leer todas sus páginas).
 
 ## 🎮 Controles
 - Arrastrar el slime con el ratón para apuntar y soltar para disparar.
