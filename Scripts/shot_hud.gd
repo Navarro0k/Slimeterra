@@ -127,7 +127,7 @@ func _construir_dial(root: Control) -> void:
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
 func _construir_panel_potencia(root: Control) -> void:
-	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 40))
+	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 228), Vector2(110, 42))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
@@ -153,8 +153,9 @@ func _crear_slider_potencia() -> HSlider:
 	slider.add_theme_stylebox_override("slider", HudTema.estilo_slider_fondo())
 	slider.add_theme_stylebox_override("grabber_area", HudTema.estilo_slider_relleno())
 	slider.add_theme_stylebox_override("grabber_area_highlight", HudTema.estilo_slider_relleno())
-	slider.add_theme_icon_override("grabber", HudTema.icono_circulo(HudTema.TINTA, 9))
-	slider.add_theme_icon_override("grabber_highlight", HudTema.icono_circulo(HudTema.PROGRESO_RELLENO, 9))
+	slider.add_theme_icon_override("grabber", HudTema.icono_pixel(HudTema.TINTA, 7))
+	slider.add_theme_icon_override("grabber_highlight", HudTema.icono_pixel(HudTema.HOVER, 7))
+	slider.add_theme_icon_override("grabber_disabled", HudTema.icono_pixel(HudTema.TINTA, 7))
 	slider.value_changed.connect(_on_power_changed)
 	return slider
 

@@ -98,16 +98,12 @@ static func estilo_slider_relleno() -> StyleBoxFlat:
 	return s
 
 
-## Círculo suave para el agarre del slider, sin depender del tema por defecto.
-static func icono_circulo(color: Color, diametro: int = 10) -> ImageTexture:
-	var img := Image.create(diametro, diametro, false, Image.FORMAT_RGBA8)
-	var centro := (diametro - 1) * 0.5
-	var radio := diametro * 0.5 - 0.5
-	for y in diametro:
-		for x in diametro:
-			var distancia := Vector2(x - centro, y - centro).length()
-			var alfa := clampf(radio + 0.5 - distancia, 0.0, 1.0)
-			img.set_pixel(x, y, Color(color, color.a * alfa))
+## Cuadrado pixelado para el agarre del slider, en tono oscuro de la cartilla.
+static func icono_pixel(color: Color, tam: int = 7) -> ImageTexture:
+	var img := Image.create(tam, tam, false, Image.FORMAT_RGBA8)
+	for y in tam:
+		for x in tam:
+			img.set_pixel(x, y, color)
 	return ImageTexture.create_from_image(img)
 
 
