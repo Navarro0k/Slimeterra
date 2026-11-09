@@ -129,7 +129,7 @@ func _construir_dial(root: Control) -> void:
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
 func _construir_panel_potencia(root: Control) -> void:
-	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 216), Vector2(110, 54))
+	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 232), Vector2(110, 38))
 	power_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var power_col := VBoxContainer.new()
 	power_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -137,10 +137,10 @@ func _construir_panel_potencia(root: Control) -> void:
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(HudTema.etiqueta("VELOCIDAD INICIAL v0", _fuente_pixel, 8))
+	power_header.add_child(HudTema.etiqueta("Velocidad Inicial V0", _fuente_pixel, 8))
 	_power_label = HudTema.etiqueta("65%", _fuente_pixel, 10)
 	power_header.add_child(_power_label)
-	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_pixel, 7, HudTema.TINTA_SUAVE))
+	power_col.add_child(HudTema.etiqueta("V0 Modifica A Y El Alcance", _fuente_pixel, 7, HudTema.TINTA_SUAVE))
 	_power_slider = _crear_slider_potencia()
 	power_col.add_child(_power_slider)
 

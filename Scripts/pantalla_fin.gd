@@ -111,7 +111,7 @@ func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String, estrellas: int 
 	_btn_continuar.visible = nuevo_modo == Modo.PAUSA
 	_btn_siguiente.visible = victoria and siguiente_nivel != ""
 	_btn_inicio.visible = victoria and es_final_del_juego and primer_nivel != ""
-	_btn_reiniciar.text = "REPETIR NIVEL" if victoria else "REINTENTAR"
+	_btn_reiniciar.text = "Repetir Nivel" if victoria else "Reintentar"
 	_btn_pausa.visible = false
 	_raiz.visible = true
 	get_tree().paused = true
@@ -233,16 +233,16 @@ func _construir_contenido(caja: VBoxContainer) -> void:
 	espacio.custom_minimum_size = Vector2(0, 2)
 	caja.add_child(espacio)
 
-	_btn_continuar = _crear_boton("CONTINUAR", continuar, true)
+	_btn_continuar = _crear_boton("Continuar", continuar, true)
 	caja.add_child(_btn_continuar)
 
-	_btn_siguiente = _crear_boton("SIGUIENTE NIVEL  →", ir_al_siguiente_nivel, true)
+	_btn_siguiente = _crear_boton("Siguiente Nivel  →", ir_al_siguiente_nivel, true)
 	caja.add_child(_btn_siguiente)
 
-	_btn_reiniciar = _crear_boton("REINTENTAR", reiniciar, false)
+	_btn_reiniciar = _crear_boton("Reintentar", reiniciar, false)
 	caja.add_child(_btn_reiniciar)
 
-	_btn_inicio = _crear_boton("VOLVER AL INICIO", ir_al_primer_nivel, true)
+	_btn_inicio = _crear_boton("Volver Al Inicio", ir_al_primer_nivel, true)
 	caja.add_child(_btn_inicio)
 
 func _crear_boton(texto: String, accion: Callable, primario: bool) -> Button:
