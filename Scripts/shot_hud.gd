@@ -127,7 +127,7 @@ func _construir_dial(root: Control) -> void:
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
 func _construir_panel_potencia(root: Control) -> void:
-	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63))
+	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 40))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
@@ -139,8 +139,6 @@ func _construir_panel_potencia(root: Control) -> void:
 	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_pixel, 5, HudTema.TINTA_SUAVE))
 	_power_slider = _crear_slider_potencia()
 	power_col.add_child(_power_slider)
-	_launch_button = _crear_boton_disparo()
-	power_col.add_child(_launch_button)
 
 func _crear_slider_potencia() -> HSlider:
 	var slider := HSlider.new()
@@ -150,6 +148,8 @@ func _crear_slider_potencia() -> HSlider:
 	slider.value = power_percent
 	slider.custom_minimum_size = Vector2(94, 9)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.editable = false
+	slider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	slider.add_theme_stylebox_override("slider", HudTema.estilo_slider_fondo())
 	slider.add_theme_stylebox_override("grabber_area", HudTema.estilo_slider_relleno())
 	slider.add_theme_stylebox_override("grabber_area_highlight", HudTema.estilo_slider_relleno())
@@ -157,25 +157,6 @@ func _crear_slider_potencia() -> HSlider:
 	slider.add_theme_icon_override("grabber_highlight", HudTema.icono_circulo(HudTema.PROGRESO_RELLENO, 9))
 	slider.value_changed.connect(_on_power_changed)
 	return slider
-
-func _crear_boton_disparo() -> Button:
-	var boton := Button.new()
-	boton.text = "DISPARAR ->"
-	boton.custom_minimum_size = Vector2(94, 14)
-	boton.add_theme_font_size_override("font_size", 7)
-	if _fuente_pixel != null:
-		boton.add_theme_font_override("font", _fuente_pixel)
-	boton.add_theme_color_override("font_color", HudTema.CREMA)
-	boton.add_theme_color_override("font_hover_color", HudTema.CREMA)
-	boton.add_theme_color_override("font_pressed_color", HudTema.CREMA)
-	boton.add_theme_color_override("font_disabled_color", HudTema.DESHABILITADO_TEXTO)
-	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(HudTema.TINTA))
-	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(HudTema.HOVER))
-	boton.add_theme_stylebox_override("pressed", HudTema.estilo_boton(HudTema.PRESSED))
-	boton.add_theme_stylebox_override("disabled", HudTema.estilo_boton(HudTema.DESHABILITADO, HudTema.PAPEL_APAGADO))
-	boton.pressed.connect(_on_launch_pressed)
-	return boton
-
 
 func _construir_cartilla() -> void:
 	var escena := load("res://Scenes/UI/Cartilla.tscn") as PackedScene
@@ -226,11 +207,6 @@ func _on_power_changed(valor: float) -> void:
 	power_percent = valor
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
-
-func _on_launch_pressed() -> void:
-	if _can_launch and power_percent > 0.0:
-		launch_requested.emit(angle_degrees, power_percent)
-
 
 func set_aim_from_drag(angulo: float, potencia: float) -> void:
 	# Sincroniza dial y slider sin crear bucles de señales.

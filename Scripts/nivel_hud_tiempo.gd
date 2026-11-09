@@ -16,7 +16,8 @@ func _init(padre: Node) -> void:
 	_etiqueta.add_theme_font_size_override("font_size", 14)
 	_etiqueta.add_theme_font_override("font", HudTema.fuente_pixel())
 	_etiqueta.add_theme_color_override("font_color", HudTema.TINTA_FUERTE)
-	_etiqueta.add_theme_stylebox_override("normal", HudTema.estilo_chip())
+	_etiqueta.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	_etiqueta.add_theme_constant_override("outline_size", 2)
 	capa.add_child(_etiqueta)
 	_etiqueta.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 6)
 	_etiqueta.grow_horizontal = Control.GROW_DIRECTION_BOTH
