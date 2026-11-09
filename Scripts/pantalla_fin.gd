@@ -1,19 +1,15 @@
 class_name PantallaFin
 extends CanvasLayer
-## Pantalla de pausa / victoria / derrota. Congela el juego (get_tree().paused) y ofrece
-## Reiniciar (y Continuar cuando es solo una pausa). Se construye por código: no necesita escena.
-## Además dibuja un botón "Pausa" siempre visible en la esquina superior derecha de la pantalla
-## de juego; Esc (ui_cancel) hace lo mismo.
+## Pantalla de pausa / victoria / derrota, construida por código.
 
 enum Modo { OCULTA, PAUSA, VICTORIA, DERROTA }
 
 var modo: Modo = Modo.OCULTA
 
-## Si no está vacío, la victoria ofrece pasar a este nivel (ruta res://...tscn). Lo asigna el nivel.
+## Ruta del siguiente nivel (res://...tscn). Lo asigna el nivel.
 var siguiente_nivel: String = ""
-## true en el último nivel del juego: la victoria pasa a ser la del juego completo.
+## true en el último nivel del juego.
 var es_final_del_juego: bool = false
-## Primer nivel del juego, al que se vuelve desde la pantalla final.
 var primer_nivel: String = ""
 
 var _btn_pausa: Button
@@ -26,13 +22,12 @@ var _btn_reiniciar: Button
 var _btn_siguiente: Button
 var _btn_inicio: Button
 
-## Cuando es true, el botón de pausa y Esc quedan deshabilitados (por ejemplo,
-## mientras se lee el tablero explicativo inicial).
+## true mientras la pausa está bloqueada (por ejemplo, leyendo la cartilla).
 var pausa_bloqueada: bool = false
 
 func _ready() -> void:
 	layer = 50
-	# Tiene que seguir funcionando con el árbol en pausa.
+	# Debe seguir funcionando con el árbol en pausa.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_construir()
 	_raiz.visible = false
@@ -44,16 +39,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		alternar_pausa()
 
-## Permite que el nivel impida abrir la pausa mientras el jugador está leyendo
-## el tablero explicativo.
+## Permite al nivel impedir abrir la pausa.
 func bloquear_pausa(bloqueada: bool) -> void:
 	pausa_bloqueada = bloqueada
 	if is_instance_valid(_btn_pausa):
 		_btn_pausa.visible = not bloqueada and modo == Modo.OCULTA
 
-# ---------------------------------------------------------------------------
-# API pública
-# ---------------------------------------------------------------------------
 
 func alternar_pausa() -> void:
 	if modo == Modo.PAUSA:
@@ -87,13 +78,10 @@ func ir_al_primer_nivel() -> void:
 func _cambiar_de_nivel(ruta: String) -> void:
 	if ruta.is_empty():
 		return
-	# Se quita la pausa ANTES: si no, el nivel nuevo arrancaría congelado.
+	# Quitar la pausa antes de cambiar de escena.
 	get_tree().paused = false
 	get_tree().change_scene_to_file(ruta)
 
-# ---------------------------------------------------------------------------
-# Interno
-# ---------------------------------------------------------------------------
 
 func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String, estrellas: int = 0) -> void:
 	modo = nuevo_modo
@@ -121,22 +109,20 @@ func _construir() -> void:
 	_construir_boton_pausa()
 	_construir_overlay()
 
-## Botón de pausa de la pantalla de juego (esquina superior derecha).
 func _construir_boton_pausa() -> void:
 	_btn_pausa = _crear_boton("Ⅱ PAUSA", alternar_pausa)
 	_btn_pausa.custom_minimum_size = Vector2(70, 20)
 	_btn_pausa.add_theme_font_size_override("font_size", 9)
-	_btn_pausa.focus_mode = Control.FOCUS_NONE # Que Espacio/Enter no lo activen por accidente.
+	_btn_pausa.focus_mode = Control.FOCUS_NONE
 	add_child(_btn_pausa)
 	_btn_pausa.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 5)
 	_btn_pausa.offset_left -= 4
 	_btn_pausa.offset_top += 1
 
-## Overlay de pausa / victoria / derrota.
 func _construir_overlay() -> void:
 	_raiz = Control.new()
 	_raiz.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_raiz.mouse_filter = Control.MOUSE_FILTER_STOP # Bloquea clics al juego mientras está abierta.
+	_raiz.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_raiz)
 
 	var fondo := ColorRect.new()

@@ -1,12 +1,5 @@
 extends Control
-## Tablero explicativo del nivel.
-##
-## Es una escena independiente (Scenes/UI/Cartilla.tscn) que se muestra al comenzar
-## el nivel. Bloquea el disparo y el cronómetro hasta que el jugador haya recorrido
-## todas las páginas y llegado al final del texto de cada una.
-##
-## Este script solo maneja la navegación y el control de lectura; el texto de cada
-## página vive en CartillaContenido.
+## Tablero explicativo del nivel: navegación y control de lectura.
 
 signal cerrada
 
@@ -25,7 +18,6 @@ const TOTAL_PAGINAS: int = 4
 @onready var _btn_siguiente: Button = $Panel/Margen/Contenido/Pie/BtnSiguiente
 @onready var _musica: AudioStreamPlayer = $Musica
 
-## Texto de las páginas y datos del disparo actual (los envía ShotHUD).
 var _contenido := CartillaContenido.new()
 
 var _pagina: int = 0
@@ -48,7 +40,7 @@ func _ready() -> void:
 	_texto.get_v_scroll_bar().value_changed.connect(_on_scroll)
 	_texto.resized.connect(_comprobar_lectura)
 
-	# La música del nivel se silencia mientras se lee el tablero.
+	# Silenciar la música del nivel mientras se lee.
 	_pausar_musica_nivel(true)
 	if _musica.stream != null:
 		_musica.finished.connect(_on_musica_terminada)
@@ -66,16 +58,12 @@ func _configurar_cabecera_modo() -> void:
 		_lbl_modo.add_theme_color_override("font_color", Color(0.18, 0.34, 0.10))
 
 
-## Condiciones iniciales y parámetros físicos reales del disparo actual.
+## Condiciones iniciales y parámetros físicos del disparo actual.
 func set_model_values(pos: Vector2, vel: Vector2, gravedad: float, amortiguamiento: float) -> void:
 	_contenido.poner_modelo(pos, vel, gravedad, amortiguamiento)
 	if is_node_ready() and visible:
 		_actualizar_pagina()
 
-
-# ---------------------------------------------------------------------------
-# Navegación y control de lectura
-# ---------------------------------------------------------------------------
 
 func _actualizar_pagina() -> void:
 	if _texto == null:
@@ -100,8 +88,7 @@ func _actualizar_pagina() -> void:
 	_btn_siguiente.disabled = not _leyendo
 	_actualizar_estado_lectura()
 
-	# Esperar a que RichTextLabel calcule su altura antes de llevar el scroll arriba
-	# y comprobar si la página necesita desplazamiento.
+	# Esperar a que RichTextLabel calcule su altura antes de subir el scroll.
 	await get_tree().process_frame
 	if version != _version_pagina or not is_inside_tree():
 		return
@@ -122,8 +109,7 @@ func _on_scroll(_valor: float) -> void:
 	_comprobar_lectura()
 
 
-## Una página se considera leída cuando el texto llegó a su final. Si el contenido
-## cabe completo en pantalla, se habilita de inmediato.
+## Una página se considera leída cuando el texto llega a su final.
 func _comprobar_lectura() -> void:
 	if _texto == null or _cargando_pagina:
 		return
@@ -180,10 +166,6 @@ func _cerrar() -> void:
 	cerrada.emit()
 	queue_free()
 
-
-# ---------------------------------------------------------------------------
-# Audio
-# ---------------------------------------------------------------------------
 
 func _pausar_musica_nivel(pausar: bool) -> void:
 	for nodo in get_tree().get_nodes_in_group("musica_nivel"):

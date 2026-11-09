@@ -1,10 +1,9 @@
 class_name NivelLimites
 extends RefCounted
-## Límites del nivel: calcula el rectángulo global a partir del nodo
-## LimitesCamara/CollisionShape2D y puede dibujar un marco de depuración.
+## Rectángulo de límites del nivel a partir de LimitesCamara/CollisionShape2D.
 
 
-## Rectángulo (coordenadas globales) del nivel, o Rect2() sin área si falta o es inválido.
+## Rectángulo global del nivel, o Rect2() sin área si falta o es inválido.
 static func calcular(nivel: Node) -> Rect2:
 	var colision := nivel.get_node_or_null(
 		"LimitesCamara/CollisionShape2D"
@@ -34,7 +33,7 @@ static func calcular(nivel: Node) -> Rect2:
 	return Rect2(origen, tamano)
 
 
-## Dibuja un marco rojo con los límites (solo para depurar).
+## Dibuja un marco rojo con los límites (solo depuración).
 static func crear_marco(nivel: Node2D, limites: Rect2) -> void:
 	if not limites.has_area():
 		return

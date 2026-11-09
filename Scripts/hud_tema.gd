@@ -1,6 +1,6 @@
 class_name HudTema
 extends RefCounted
-## Colores y fábricas de estilos/controles del HUD de disparo (ShotHUD).
+## Colores y fábricas de estilos/controles del HUD de disparo.
 
 const PANEL := Color("#17263B")
 const PANEL_LIGHT := Color("#243B55")
@@ -22,7 +22,7 @@ static func estilo_panel(color: Color = PANEL) -> StyleBoxFlat:
 	return s
 
 
-## Panel sin fondo ni borde: solo se ve su contenido.
+## Panel sin fondo ni borde.
 static func estilo_transparente() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = Color(0, 0, 0, 0)

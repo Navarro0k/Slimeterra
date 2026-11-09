@@ -1,9 +1,6 @@
 class_name HudEcuaciones
 extends RefCounted
 ## Texto BBCode del panel de ecuaciones del HUD.
-## Muestra la matemática del nivel: parábola (cinemática) en el nivel 1, y el sistema
-## lineal en espacio de estados (matrices) en el nivel 2, donde el amortiguamiento hace
-## que el tiro ya no sea una parábola perfecta.
 
 
 static func texto(modo: String, posicion: Vector2, velocidad: Vector2, gravedad: float, amortiguamiento: float) -> String:

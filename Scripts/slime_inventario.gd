@@ -1,10 +1,9 @@
 class_name SlimeInventario
 extends RefCounted
-## Utilidad compartida por la resortera y la UI para que ambas interpreten
-## el diccionario del nivel exactamente igual (mismo orden, mismos índices).
+## Utilidad compartida para interpretar el inventario de slimes.
 
-## Convierte { SlimeCatalogo.Tipo: cantidad } en una lista ordenada de entradas
-## [{ "tipo": int, "cantidad": int }, ...] siguiendo el orden del diccionario.
+
+## Convierte { tipo: cantidad } en [{ "tipo": int, "cantidad": int }].
 ## Ignora tipos desconocidos y cantidades <= 0.
 static func desde_diccionario(slimes: Dictionary) -> Array[Dictionary]:
 	var resultado: Array[Dictionary] = []
@@ -18,7 +17,6 @@ static func desde_diccionario(slimes: Dictionary) -> Array[Dictionary]:
 		resultado.append({"tipo": int(tipo), "cantidad": cantidad})
 	return resultado
 
-## Total de slimes restantes en un inventario.
 static func total(inventario: Array) -> int:
 	var suma := 0
 	for entrada in inventario:

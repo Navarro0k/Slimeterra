@@ -1,11 +1,6 @@
 extends CanvasLayer
 class_name ShotHUD
-## HUD compacto para viewport 480x270. Mantiene las señales públicas usadas por Slingshoot.
-## Clases auxiliares:
-##   HudTema        -> colores y fábricas de estilos/controles
-##   HudEcuaciones  -> texto del panel de ecuaciones
-##   shot_dial.gd   -> dial de ángulo
-##   Cartilla.tscn  -> tablero explicativo inicial
+## HUD compacto (480x270) con ecuaciones, dial de ángulo, potencia y cartilla.
 
 signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
@@ -13,9 +8,9 @@ signal cartilla_cerrada()
 
 var angle_degrees: float = 45.0
 var power_percent: float = 65.0
-## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
+## "parabola" (nivel 1) o "matrices" (nivel 2).
 var modo_ecuacion: String = "parabola"
-## True mientras la cartilla esta abierta: bloquea el juego.
+## true mientras la cartilla está abierta: bloquea el juego.
 var cartilla_activa: bool = true
 
 var _can_launch := true
@@ -30,11 +25,8 @@ var _equation_title: Label
 var _equation_visible := true
 var _launch_button: Button
 var _pause_button: Button
-## Fuente pixel para ecuaciones y cartilla.
 var _fuente_ecuaciones: FontFile
-## Cartilla de explicacion (bloc de notas amarillo).
 var _cartilla: Control
-## Ultimo modelo fisico recibido. Se reenvia a la cartilla cuando esta ya existe.
 var _modelo_pos: Vector2 = Vector2.ZERO
 var _modelo_vel: Vector2 = Vector2.ZERO
 var _modelo_gravedad: float = 980.0
@@ -50,9 +42,6 @@ func _ready() -> void:
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
 
-# ---------------------------------------------------------------------------
-# Construcción de la interfaz
-# ---------------------------------------------------------------------------
 
 func _construir_interfaz() -> void:
 	var root := Control.new()
@@ -61,16 +50,13 @@ func _construir_interfaz() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
 
-	# Grid de HUD para viewport 480x270:
-	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
-	# El botón de ecuación vive en la cabecera del propio panel.
+	# Ecuación arriba-izquierda, ángulo abajo-centro, potencia/disparo abajo-derecha.
 	_construir_panel_ecuacion(root)
 	_construir_dial(root)
 	_construir_panel_potencia(root)
 
 func _construir_panel_ecuacion(root: Control) -> void:
 	_equation_panel = HudTema.panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0, 0, 0, 0))
-	# Panel transparente: solo texto, sin recuadro visible.
 	_equation_panel.add_theme_stylebox_override("panel", HudTema.estilo_transparente())
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.position = Vector2(4, 18)
@@ -83,7 +69,7 @@ func _construir_panel_ecuacion(root: Control) -> void:
 	_math_label = _crear_texto_ecuaciones()
 	ecuacion_col.add_child(_math_label)
 
-	# El botón es hermano del panel, no hijo: permanece visible para volver a abrirlo.
+	# El botón es hermano del panel: permanece visible para volver a abrirlo.
 	_equation_toggle = _crear_boton_ecuacion()
 	root.add_child(_equation_toggle)
 
@@ -123,7 +109,6 @@ func _crear_boton_ecuacion() -> Button:
 	boton.pressed.connect(_on_equation_toggle_pressed)
 	return boton
 
-## Brújula sin panel de fondo; lectura única del ángulo y dial 20% mayor.
 func _construir_dial(root: Control) -> void:
 	var dial_col := VBoxContainer.new()
 	dial_col.name = "AngleControls"
@@ -140,8 +125,6 @@ func _construir_dial(root: Control) -> void:
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-## El control representa la velocidad inicial v0, ajustada mediante el porcentaje
-## de potencia. v0 cambia el coeficiente a (curvatura) y el alcance del disparo.
 func _construir_panel_potencia(root: Control) -> void:
 	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), HudTema.PANEL)
 	var power_col := VBoxContainer.new()
@@ -183,9 +166,6 @@ func _crear_boton_disparo() -> Button:
 	boton.pressed.connect(_on_launch_pressed)
 	return boton
 
-# ---------------------------------------------------------------------------
-# Cartilla (tablero explicativo)
-# ---------------------------------------------------------------------------
 
 func _construir_cartilla() -> void:
 	var escena := load("res://Scenes/UI/Cartilla.tscn") as PackedScene
@@ -208,7 +188,7 @@ func _construir_cartilla() -> void:
 	if _hay_modelo and _cartilla.has_method("set_model_values"):
 		_cartilla.call("set_model_values", _modelo_pos, _modelo_vel, _modelo_gravedad, _modelo_amortiguamiento)
 
-## Sin cartilla (escena ausente o rota) el nivel no debe quedar bloqueado.
+## Sin cartilla el nivel no debe quedar bloqueado.
 func _omitir_cartilla() -> void:
 	cartilla_activa = false
 	_emitir_cartilla_cerrada.call_deferred()
@@ -221,9 +201,6 @@ func _on_cartilla_cerrada() -> void:
 	_cartilla = null
 	cartilla_cerrada.emit()
 
-# ---------------------------------------------------------------------------
-# Controles del jugador
-# ---------------------------------------------------------------------------
 
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
@@ -244,12 +221,9 @@ func _on_launch_pressed() -> void:
 	if _can_launch and power_percent > 0.0:
 		launch_requested.emit(angle_degrees, power_percent)
 
-# ---------------------------------------------------------------------------
-# API pública (la usa la resortera)
-# ---------------------------------------------------------------------------
 
 func set_aim_from_drag(angulo: float, potencia: float) -> void:
-	# Sincroniza dial, porcentaje y etiquetas sin crear bucles de señales.
+	# Sincroniza dial y slider sin crear bucles de señales.
 	angle_degrees = fposmod(angulo, 360.0)
 	power_percent = clampf(potencia, 0.0, 100.0)
 	if is_instance_valid(_angle_dial):

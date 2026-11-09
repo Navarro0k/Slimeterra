@@ -1,53 +1,30 @@
 extends RigidBody2D
+## Ciclo de vida del slime: CARGADO, SALIENDO, EN_VUELO, TERMINADO.
 
-## Ciclo de vida del slime (una sola fuente de verdad, en vez de varios booleanos):
-##   CARGADO   -> en la resortera: congelado, movido por código y SIN colisiones.
-##   SALIENDO  -> recién lanzado, dentro del ÁREA DE RESPETO (el círculo de estiramiento de
-##                la honda): sin colisiones y sin poder pegarse. Sale de este estado cuando
-##                su cuerpo queda completamente fuera del círculo y libre de sólidos.
-##   EN_VUELO  -> colisiones activas. Se pega solo si CHOCA DE FRENTE contra una superficie pegajosa.
-##   TERMINADO -> se pegó o se descartó; ya no reacciona a nada.
-##
-## Este script solo orquesta el estado y la física. El resto vive en clases auxiliares:
-##   SlimeVisual   -> estela, brillo y burbujas
-##   SlimeImpacto  -> decide si un choque lo pega
-##   SlimeLimites  -> rebote en los bordes del nivel
-##   SlimeQuemador -> poder del slime de fuego
-##   SlimeSonidos  -> sonidos de pegado y quemado
 enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 
 @export var tipo_slime: SlimeCatalogo.Tipo = SlimeCatalogo.Tipo.BASE
-## Segundos máximos en vuelo. Si no choca con nada (cae al vacío) se descarta y el turno termina.
+## Segundos máximos en vuelo antes de descartarse.
 @export var tiempo_vuelo_max: float = 8.0
-## Margen (px) extra alrededor del slime para considerar que "toca" un bloque rompible.
+## Margen (px) extra para considerar que toca un bloque rompible.
 @export var margen_quema: float = 2.0
 
 @export_group("Impacto")
-## Cuán de frente debe ir el slime contra una superficie para pegarse: es el coseno del ángulo
-## entre su velocidad y la dirección hacia el punto de contacto.
-## 0 = cualquier contacto por delante; 1 = solo impactos perfectamente frontales.
-## Los contactos por detrás o de lado (la superficie de la que acaba de salir) nunca pegan.
+## Coseno del ángulo mínimo para pegarse (1 = solo frontal).
 @export_range(0.0, 0.9, 0.05) var umbral_impacto: float = 0.1
 
 @export_group("Límites del nivel")
-## Velocidad que conserva al rebotar contra los límites del nivel (0 = se amortigua, 1 = rebote perfecto).
+## Velocidad conservada al rebotar (0 = amortiguado, 1 = perfecto).
 @export_range(0.0, 1.0, 0.05) var rebote_limites: float = 0.7
-## Si tras rebotar en el límite inferior sale con menos velocidad que esta (px/s), se da por
-## perdido y se descarta: evita esperar a `tiempo_vuelo_max` viéndolo rodar por el suelo del nivel.
+## Velocidad mínima en el suelo antes de dar el slime por perdido.
 @export var velocidad_minima_suelo: float = 60.0
 
 @export_group("Sonido")
-## Sonido al pegarse a una superficie (tile o plataforma).
 @export var sonido_pegado: AudioStream
-## Sonido al quemar (destruir) un bloque (solo slime de fuego).
 @export var sonido_quemar: AudioStream
-## Volumen (dB) del sonido de pegado.
 @export var volumen_pegado_db: float = -2.0
-## Velocidad de reproducción (también cambia el tono): 1.0 = original.
 @export_range(0.5, 2.0, 0.05) var velocidad_pegado: float = 1.0
-## Variación aleatoria de tono para que no suene siempre idéntico (0 = sin variación).
 @export_range(0.0, 0.3, 0.01) var variacion_tono: float = 0.05
-## Bus de audio de los efectos. Si no existe en el proyecto, usa Master.
 @export var bus_efectos: StringName = &"SFX"
 
 @export_group("Estirado en la resortera")
@@ -58,15 +35,13 @@ enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 @onready var sprite: Sprite2D = $Sprite2D
 @onready var forma_colision: CollisionShape2D = $CollisionShape2D
 
-# Señales arquitectónicas para comunicarse de vuelta con la honda
-## plataforma es null si se pegó a un tile; si no, es el nodo móvil al que se pegó.
+## plataforma es null si se pegó a un tile.
 signal slime_pegado(nueva_posicion, plataforma)
 signal turno_terminado
 
 var estado: Estado = Estado.CARGADO
 
-## Rectángulo (coordenadas globales) dentro del que rebota. Lo asigna el nivel al lanzarse;
-## un rectángulo sin área significa "sin límites".
+## Rectángulo donde rebota; sin área = sin límites.
 var limites: Rect2 = Rect2()
 
 var arrastre: float
@@ -74,21 +49,17 @@ var vel_sim: Vector2 = Vector2.ZERO
 var v_motor: Vector2 = Vector2.ZERO
 var _tiempo_vuelo: float = 0.0
 
-## El slime de fuego quema (rompe) todo bloque rompible que toca mientras vuela.
 var _quema_bloques: bool = false
 var _radio: float = 7.0
 
-# --- Colisiones y área de respeto -------------------------------------------
 var _capa_original: int
 var _mascara_original: int
-## Tiempo máximo en SALIENDO: pasado este tiempo se fuerza la salida (o se descarta).
+## Tiempo máximo en SALIENDO.
 var _tiempo_respeto: float = 0.0
-## Centro del círculo de respeto (se sigue por nodo: la honda puede ir sobre una plataforma móvil).
+## Centro del círculo de respeto.
 var _zona: Node2D = null
-## Radio del círculo de estiramiento de la honda (sin contar el cuerpo del slime).
 var _radio_zona: float = 0.0
 
-# --- Módulos auxiliares (se crean en _ready) ---------------------------------
 var _visual: SlimeVisual
 var _impacto: SlimeImpacto
 var _quemador: SlimeQuemador
@@ -132,9 +103,6 @@ func _physics_process(delta):
 func _process(_delta: float) -> void:
 	_visual.actualizar_pulso()
 
-# ---------------------------------------------------------------------------
-# Configuración inicial
-# ---------------------------------------------------------------------------
 
 func _calcular_radio() -> float:
 	var circulo := forma_colision.shape as CircleShape2D
@@ -148,9 +116,6 @@ func _calcular_arrastre() -> float:
 	var damp_global: float = ProjectSettings.get_setting("physics/2d/default_linear_damp")
 	return linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
 
-# ---------------------------------------------------------------------------
-# Ciclo de vida
-# ---------------------------------------------------------------------------
 
 func preparar():
 	estado = Estado.CARGADO
@@ -220,19 +185,12 @@ func _pegarse(superficie: Node, posicion: Vector2) -> void:
 	slime_pegado.emit(posicion, superficie)
 	queue_free()
 
-# ---------------------------------------------------------------------------
-# Estirado visual en la resortera
-# ---------------------------------------------------------------------------
 
-## t: 0..1 (potencia acumulada). Solo controla el brillo y las burbujas;
-## el sprite NO se deforma ni rota. direccion_tiron solo indica si hay tirón.
+## t: 0..1. Solo controla brillo y burbujas.
 func set_tension(t: float, direccion_tiron: Vector2 = Vector2.ZERO) -> void:
 	if _visual != null:
 		_visual.set_tension(t, direccion_tiron)
 
-# ---------------------------------------------------------------------------
-# Física
-# ---------------------------------------------------------------------------
 
 func _integrate_forces(state: PhysicsDirectBodyState2D):
 	if estado != Estado.SALIENDO and estado != Estado.EN_VUELO:

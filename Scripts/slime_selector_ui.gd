@@ -1,7 +1,6 @@
 class_name SlimeSelectorUI
 extends CanvasLayer
 ## Barra inferior izquierda: un botón por tipo de slime con su cantidad restante.
-## No conoce a la resortera: solo emite slime_elegido y se refresca con actualizar().
 
 ## El jugador eligió el tipo en la posición `indice` del inventario.
 signal slime_elegido(indice: int)
@@ -20,7 +19,7 @@ func _ready() -> void:
 	follow_viewport_enabled = false
 	var panel := get_node_or_null("Margen/Panel") as PanelContainer
 	if panel:
-		# El contenedor queda completamente transparente; solo se ven los slots.
+		# Contenedor transparente: solo se ven los slots.
 		var estilo := StyleBoxFlat.new()
 		estilo.bg_color = Color(0.0, 0.0, 0.0, 0.0)
 		estilo.border_color = Color(0.0, 0.0, 0.0, 0.0)
@@ -32,8 +31,7 @@ func _ready() -> void:
 		estilo.content_margin_bottom = 0
 		panel.add_theme_stylebox_override("panel", estilo)
 
-## Construye un slot por cada tipo del diccionario { SlimeCatalogo.Tipo: cantidad }
-## (mismo orden que la resortera).
+## Construye un slot por cada tipo del diccionario { tipo: cantidad }.
 func configurar(slimes: Dictionary) -> void:
 	_limpiar()
 	var inventario := SlimeInventario.desde_diccionario(slimes)
@@ -52,7 +50,6 @@ func actualizar(inventario: Array, indice_seleccionado: int) -> void:
 		boton.set_pressed_no_signal(i == indice_seleccionado)
 
 
-
 func _limpiar() -> void:
 	for hijo in _slots_box.get_children():
 		_slots_box.remove_child(hijo)
@@ -63,7 +60,7 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	var boton := Button.new()
 	boton.toggle_mode = true
 	boton.custom_minimum_size = tamano_slot
-	boton.focus_mode = Control.FOCUS_NONE # Evita que Espacio/Enter lo activen.
+	boton.focus_mode = Control.FOCUS_NONE
 	boton.mouse_filter = Control.MOUSE_FILTER_STOP
 	boton.z_index = 5
 	boton.add_theme_color_override("font_color", Color("#EAF4FF"))
