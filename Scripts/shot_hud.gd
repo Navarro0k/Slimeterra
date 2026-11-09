@@ -118,7 +118,7 @@ func _construir_dial(root: Control) -> void:
 	dial_col.size = Vector2(48, 61)
 	dial_col.add_theme_constant_override("separation", 0)
 	root.add_child(dial_col)
-	_angle_label = HudTema.etiqueta("45°", _fuente_pixel, 9)
+	_angle_label = HudTema.etiqueta("45°", _fuente_pixel, 8)
 	_angle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_angle_label.add_theme_stylebox_override("normal", HudTema.estilo_chip())
 	dial_col.add_child(_angle_label)
@@ -137,10 +137,10 @@ func _construir_panel_potencia(root: Control) -> void:
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(HudTema.etiqueta("Velocidad v0", _fuente_pixel, 8))
-	_power_label = HudTema.etiqueta("65%", _fuente_pixel, 8)
+	power_header.add_child(HudTema.etiqueta("Velocidad v0", _fuente_pixel, 6))
+	_power_label = HudTema.etiqueta("65%", _fuente_pixel, 6)
 	power_header.add_child(_power_label)
-	power_col.add_child(HudTema.etiqueta("V0 Alcance", _fuente_pixel, 8, HudTema.TINTA_SUAVE))
+	power_col.add_child(HudTema.etiqueta("V0 Alcance", _fuente_pixel, 6, HudTema.TINTA_SUAVE))
 	_power_slider = _crear_slider_potencia()
 	power_col.add_child(_power_slider)
 
