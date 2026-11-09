@@ -7,6 +7,13 @@ extends RigidBody2D
 ##                su cuerpo queda completamente fuera del círculo y libre de sólidos.
 ##   EN_VUELO  -> colisiones activas. Se pega solo si CHOCA DE FRENTE contra una superficie pegajosa.
 ##   TERMINADO -> se pegó o se descartó; ya no reacciona a nada.
+##
+## Este script solo orquesta el estado y la física. El resto vive en clases auxiliares:
+##   SlimeVisual   -> estela, brillo y burbujas
+##   SlimeImpacto  -> decide si un choque lo pega
+##   SlimeLimites  -> rebote en los bordes del nivel
+##   SlimeQuemador -> poder del slime de fuego
+##   SlimeSonidos  -> sonidos de pegado y quemado
 enum Estado { CARGADO, SALIENDO, EN_VUELO, TERMINADO }
 
 @export var tipo_slime: SlimeCatalogo.Tipo = SlimeCatalogo.Tipo.BASE
@@ -81,11 +88,11 @@ var _zona: Node2D = null
 ## Radio del círculo de estiramiento de la honda (sin contar el cuerpo del slime).
 var _radio_zona: float = 0.0
 
-# --- Estirado visual ---------------------------------------------------------
-var _escala_base: Vector2 = Vector2.ONE
-var _tension: float = 0.0
-var _brillo: Sprite2D
-var _burbujas: CPUParticles2D
+# --- Módulos auxiliares (se crean en _ready) ---------------------------------
+var _visual: SlimeVisual
+var _impacto: SlimeImpacto
+var _quemador: SlimeQuemador
+
 
 func _ready():
 	custom_integrator = true
@@ -95,40 +102,18 @@ func _ready():
 	_quema_bloques = tipo_slime == SlimeCatalogo.Tipo.FUEGO
 	if _quema_bloques:
 		color_burbujas = Color(1.0, 0.6, 0.2)
-	# Configurar las particulas de rastro para que sean visibles al disparar.
-	var degradado_rastro := Gradient.new()
-	degradado_rastro.offsets = PackedFloat32Array([0.0, 1.0])
-	degradado_rastro.colors = PackedColorArray([Color(color_burbujas, 0.9), Color(color_burbujas, 0.0)])
-	particulas_rastro.color_ramp = degradado_rastro
-	particulas_rastro.local_coords = false  # Las particulas se quedan en el mundo (estela), no siguen al slime.
-	particulas_rastro.amount = 12
-	particulas_rastro.lifetime = 0.6
-	particulas_rastro.scale_amount_min = 0.6
-	particulas_rastro.scale_amount_max = 1.0
-	particulas_rastro.initial_velocity_min = 0.0
-	particulas_rastro.initial_velocity_max = 0.0
-	particulas_rastro.gravity = Vector2(0, 20)  # Ligera caida para que la estela se disperse.
-	particulas_rastro.emission_shape = CPUParticles2D.EMISSION_SHAPE_POINT
-	particulas_rastro.spread = 15.0
-	particulas_rastro.show_behind_parent = false
-	particulas_rastro.z_index = 5  # Visible por encima de tiles y resortera.
-	var circulo := forma_colision.shape as CircleShape2D
-	if circulo != null:
-		var escala := forma_colision.global_scale
-		_radio = circulo.radius * maxf(absf(escala.x), absf(escala.y))
 
+	_radio = _calcular_radio()
 	_capa_original = collision_layer
 	_mascara_original = collision_mask
+	arrastre = _calcular_arrastre()
 
-	var damp_global: float = ProjectSettings.get_setting("physics/2d/default_linear_damp")
-	arrastre = linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
-
-	_escala_base = sprite.scale
-	_crear_brillo()
-	_crear_burbujas()
+	_visual = SlimeVisual.new(self, sprite, particulas_rastro, color_burbujas, burbujas_cantidad, _radio)
+	_impacto = SlimeImpacto.new(self)
+	_quemador = SlimeQuemador.new(self, _mascara_original)
 
 func _physics_process(delta):
-	particulas_rastro.emitting = linear_velocity.length() > 5.0
+	_visual.actualizar_rastro(linear_velocity)
 
 	if estado != Estado.SALIENDO and estado != Estado.EN_VUELO:
 		return
@@ -139,16 +124,29 @@ func _physics_process(delta):
 		return
 
 	if _quema_bloques:
-		_quemar_bloques(delta)
+		_quemador.quemar(global_position, v_motor, delta, _radio + margen_quema)
 
 	if estado == Estado.SALIENDO:
 		_actualizar_salida(delta)
 
 func _process(_delta: float) -> void:
-	# Pulso del brillo: más intenso y rápido a más tensión.
-	if _tension > 0.0 and _brillo != null and _brillo.visible:
-		var pulso := 0.65 + 0.25 * sin(Time.get_ticks_msec() * 0.001 * lerpf(8.0, 18.0, _tension))
-		_brillo.modulate.a = _tension * pulso
+	_visual.actualizar_pulso()
+
+# ---------------------------------------------------------------------------
+# Configuración inicial
+# ---------------------------------------------------------------------------
+
+func _calcular_radio() -> float:
+	var circulo := forma_colision.shape as CircleShape2D
+	if circulo == null:
+		return _radio
+	var escala := forma_colision.global_scale
+	return circulo.radius * maxf(absf(escala.x), absf(escala.y))
+
+## Amortiguamiento real: el propio + el global del proyecto (según el modo).
+func _calcular_arrastre() -> float:
+	var damp_global: float = ProjectSettings.get_setting("physics/2d/default_linear_damp")
+	return linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
 
 # ---------------------------------------------------------------------------
 # Ciclo de vida
@@ -218,80 +216,19 @@ func _pegarse(superficie: Node, posicion: Vector2) -> void:
 		return
 	estado = Estado.TERMINADO
 	set_deferred("freeze", true)
-	_reproducir_sonido_pegado()
+	SlimeSonidos.pegado(get_tree(), sonido_pegado, volumen_pegado_db, velocidad_pegado, variacion_tono, bus_efectos)
 	slime_pegado.emit(posicion, superficie)
 	queue_free()
-
-func _reproducir_sonido_pegado() -> void:
-	var escena := get_tree().current_scene
-	if sonido_pegado == null or escena == null:
-		return
-	var reproductor := AudioStreamPlayer.new()
-	reproductor.stream = sonido_pegado
-	reproductor.volume_db = volumen_pegado_db
-	reproductor.pitch_scale = velocidad_pegado * (1.0 + randf_range(-variacion_tono, variacion_tono))
-	reproductor.bus = bus_efectos if AudioServer.get_bus_index(bus_efectos) != -1 else &"Master"
-	escena.add_child(reproductor)
-	reproductor.finished.connect(reproductor.queue_free)
-	reproductor.play()
 
 # ---------------------------------------------------------------------------
 # Estirado visual en la resortera
 # ---------------------------------------------------------------------------
 
 ## t: 0..1 (potencia acumulada). Solo controla el brillo y las burbujas;
-## el sprite NO se deforma ni rota. direccion_tiron se ignora, se conserva
-## en la firma para no tocar slingshoot.gd.
+## el sprite NO se deforma ni rota. direccion_tiron solo indica si hay tirón.
 func set_tension(t: float, direccion_tiron: Vector2 = Vector2.ZERO) -> void:
-	if _brillo == null or _burbujas == null:
-		return
-	t = clampf(t, 0.0, 1.0)
-	if t <= 0.01 or direccion_tiron == Vector2.ZERO:
-		_tension = 0.0
-		_brillo.visible = false
-		_burbujas.emitting = false
-		return
-
-	_tension = t
-	_brillo.visible = true
-	_burbujas.emitting = t > 0.08
-	_burbujas.speed_scale = lerpf(0.7, 2.2, t)  # más potencia = más burbujas por segundo
-	_burbujas.scale_amount_max = lerpf(1.5, 3.0, t)
-	
-func _crear_brillo() -> void:
-	_brillo = Sprite2D.new()
-	_brillo.texture = sprite.texture
-	_brillo.scale = _escala_base * 1.08
-	var mat := CanvasItemMaterial.new()
-	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
-	_brillo.material = mat
-	_brillo.modulate = Color(1, 1, 1, 0)
-	_brillo.visible = false
-	add_child(_brillo)
-
-func _crear_burbujas() -> void:
-	_burbujas = CPUParticles2D.new()
-	_burbujas.emitting = false
-	_burbujas.amount = burbujas_cantidad
-	_burbujas.lifetime = 0.7
-	_burbujas.local_coords = false  # las burbujas se quedan flotando donde nacen
-	_burbujas.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	_burbujas.emission_sphere_radius = _radio + 2.0
-	_burbujas.direction = Vector2.UP
-	_burbujas.spread = 60.0
-	_burbujas.gravity = Vector2(0, -14)  # suben
-	_burbujas.initial_velocity_min = 2.0
-	_burbujas.initial_velocity_max = 8.0
-	_burbujas.scale_amount_min = 1.0
-	_burbujas.scale_amount_max = 1.5
-	var degradado := Gradient.new()
-	degradado.offsets = PackedFloat32Array([0.0, 1.0])
-	degradado.colors = PackedColorArray([
-		Color(color_burbujas, 0.95), Color(color_burbujas, 0.0)
-	])
-	_burbujas.color_ramp = degradado
-	_burbujas.z_index = 1
-	add_child(_burbujas)
+	if _visual != null:
+		_visual.set_tension(t, direccion_tiron)
 
 # ---------------------------------------------------------------------------
 # Física
@@ -301,7 +238,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	if estado != Estado.SALIENDO and estado != Estado.EN_VUELO:
 		return
 
-	if estado == Estado.EN_VUELO and _evaluar_contactos(state):
+	if estado == Estado.EN_VUELO and _intentar_pegarse(state):
 		return
 
 	var dt: float = state.step
@@ -316,231 +253,21 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 	var nueva_vel: Vector2 = r[1]
 
 	if limites.has_area():
-		var rebote := _rebotar_en_limites(nueva_pos, nueva_vel)
-		if estado == Estado.TERMINADO:
+		var rebote := SlimeLimites.rebotar(nueva_pos, nueva_vel, limites, _radio, rebote_limites, velocidad_minima_suelo)
+		if rebote["perdido"]:
+			_descartar()
 			return
-		nueva_pos = rebote[0]
-		nueva_vel = rebote[1]
+		nueva_pos = rebote["pos"]
+		nueva_vel = rebote["vel"]
 
 	vel_sim = nueva_vel
 	v_motor = (nueva_pos - pos) / dt
 	state.linear_velocity = v_motor
 
-func _rebotar_en_limites(pos: Vector2, vel: Vector2) -> Array:
-	var izquierda := limites.position.x + _radio
-	var derecha := limites.end.x - _radio
-	var arriba := limites.position.y + _radio
-	var abajo := limites.end.y - _radio
-
-	if pos.x < izquierda:
-		pos.x = izquierda
-		if vel.x < 0.0:
-			vel.x = -vel.x * rebote_limites
-	elif pos.x > derecha:
-		pos.x = derecha
-		if vel.x > 0.0:
-			vel.x = -vel.x * rebote_limites
-
-	if pos.y < arriba:
-		pos.y = arriba
-		if vel.y < 0.0:
-			vel.y = -vel.y * rebote_limites
-	elif pos.y > abajo:
-		pos.y = abajo
-		if vel.y > 0.0:
-			vel.y = -vel.y * rebote_limites
-		if absf(vel.y) < velocidad_minima_suelo:
-			_descartar()
-
-	return [pos, vel]
-
-# ---------------------------------------------------------------------------
-# Impactos (CORREGIDO)
-# ---------------------------------------------------------------------------
-
-func _evaluar_contactos(state: PhysicsDirectBodyState2D) -> bool:
-	var velocidad := v_motor if v_motor.length_squared() > 0.000001 else state.linear_velocity
-	if velocidad.length_squared() < 0.000001:
+## Consulta a SlimeImpacto; si el choque lo pega, se pega y devuelve true.
+func _intentar_pegarse(state: PhysicsDirectBodyState2D) -> bool:
+	var impacto := _impacto.buscar_pegado(state, v_motor, umbral_impacto)
+	if impacto.is_empty():
 		return false
-	var dir_vuelo := velocidad.normalized()
-	var origen := state.transform.origin
-
-	for i in state.get_contact_count():
-		var punto := state.get_contact_collider_position(i)
-		var hacia_contacto := punto - origen
-		if hacia_contacto.length_squared() < 0.0001:
-			continue
-		hacia_contacto = hacia_contacto.normalized()
-
-		# CORRECCIÓN: Suavizamos el umbral para impactos laterales durante curvas pronunciadas.
-		# Evita que se ignore el choque horizontal si el slime va cayendo rápido.
-		if dir_vuelo.dot(hacia_contacto) < umbral_impacto - 0.2:
-			continue
-
-		var superficie := state.get_contact_collider_object(i) as Node
-		if superficie == null:
-			continue
-
-		if superficie is TileMapLayer:
-			if _tile_pegajoso_en(superficie, punto, hacia_contacto):
-				_pegarse(null, origen)
-				return true
-		else:
-			var plataforma := _buscar_superficie_pegajosa(superficie)
-			if plataforma != null:
-				_pegarse(plataforma, origen)
-				return true
-	return false
-
-func _tile_pegajoso_en(capa: TileMapLayer, punto: Vector2, hacia_contacto: Vector2) -> bool:
-	# 1. Proyección directa un poco más profunda
-	for profundidad in [2.0, 5.0]:
-		var celda := capa.local_to_map(capa.to_local(punto + hacia_contacto * profundidad))
-		var datos := capa.get_cell_tile_data(celda)
-		if datos != null and datos.get_custom_data("es_pegajoso"):
-			return true
-			
-	# 2. CORRECCIÓN: Restauramos el "Escáner infalible" para las esquinas u horizontales
-	var celda_impacto := capa.local_to_map(capa.to_local(punto))
-	var vecinos = [
-		celda_impacto,
-		celda_impacto + Vector2i(0, 1), celda_impacto + Vector2i(0, -1),
-		celda_impacto + Vector2i(1, 0), celda_impacto + Vector2i(-1, 0),
-		celda_impacto + Vector2i(1, 1), celda_impacto + Vector2i(-1, -1),
-		celda_impacto + Vector2i(1, -1), celda_impacto + Vector2i(-1, 1)
-	]
-	
-	for vecino in vecinos:
-		var datos := capa.get_cell_tile_data(vecino)
-		if datos != null and datos.get_custom_data("es_pegajoso"):
-			return true
-			
-	return false
-
-func _buscar_superficie_pegajosa(nodo: Node) -> Node:
-	var actual: Node = nodo
-	while actual != null and actual != get_tree().root:
-		if actual.get("es_pegajoso") == true or actual.is_in_group("plataforma_pegajosa"):
-			return actual
-		actual = actual.get_parent()
-	return null
-
-# ---------------------------------------------------------------------------
-# Slime de fuego: quema bloques rompibles
-# ---------------------------------------------------------------------------
-
-func _quemar_bloques(delta: float) -> void:
-	var radio := _radio + margen_quema
-	_quemar_en(global_position, radio)
-	_quemar_en(global_position + v_motor * delta, radio)
-
-func _quemar_en(centro: Vector2, radio: float) -> void:
-	var forma := CircleShape2D.new()
-	forma.radius = radio
-	var consulta := PhysicsShapeQueryParameters2D.new()
-	consulta.shape = forma
-	consulta.transform = Transform2D(0.0, centro)
-	consulta.collision_mask = _mascara_original
-	consulta.collide_with_bodies = true
-	consulta.collide_with_areas = false
-	var excluidos: Array[RID] = [get_rid()]
-	consulta.exclude = excluidos
-	for choque in get_world_2d().direct_space_state.intersect_shape(consulta, 8):
-		var capa = choque["collider"]
-		if capa is TileMapLayer:
-			_quemar_celdas(capa, centro, radio)
-
-func _quemar_celdas(capa: TileMapLayer, centro: Vector2, radio: float) -> void:
-	var mitad := Vector2(capa.tile_set.tile_size) * 0.5
-	var local := capa.to_local(centro)
-	var celda_min := capa.local_to_map(local - Vector2(radio, radio))
-	var celda_max := capa.local_to_map(local + Vector2(radio, radio))
-	for x in range(celda_min.x, celda_max.x + 1):
-		for y in range(celda_min.y, celda_max.y + 1):
-			var celda := Vector2i(x, y)
-			var datos := capa.get_cell_tile_data(celda)
-			if datos == null:
-				continue
-			var es_rompible: bool = datos.get_custom_data("rompible_por_fuego")
-			if not es_rompible:
-				continue
-			var d := (local - capa.map_to_local(celda)).abs() - mitad
-			var fuera := Vector2(maxf(d.x, 0.0), maxf(d.y, 0.0)).length()
-			if fuera <= radio:
-				capa.erase_cell(celda)
-				_efecto_quemar(capa, celda)
-
-# ---------------------------------------------------------------------------
-# Efecto visual y sonoro al quemar un bloque
-# ---------------------------------------------------------------------------
-func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
-	# Efecto visual: particulas de fuego en la posicion del bloque.
-	var centro_local := capa.map_to_local(celda)
-	var centro_global := capa.to_global(centro_local)
-	var particulas := CPUParticles2D.new()
-	particulas.global_position = centro_global
-	particulas.emitting = true
-	particulas.one_shot = true
-	particulas.explosiveness = 0.9
-	particulas.amount = 12
-	particulas.lifetime = 0.5
-	particulas.local_coords = false
-	particulas.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
-	particulas.emission_sphere_radius = 4.0
-	particulas.direction = Vector2(0, -1)
-	particulas.spread = 180.0
-	particulas.gravity = Vector2(0, -40)
-	particulas.initial_velocity_min = 10.0
-	particulas.initial_velocity_max = 30.0
-	particulas.scale_amount_min = 0.5
-	particulas.scale_amount_max = 1.5
-	var degradado := Gradient.new()
-	degradado.offsets = PackedFloat32Array([0.0, 1.0])
-	degradado.colors = PackedColorArray([Color(1.0, 0.6, 0.2, 1.0), Color(1.0, 0.2, 0.0, 0.0)])
-	particulas.color_ramp = degradado
-	var escena := get_tree().current_scene
-	if escena != null:
-		escena.add_child(particulas)
-		# Auto-limpiar.
-		var timer := get_tree().create_timer(1.0)
-		timer.timeout.connect(particulas.queue_free)
-
-	# Sonido de quemado: crash/explosion generado proceduralmente.
-	if escena != null:
-		var mix_rate := 22050.0
-		var duracion := 0.25
-		var generador := AudioStreamGenerator.new()
-		generador.mix_rate = mix_rate
-		generador.buffer_length = duracion
-		var reproductor := AudioStreamPlayer.new()
-		reproductor.stream = generador
-		reproductor.volume_db = 2.0
-		reproductor.bus = &"Master"
-		escena.add_child(reproductor)
-		reproductor.play()
-		var playback := reproductor.get_stream_playback() as AudioStreamGeneratorPlayback
-		if playback != null:
-			var frames := int(mix_rate * duracion)
-			var buffer := PackedVector2Array()
-			buffer.resize(frames)
-			for i in range(frames):
-				var t := float(i) / mix_rate
-				# Envolvente: ataque instantaneo, decaimiento exponencial rapido.
-				var env := exp(-t * 18.0)
-				# Componente grave (golpe).
-				var grave := sin(t * TAU * 55.0) * env * 0.6
-				# Componente medio (cuerpo del crash).
-				var medio := sin(t * TAU * 110.0) * env * 0.3
-				# Ruido (textura de impacto/cristal roto).
-				var ruido := (randf() * 2.0 - 1.0) * env * env * 0.4
-				# Chasquido inicial (transiente).
-				var chasquido := 0.0
-				if t < 0.005:
-					chasquido = (randf() * 2.0 - 1.0) * (1.0 - t / 0.005) * 0.8
-				var sample := grave + medio + ruido + chasquido
-				sample = clampf(sample, -1.0, 1.0)
-				buffer[i] = Vector2(sample, sample)
-			playback.push_buffer(buffer)
-		# Auto-limpiar.
-		var timer := get_tree().create_timer(duracion + 0.1)
-		timer.timeout.connect(reproductor.queue_free)
+	_pegarse(impacto["plataforma"], state.transform.origin)
+	return true

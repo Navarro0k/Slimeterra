@@ -3,6 +3,10 @@ extends Node2D
 ## Script del nivel: es el único que conoce a la resortera y a la UI.
 ## Les entrega el inventario de slimes y los comunica entre sí.
 ## También decide cuándo termina el nivel: victoria al tocar una Meta, derrota al quedarse sin slimes.
+## Clases auxiliares:
+##   NivelLimites   -> rectángulo de límites del nivel
+##   NivelHudTiempo -> cronómetro en pantalla
+##   SlimeInventario -> conteo de slimes restantes
 
 ## Orden de los niveles del juego. Al ganar se pasa al siguiente de esta lista y el último
 ## cierra el juego. Para añadir un nivel basta con añadirlo aquí.
@@ -30,7 +34,7 @@ var slimes_nivel: Dictionary = {
 
 var limites_globales: Rect2 = Rect2()
 var tiempo_transcurrido: float = 0.0
-var _etiqueta_tiempo: Label
+var _hud_tiempo: NivelHudTiempo
 ## false mientras el tablero explicativo está abierto: el nivel aún no ha comenzado.
 var _explicacion_completada: bool = false
 
@@ -44,6 +48,38 @@ var pantalla: PantallaFin
 var _terminado: bool = false
 
 func _ready() -> void:
+	_conectar_resortera()
+	_crear_pantalla_fin()
+	_conectar_metas()
+	_agrupar_musica()
+	_aplicar_limites()
+
+	# Mismo diccionario para los dos. Primero la UI (crea los slots) y luego la
+	# resortera (emite inventario_cambiado y la UI se rellena).
+	ui.configurar(slimes_nivel)
+	slingshoot.configurar(slimes_nivel)
+
+	# La cámara arranca ya sobre la resortera (sin paneo inicial).
+	camara.seguir(slingshoot, true)
+
+	_hud_tiempo = NivelHudTiempo.new(self)
+
+	# Mientras se lee el tablero no se puede pausar ni contar tiempo: el nivel
+	# empieza realmente cuando la cartilla emite su cierre.
+	pantalla.bloquear_pausa(true)
+
+
+func _process(delta: float) -> void:
+	if _terminado or not _explicacion_completada or _hud_tiempo == null:
+		return
+	tiempo_transcurrido += delta
+	_hud_tiempo.mostrar(tiempo_transcurrido)
+
+# ---------------------------------------------------------------------------
+# Preparación del nivel (se llama desde _ready)
+# ---------------------------------------------------------------------------
+
+func _conectar_resortera() -> void:
 	# Resortera -> UI: cambió la munición o la selección.
 	slingshoot.inventario_cambiado.connect(ui.actualizar)
 	# UI -> Resortera: el jugador eligió otro tipo de slime.
@@ -56,87 +92,62 @@ func _ready() -> void:
 	# Resortera -> Nivel: el tablero explicativo inicial ya se leyó por completo.
 	slingshoot.explicacion_completada.connect(_on_explicacion_completada)
 
+func _crear_pantalla_fin() -> void:
 	pantalla = get_node_or_null("PantallaFin") as PantallaFin
 	if pantalla == null:
 		pantalla = PantallaFin.new()
 		add_child(pantalla)
 	_configurar_progresion()
 
-	# Meta(s) del nivel: cualquier nodo Meta en la escena se encuentra por su grupo.
+## Meta(s) del nivel: cualquier nodo Meta en la escena se encuentra por su grupo.
+func _conectar_metas() -> void:
 	var metas := get_tree().get_nodes_in_group("meta")
+	if metas.is_empty():
+		push_warning("Este nivel no tiene ninguna Meta (instancia Scenes/Meta.tscn): no se podrá ganar.")
+	for meta in metas:
+		meta.meta_alcanzada.connect(_on_meta_alcanzada)
 
-	# La musica del nivel se agrupa para que la cartilla pueda pausarla.
+## La musica del nivel se agrupa para que la cartilla pueda pausarla.
+func _agrupar_musica() -> void:
 	var musicos := get_tree().get_nodes_in_group("musica_nivel")
 	if musicos.is_empty():
 		var audio_nodes := find_children("*", "AudioStreamPlayer", true, false)
 		for a in audio_nodes:
 			a.add_to_group("musica_nivel")
-	if metas.is_empty():
-		push_warning("Este nivel no tiene ninguna Meta (instancia Scenes/Meta.tscn): no se podrá ganar.")
-	for meta in metas:
-		meta.meta_alcanzada.connect(_on_meta_alcanzada)
-	# Límites: la cámara no sale del nivel y el slime rebota en sus bordes.
-	limites_globales = _calcular_limites()
+
+## Límites: la cámara no sale del nivel y el slime rebota en sus bordes.
+func _aplicar_limites() -> void:
+	limites_globales = NivelLimites.calcular(self)
 	camara.aplicar_limites(limites_globales)
 	if mostrar_limites:
 		print("%s límites: %s" % [name, limites_globales])
-		_crear_marco_limites()
+		NivelLimites.crear_marco(self, limites_globales)
 
-	# Mismo diccionario para los dos. Primero la UI (crea los slots) y luego la
-	# resortera (emite inventario_cambiado y la UI se rellena).
-	ui.configurar(slimes_nivel)
-	slingshoot.configurar(slimes_nivel)
-
-	# La cámara arranca ya sobre la resortera (sin paneo inicial).
-	camara.seguir(slingshoot, true)
-
-	_crear_hud_tiempo()
-
-	# Mientras se lee el tablero no se puede pausar ni contar tiempo: el nivel
-	# empieza realmente cuando la cartilla emite su cierre.
-	pantalla.bloquear_pausa(true)
-
-
-func _process(delta: float) -> void:
-	if _terminado or not _explicacion_completada or _etiqueta_tiempo == null:
+## Le dice a la pantalla de fin qué viene después de este nivel según ORDEN_NIVELES.
+## Un nivel que no esté en la lista (por ejemplo Level_1) solo ofrece repetirse.
+func _configurar_progresion() -> void:
+	var posicion := ORDEN_NIVELES.find(scene_file_path)
+	if posicion < 0:
 		return
-	tiempo_transcurrido += delta
-	_etiqueta_tiempo.text = _formatear_tiempo(tiempo_transcurrido)
+	pantalla.primer_nivel = ORDEN_NIVELES[0]
+	if posicion + 1 < ORDEN_NIVELES.size():
+		pantalla.siguiente_nivel = ORDEN_NIVELES[posicion + 1]
+	else:
+		pantalla.es_final_del_juego = true
 
+# ---------------------------------------------------------------------------
+# Tiempo y estrellas
+# ---------------------------------------------------------------------------
 
 func _on_explicacion_completada() -> void:
 	if _explicacion_completada:
 		return
 	_explicacion_completada = true
 	tiempo_transcurrido = 0.0
-	if _etiqueta_tiempo != null:
-		_etiqueta_tiempo.text = _formatear_tiempo(0.0)
+	if _hud_tiempo != null:
+		_hud_tiempo.mostrar(0.0)
 	if pantalla != null:
 		pantalla.bloquear_pausa(false)
-
-# ---------------------------------------------------------------------------
-# Contador de tiempo y estrellas
-# ---------------------------------------------------------------------------
-
-func _crear_hud_tiempo() -> void:
-	var capa := CanvasLayer.new()
-	capa.layer = 20
-	add_child(capa)
-	_etiqueta_tiempo = Label.new()
-	_etiqueta_tiempo.text = "0:00.0"
-	_etiqueta_tiempo.custom_minimum_size = Vector2(80, 0)
-	_etiqueta_tiempo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_etiqueta_tiempo.add_theme_font_size_override("font_size", 14)
-	_etiqueta_tiempo.add_theme_color_override("font_outline_color", Color.BLACK)
-	_etiqueta_tiempo.add_theme_constant_override("outline_size", 4)
-	capa.add_child(_etiqueta_tiempo)
-	_etiqueta_tiempo.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP, Control.PRESET_MODE_MINSIZE, 6)
-	_etiqueta_tiempo.grow_horizontal = Control.GROW_DIRECTION_BOTH
-
-func _formatear_tiempo(t: float) -> String:
-	var minutos := floori(t / 60.0)
-	var segundos := fmod(t, 60.0)
-	return "%d:%04.1f" % [minutos, segundos]
 
 func _calcular_estrellas() -> int:
 	if tiempo_transcurrido <= tiempo_3_estrellas:
@@ -145,6 +156,8 @@ func _calcular_estrellas() -> int:
 		return 2
 	return 1
 
+# ---------------------------------------------------------------------------
+# Eventos del juego
 # ---------------------------------------------------------------------------
 
 func _on_slime_lanzado(slime: Node2D) -> void:
@@ -166,68 +179,9 @@ func _on_meta_alcanzada() -> void:
 	if _terminado:
 		return
 	_terminado = true
-	var mensaje := "Tiempo: %s\nSlimes sobrantes: %d" % [_formatear_tiempo(tiempo_transcurrido), _slimes_restantes()]
+	var mensaje := "Tiempo: %s\nSlimes sobrantes: %d" % [NivelHudTiempo.formatear(tiempo_transcurrido), _slimes_restantes()]
 	pantalla.mostrar_victoria.call_deferred(mensaje, _calcular_estrellas())
 
 ## Slimes que aún no se han disparado (el que está volando ya se descontó).
 func _slimes_restantes() -> int:
-	var total := 0
-	for entrada in slingshoot.get_inventario():
-		total += int(entrada["cantidad"])
-	return total
-
-## Le dice a la pantalla de fin qué viene después de este nivel según ORDEN_NIVELES.
-## Un nivel que no esté en la lista (por ejemplo Level_1) solo ofrece repetirse.
-func _configurar_progresion() -> void:
-	var posicion := ORDEN_NIVELES.find(scene_file_path)
-	if posicion < 0:
-		return
-	pantalla.primer_nivel = ORDEN_NIVELES[0]
-	if posicion + 1 < ORDEN_NIVELES.size():
-		pantalla.siguiente_nivel = ORDEN_NIVELES[posicion + 1]
-	else:
-		pantalla.es_final_del_juego = true
-
-
-func _calcular_limites() -> Rect2:
-	var colision := get_node_or_null(
-		"LimitesCamara/CollisionShape2D"
-	) as CollisionShape2D
-
-	if colision == null:
-		push_error(
-			"Falta LimitesCamara/CollisionShape2D en el nivel: " + name
-		)
-		return Rect2()
-
-	if not colision.shape is RectangleShape2D:
-		push_error(
-			"LimitesCamara debe usar RectangleShape2D en el nivel: " + name
-		)
-		return Rect2()
-
-	var rectangulo := colision.shape as RectangleShape2D
-	var tamano: Vector2 = rectangulo.size * colision.global_scale.abs()
-
-	if tamano.x <= 0.0 or tamano.y <= 0.0:
-		push_error("El rectángulo de límites tiene tamaño inválido.")
-		return Rect2()
-
-	var origen: Vector2 = colision.global_position - tamano / 2.0
-
-	return Rect2(origen, tamano)
-
-
-func _crear_marco_limites() -> void:
-	if not limites_globales.has_area():
-		return
-	var r := limites_globales
-	var marco := Line2D.new()
-	marco.width = 1.0
-	marco.default_color = Color(1.0, 0.2, 0.2, 0.9)
-	marco.z_index = 100
-	marco.points = PackedVector2Array([
-		to_local(r.position), to_local(Vector2(r.end.x, r.position.y)),
-		to_local(r.end), to_local(Vector2(r.position.x, r.end.y)), to_local(r.position),
-	])
-	add_child(marco)
+	return SlimeInventario.total(slingshoot.get_inventario())

@@ -7,35 +7,6 @@ extends CanvasLayer
 
 enum Modo { OCULTA, PAUSA, VICTORIA, DERROTA }
 
-## Dibuja 3 estrellas; las `obtenidas` en dorado y el resto apagadas.
-class Estrellas extends Control:
-	const TAM := 22.0
-	const SEP := 8.0
-	var obtenidas: int = 0
-
-	func _init() -> void:
-		custom_minimum_size = Vector2(TAM * 3.0 + SEP * 2.0, TAM)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-
-	func poner(n: int) -> void:
-		obtenidas = n
-		queue_redraw()
-
-	func _draw() -> void:
-		for i in 3:
-			var centro := Vector2(TAM * 0.5 + i * (TAM + SEP), TAM * 0.5)
-			var color := Color(1.0, 0.85, 0.2) if i < obtenidas else Color(0.25, 0.25, 0.32)
-			draw_colored_polygon(_puntos(centro, TAM * 0.5, TAM * 0.22), color)
-
-	func _puntos(c: Vector2, r_ext: float, r_int: float) -> PackedVector2Array:
-		var pts := PackedVector2Array()
-		for k in 10:
-			var r := r_ext if k % 2 == 0 else r_int
-			var a := -PI / 2.0 + k * PI / 5.0
-			pts.append(c + Vector2(cos(a), sin(a)) * r)
-		return pts
-
 var modo: Modo = Modo.OCULTA
 
 ## Si no está vacío, la victoria ofrece pasar a este nivel (ruta res://...tscn). Lo asigna el nivel.
@@ -48,7 +19,7 @@ var primer_nivel: String = ""
 var _btn_pausa: Button
 var _raiz: Control
 var _titulo: Label
-var _estrellas: Estrellas
+var _estrellas: PantallaFinEstrellas
 var _mensaje: Label
 var _btn_continuar: Button
 var _btn_reiniciar: Button
@@ -147,7 +118,11 @@ func _mostrar(nuevo_modo: Modo, titulo: String, mensaje: String, estrellas: int 
 		_btn_reiniciar.grab_focus()
 
 func _construir() -> void:
-	# Botón de pausa de la pantalla de juego (esquina superior derecha).
+	_construir_boton_pausa()
+	_construir_overlay()
+
+## Botón de pausa de la pantalla de juego (esquina superior derecha).
+func _construir_boton_pausa() -> void:
 	_btn_pausa = _crear_boton("Ⅱ PAUSA", alternar_pausa)
 	_btn_pausa.custom_minimum_size = Vector2(70, 20)
 	_btn_pausa.add_theme_font_size_override("font_size", 9)
@@ -157,7 +132,8 @@ func _construir() -> void:
 	_btn_pausa.offset_left -= 4
 	_btn_pausa.offset_top += 1
 
-	# Overlay de pausa / victoria / derrota.
+## Overlay de pausa / victoria / derrota.
+func _construir_overlay() -> void:
 	_raiz = Control.new()
 	_raiz.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_raiz.mouse_filter = Control.MOUSE_FILTER_STOP # Bloquea clics al juego mientras está abierta.
@@ -185,13 +161,15 @@ func _construir() -> void:
 	var caja := VBoxContainer.new()
 	caja.add_theme_constant_override("separation", 8)
 	margen.add_child(caja)
+	_construir_contenido(caja)
 
+func _construir_contenido(caja: VBoxContainer) -> void:
 	_titulo = Label.new()
 	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_titulo.add_theme_font_size_override("font_size", 20)
 	caja.add_child(_titulo)
 
-	_estrellas = Estrellas.new()
+	_estrellas = PantallaFinEstrellas.new()
 	caja.add_child(_estrellas)
 
 	_mensaje = Label.new()

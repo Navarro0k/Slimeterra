@@ -1,6 +1,11 @@
 extends CanvasLayer
 class_name ShotHUD
 ## HUD compacto para viewport 480x270. Mantiene las señales públicas usadas por Slingshoot.
+## Clases auxiliares:
+##   HudTema        -> colores y fábricas de estilos/controles
+##   HudEcuaciones  -> texto del panel de ecuaciones
+##   shot_dial.gd   -> dial de ángulo
+##   Cartilla.tscn  -> tablero explicativo inicial
 
 signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
@@ -8,6 +13,11 @@ signal cartilla_cerrada()
 
 var angle_degrees: float = 45.0
 var power_percent: float = 65.0
+## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
+var modo_ecuacion: String = "parabola"
+## True mientras la cartilla esta abierta: bloquea el juego.
+var cartilla_activa: bool = true
+
 var _can_launch := true
 var _angle_dial: Control
 var _power_slider: HSlider
@@ -20,17 +30,16 @@ var _equation_title: Label
 var _equation_visible := true
 var _launch_button: Button
 var _pause_button: Button
-## Modo de ecuación mostrada en el panel: "parabola" (nivel 1) o "matrices" (nivel 2).
-var modo_ecuacion: String = "parabola"
 ## Fuente pixel para ecuaciones y cartilla.
 var _fuente_ecuaciones: FontFile
 ## Cartilla de explicacion (bloc de notas amarillo).
-
-const PANEL := Color("#17263B")
-const PANEL_LIGHT := Color("#243B55")
-const RED := Color("#62D9C7")
-const TEXT := Color("#F0F6FF")
-const EDGE := Color("#3C6680")
+var _cartilla: Control
+## Ultimo modelo fisico recibido. Se reenvia a la cartilla cuando esta ya existe.
+var _modelo_pos: Vector2 = Vector2.ZERO
+var _modelo_vel: Vector2 = Vector2.ZERO
+var _modelo_gravedad: float = 980.0
+var _modelo_amortiguamiento: float = 0.0
+var _hay_modelo: bool = false
 
 func _ready() -> void:
 	layer = 45
@@ -41,38 +50,9 @@ func _ready() -> void:
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
 
-func _panel_style(color: Color = PANEL) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = color
-	s.border_color = EDGE
-	s.set_border_width_all(1)
-	s.set_corner_radius_all(2)
-	s.content_margin_left = 4
-	s.content_margin_right = 4
-	s.content_margin_top = 3
-	s.content_margin_bottom = 3
-	return s
-
-func _label(texto: String, size: int = 9, color: Color = RED) -> Label:
-	var l := Label.new()
-	l.text = texto
-	l.add_theme_font_size_override("font_size", size)
-	l.add_theme_color_override("font_color", color)
-	l.add_theme_color_override("font_outline_color", Color.BLACK)
-	l.add_theme_constant_override("outline_size", 2)
-	if _fuente_ecuaciones != null:
-		l.add_theme_font_override("font", _fuente_ecuaciones)
-	return l
-
-func _panel_contenedor(parent: Control, nombre: String, pos: Vector2, tam: Vector2, color: Color = PANEL) -> PanelContainer:
-	var p := PanelContainer.new()
-	p.name = nombre
-	p.position = pos
-	p.size = tam
-	p.custom_minimum_size = tam
-	p.add_theme_stylebox_override("panel", _panel_style(color))
-	parent.add_child(p)
-	return p
+# ---------------------------------------------------------------------------
+# Construcción de la interfaz
+# ---------------------------------------------------------------------------
 
 func _construir_interfaz() -> void:
 	var root := Control.new()
@@ -84,69 +64,74 @@ func _construir_interfaz() -> void:
 	# Grid de HUD para viewport 480x270:
 	# ecuación arriba-izquierda, ángulo abajo-centro y potencia/disparo abajo-derecha.
 	# El botón de ecuación vive en la cabecera del propio panel.
-	_equation_panel = _panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0, 0, 0, 0))
+	_construir_panel_ecuacion(root)
+	_construir_dial(root)
+	_construir_panel_potencia(root)
+
+func _construir_panel_ecuacion(root: Control) -> void:
+	_equation_panel = HudTema.panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0, 0, 0, 0))
 	# Panel transparente: solo texto, sin recuadro visible.
-	var estilo_transparente := StyleBoxFlat.new()
-	estilo_transparente.bg_color = Color(0, 0, 0, 0)
-	estilo_transparente.border_color = Color(0, 0, 0, 0)
-	estilo_transparente.set_border_width_all(0)
-	estilo_transparente.set_corner_radius_all(0)
-	estilo_transparente.content_margin_left = 4
-	estilo_transparente.content_margin_right = 4
-	estilo_transparente.content_margin_top = 3
-	estilo_transparente.content_margin_bottom = 3
-	_equation_panel.add_theme_stylebox_override("panel", estilo_transparente)
+	_equation_panel.add_theme_stylebox_override("panel", HudTema.estilo_transparente())
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.position = Vector2(4, 18)
 	ecuacion_col.size = Vector2(150, 69)
 	ecuacion_col.add_theme_constant_override("separation", 1)
 	_equation_panel.add_child(ecuacion_col)
-	_equation_title = _label("TRAYECTORIA", 7)
+	_equation_title = HudTema.etiqueta("TRAYECTORIA", _fuente_ecuaciones, 7)
 	ecuacion_col.add_child(_equation_title)
 
-	_math_label = RichTextLabel.new()
-	_math_label.bbcode_enabled = true
-	_math_label.fit_content = false
-	_math_label.scroll_active = false
-	_math_label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_math_label.custom_minimum_size = Vector2(150, 68)
-	_math_label.add_theme_font_size_override("normal_font_size", 8)
-	_math_label.add_theme_font_size_override("bold_font_size", 8)
-	_math_label.add_theme_font_size_override("mono_font_size", 8)
-	if _fuente_ecuaciones != null:
-		_math_label.add_theme_font_override("normal_font", _fuente_ecuaciones)
-		_math_label.add_theme_font_override("bold_font", _fuente_ecuaciones)
-		_math_label.add_theme_font_override("mono_font", _fuente_ecuaciones)
-	_math_label.add_theme_color_override("default_color", Color("#F0F6FF"))
-	_math_label.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
-	_math_label.add_theme_constant_override("outline_size", 2)
+	_math_label = _crear_texto_ecuaciones()
 	ecuacion_col.add_child(_math_label)
 
 	# El botón es hermano del panel, no hijo: permanece visible para volver a abrirlo.
-	_equation_toggle = Button.new()
-	_equation_toggle.name = "EquationToggle"
-	_equation_toggle.position = Vector2(5, 5)
-	_equation_toggle.custom_minimum_size = Vector2(42, 12)
-	_equation_toggle.text = "OCULTAR"
-	_equation_toggle.add_theme_font_size_override("font_size", 5)
-	_equation_toggle.add_theme_color_override("font_color", RED)
-	_equation_toggle.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
-	_equation_toggle.add_theme_constant_override("outline_size", 2)
-	if _fuente_ecuaciones != null:
-		_equation_toggle.add_theme_font_override("font", _fuente_ecuaciones)
-	_equation_toggle.add_theme_stylebox_override("normal", _button_style(Color(0.09, 0.15, 0.23, 0.58)))
-	_equation_toggle.add_theme_stylebox_override("hover", _button_style(Color(0.14, 0.23, 0.33, 0.92)))
-	_equation_toggle.pressed.connect(_on_equation_toggle_pressed)
+	_equation_toggle = _crear_boton_ecuacion()
 	root.add_child(_equation_toggle)
 
-	# Brújula sin panel de fondo; lectura única del ángulo y dial 20% mayor.
+func _crear_texto_ecuaciones() -> RichTextLabel:
+	var texto := RichTextLabel.new()
+	texto.bbcode_enabled = true
+	texto.fit_content = false
+	texto.scroll_active = false
+	texto.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	texto.custom_minimum_size = Vector2(150, 68)
+	texto.add_theme_font_size_override("normal_font_size", 8)
+	texto.add_theme_font_size_override("bold_font_size", 8)
+	texto.add_theme_font_size_override("mono_font_size", 8)
+	if _fuente_ecuaciones != null:
+		texto.add_theme_font_override("normal_font", _fuente_ecuaciones)
+		texto.add_theme_font_override("bold_font", _fuente_ecuaciones)
+		texto.add_theme_font_override("mono_font", _fuente_ecuaciones)
+	texto.add_theme_color_override("default_color", Color("#F0F6FF"))
+	texto.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
+	texto.add_theme_constant_override("outline_size", 2)
+	return texto
+
+func _crear_boton_ecuacion() -> Button:
+	var boton := Button.new()
+	boton.name = "EquationToggle"
+	boton.position = Vector2(5, 5)
+	boton.custom_minimum_size = Vector2(42, 12)
+	boton.text = "OCULTAR"
+	boton.add_theme_font_size_override("font_size", 5)
+	boton.add_theme_color_override("font_color", HudTema.RED)
+	boton.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
+	boton.add_theme_constant_override("outline_size", 2)
+	if _fuente_ecuaciones != null:
+		boton.add_theme_font_override("font", _fuente_ecuaciones)
+	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(Color(0.09, 0.15, 0.23, 0.58)))
+	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(Color(0.14, 0.23, 0.33, 0.92)))
+	boton.pressed.connect(_on_equation_toggle_pressed)
+	return boton
+
+## Brújula sin panel de fondo; lectura única del ángulo y dial 20% mayor.
+func _construir_dial(root: Control) -> void:
 	var dial_col := VBoxContainer.new()
 	dial_col.name = "AngleControls"
 	dial_col.position = Vector2(216, 207)
 	dial_col.size = Vector2(48, 61)
 	dial_col.add_theme_constant_override("separation", 0)
 	root.add_child(dial_col)
-	_angle_label = _label("45°", 9)
+	_angle_label = HudTema.etiqueta("45°", _fuente_ecuaciones, 9)
 	_angle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	dial_col.add_child(_angle_label)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
@@ -155,50 +140,52 @@ func _construir_interfaz() -> void:
 	dial_col.add_child(_angle_dial)
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
-	# El control representa la velocidad inicial v0, ajustada mediante el porcentaje
-	# de potencia. v0 cambia el coeficiente a (curvatura) y el alcance del disparo.
-	var power_panel := _panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), Color("#17263B"))
+## El control representa la velocidad inicial v0, ajustada mediante el porcentaje
+## de potencia. v0 cambia el coeficiente a (curvatura) y el alcance del disparo.
+func _construir_panel_potencia(root: Control) -> void:
+	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), HudTema.PANEL)
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(_label("VELOCIDAD INICIAL v0", 6))
-	_power_label = _label("65%", 8)
+	power_header.add_child(HudTema.etiqueta("VELOCIDAD INICIAL v0", _fuente_ecuaciones, 6))
+	_power_label = HudTema.etiqueta("65%", _fuente_ecuaciones, 8)
 	power_header.add_child(_power_label)
-	var power_hint := _label("v0 modifica a y el alcance", 5, TEXT)
-	power_col.add_child(power_hint)
-	_power_slider = HSlider.new()
-	_power_slider.min_value = 0
-	_power_slider.max_value = 100
-	_power_slider.step = 1
-	_power_slider.value = power_percent
-	_power_slider.custom_minimum_size = Vector2(94, 7)
-	_power_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_power_slider.value_changed.connect(_on_power_changed)
+	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_ecuaciones, 5, HudTema.TEXT))
+	_power_slider = _crear_slider_potencia()
 	power_col.add_child(_power_slider)
-	_launch_button = Button.new()
-	_launch_button.text = "DISPARAR ->"
-	_launch_button.custom_minimum_size = Vector2(94, 14)
-	_launch_button.add_theme_font_size_override("font_size", 7)
-	if _fuente_ecuaciones != null:
-		_launch_button.add_theme_font_override("font", _fuente_ecuaciones)
-	_launch_button.add_theme_color_override("font_color", Color("#102338"))
-	_launch_button.add_theme_stylebox_override("normal", _button_style(Color("#62D9C7")))
-	_launch_button.add_theme_stylebox_override("hover", _button_style(Color("#8AEBDD")))
-	_launch_button.add_theme_stylebox_override("pressed", _button_style(Color("#3CAFA6")))
-	_launch_button.pressed.connect(_on_launch_pressed)
+	_launch_button = _crear_boton_disparo()
 	power_col.add_child(_launch_button)
 
-var _cartilla: Control
-## True mientras la cartilla esta abierta: bloquea el juego.
-var cartilla_activa: bool = true
-## Ultimo modelo fisico recibido. Se reenvia a la cartilla cuando esta ya existe.
-var _modelo_pos: Vector2 = Vector2.ZERO
-var _modelo_vel: Vector2 = Vector2.ZERO
-var _modelo_gravedad: float = 980.0
-var _modelo_amortiguamiento: float = 0.0
-var _hay_modelo: bool = false
+func _crear_slider_potencia() -> HSlider:
+	var slider := HSlider.new()
+	slider.min_value = 0
+	slider.max_value = 100
+	slider.step = 1
+	slider.value = power_percent
+	slider.custom_minimum_size = Vector2(94, 7)
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(_on_power_changed)
+	return slider
+
+func _crear_boton_disparo() -> Button:
+	var boton := Button.new()
+	boton.text = "DISPARAR ->"
+	boton.custom_minimum_size = Vector2(94, 14)
+	boton.add_theme_font_size_override("font_size", 7)
+	if _fuente_ecuaciones != null:
+		boton.add_theme_font_override("font", _fuente_ecuaciones)
+	boton.add_theme_color_override("font_color", Color("#102338"))
+	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(Color("#62D9C7")))
+	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(Color("#8AEBDD")))
+	boton.add_theme_stylebox_override("pressed", HudTema.estilo_boton(Color("#3CAFA6")))
+	boton.pressed.connect(_on_launch_pressed)
+	return boton
+
+# ---------------------------------------------------------------------------
+# Cartilla (tablero explicativo)
+# ---------------------------------------------------------------------------
 
 func _construir_cartilla() -> void:
 	var escena := load("res://Scenes/UI/Cartilla.tscn") as PackedScene
@@ -234,26 +221,14 @@ func _on_cartilla_cerrada() -> void:
 	_cartilla = null
 	cartilla_cerrada.emit()
 
+# ---------------------------------------------------------------------------
+# Controles del jugador
+# ---------------------------------------------------------------------------
+
 func _on_equation_toggle_pressed() -> void:
 	_equation_visible = not _equation_visible
 	_equation_panel.visible = _equation_visible
 	_equation_toggle.text = "OCULTAR" if _equation_visible else "VER EQ."
-
-func _button_style(color: Color) -> StyleBoxFlat:
-	var s := _panel_style(color)
-	s.border_color = color
-	return s
-
-func set_aim_from_drag(angulo: float, potencia: float) -> void:
-	# Sincroniza dial, porcentaje y etiquetas sin crear bucles de señales.
-	angle_degrees = fposmod(angulo, 360.0)
-	power_percent = clampf(potencia, 0.0, 100.0)
-	if is_instance_valid(_angle_dial):
-		_angle_dial.angle = angle_degrees
-	if is_instance_valid(_power_slider):
-		_power_slider.set_value_no_signal(power_percent)
-	_actualizar_lecturas()
-	aim_changed.emit(angle_degrees, power_percent)
 
 func _on_angle_changed(valor: float) -> void:
 	angle_degrees = valor
@@ -268,6 +243,21 @@ func _on_power_changed(valor: float) -> void:
 func _on_launch_pressed() -> void:
 	if _can_launch and power_percent > 0.0:
 		launch_requested.emit(angle_degrees, power_percent)
+
+# ---------------------------------------------------------------------------
+# API pública (la usa la resortera)
+# ---------------------------------------------------------------------------
+
+func set_aim_from_drag(angulo: float, potencia: float) -> void:
+	# Sincroniza dial, porcentaje y etiquetas sin crear bucles de señales.
+	angle_degrees = fposmod(angulo, 360.0)
+	power_percent = clampf(potencia, 0.0, 100.0)
+	if is_instance_valid(_angle_dial):
+		_angle_dial.angle = angle_degrees
+	if is_instance_valid(_power_slider):
+		_power_slider.set_value_no_signal(power_percent)
+	_actualizar_lecturas()
+	aim_changed.emit(angle_degrees, power_percent)
 
 func set_launch_enabled(enabled: bool) -> void:
 	_can_launch = enabled
@@ -285,31 +275,7 @@ func set_model_values(position_initial: Vector2, velocity_initial: Vector2, grav
 		_cartilla.call("set_model_values", position_initial, velocity_initial, gravity, damping)
 	if not is_instance_valid(_math_label):
 		return
-
-	# El panel muestra la matemática del nivel: parábola (cinemática) en el nivel 1,
-	# y el sistema lineal en espacio de estados (matrices) en el nivel 2, donde el
-	# amortiguamiento hace que el tiro ya no sea una parábola perfecta.
-	var texto := ""
-	if modo_ecuacion == "matrices":
-		texto += "[color=#FFFFFF][b]Espacio de estados[/b][/color]\n"
-		texto += "[color=#A6B8D0]s  = [ x  y  vx  vy ]^T[/color]\n"
-		texto += "[color=#62D9C7]s0 = [%.0f  %.0f  %.0f  %.0f]^T[/color]\n" % [position_initial.x, position_initial.y, velocity_initial.x, velocity_initial.y]
-		texto += "[color=#FFFFFF]s' = A s + b[/color]\n"
-		texto += "[color=#62D9C7][b]A[/b] = [ 0  0  1  0 ]\n    [ 0  0  0  1 ]\n    [ 0  0 -k  0 ]\n    [ 0  0  0 -k ][/color]\n"
-		texto += "[color=#62D9C7][b]b[/b] = [ 0  0  0  g ]^T[/color]\n"
-		texto += "[color=#A6B8D0]k=%.2f   g=%.0f[/color]" % [damping, gravity]
-	else:
-		var modelo: Dictionary = SolverNumerico.ecuacion_parabolica(position_initial, velocity_initial, gravity)
-		texto += "[color=#FFFFFF]y(x) = a x\u00b2 + b x + c[/color]\n"
-		if bool(modelo.get("valida", false)):
-			var a: float = float(modelo["a"])
-			var b: float = float(modelo["b"])
-			var c: float = float(modelo["c"])
-			texto += "[color=#62D9C7]a = %.4f\nb = %.4f\nc = %.2f[/color]\n" % [a, b, c]
-			texto += "[color=#FFFFFF]y(x) = %.4f x\u00b2 %s %.4f x %s %.2f[/color]" % [a, "+" if b >= 0.0 else "-", absf(b), "+" if c >= 0.0 else "-", absf(c)]
-		else:
-			texto += "[color=#A6B8D0]Trayectoria casi vertical; no se expresa como y(x).[/color]"
-	_math_label.text = texto
+	_math_label.text = HudEcuaciones.texto(modo_ecuacion, position_initial, velocity_initial, gravity, damping)
 
 func _actualizar_lecturas() -> void:
 	if is_instance_valid(_angle_label):

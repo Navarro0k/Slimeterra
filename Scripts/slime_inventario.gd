@@ -24,3 +24,10 @@ static func total(inventario: Array) -> int:
 	for entrada in inventario:
 		suma += int(entrada["cantidad"])
 	return suma
+
+## Índice de la primera entrada con munición, o -1 si no queda ninguna.
+static func primer_con_stock(inventario: Array) -> int:
+	for i in inventario.size():
+		if inventario[i]["cantidad"] > 0:
+			return i
+	return -1
