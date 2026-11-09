@@ -1,23 +1,14 @@
 class_name NivelSlimes
 extends Node2D
-## Script del nivel: es el único que conoce a la resortera y a la UI.
-## Les entrega el inventario de slimes y los comunica entre sí.
-## También decide cuándo termina el nivel: victoria al tocar una Meta, derrota al quedarse sin slimes.
-## Clases auxiliares:
-##   NivelLimites   -> rectángulo de límites del nivel
-##   NivelHudTiempo -> cronómetro en pantalla
-##   SlimeInventario -> conteo de slimes restantes
+## Script del nivel: conecta resortera, UI, cámara y pantalla de fin.
 
-## Orden de los niveles del juego. Al ganar se pasa al siguiente de esta lista y el último
-## cierra el juego. Para añadir un nivel basta con añadirlo aquí.
+## Orden de los niveles. El último cierra el juego.
 const ORDEN_NIVELES: Array[String] = [
 	"res://Scenes/Levels/jungleLevel.tscn",
 	"res://Scenes/Levels/Level_Ice.tscn",
 ]
 
-## Slimes disponibles en este nivel: { tipo de slime: cantidad }.
-## Los tipos están definidos en SlimeCatalogo.Tipo.
-## Cada nivel concreto lo redefine en su propio script (ver jungle_level.gd).
+## Slimes disponibles: { tipo: cantidad }. Cada nivel concreto lo redefine.
 var slimes_nivel: Dictionary = {
 	SlimeCatalogo.Tipo.BASE: 3,
 	SlimeCatalogo.Tipo.FUEGO: 1,
@@ -27,24 +18,23 @@ var slimes_nivel: Dictionary = {
 @export var mostrar_limites: bool = false
 
 @export_group("Estrellas")
-## Tiempo (s) máximo para conseguir 3 estrellas.
+## Tiempo (s) máximo para 3 estrellas.
 @export var tiempo_3_estrellas: float = 45.0
-## Tiempo (s) máximo para conseguir 2 estrellas. Más que esto = 1 estrella.
+## Tiempo (s) máximo para 2 estrellas.
 @export var tiempo_2_estrellas: float = 90.0
 
 var limites_globales: Rect2 = Rect2()
 var tiempo_transcurrido: float = 0.0
 var _hud_tiempo: NivelHudTiempo
-## false mientras el tablero explicativo está abierto: el nivel aún no ha comenzado.
+## false mientras la cartilla está abierta: el nivel aún no ha comenzado.
 var _explicacion_completada: bool = false
 
 @onready var slingshoot: Node2D = $Slingshoot
 @onready var ui: SlimeSelectorUI = $SlimeSelectorUI
 @onready var camara: CamaraSeguimiento = $Camara
 
-## Pantalla de pausa / fin de nivel. Si el nivel no tiene un nodo "PantallaFin", se crea sola.
 var pantalla: PantallaFin
-## true cuando el nivel ya terminó (victoria o derrota): evita que una pantalla pise a la otra.
+## true cuando el nivel ya terminó: evita que una pantalla pise a la otra.
 var _terminado: bool = false
 
 func _ready() -> void:
@@ -54,18 +44,14 @@ func _ready() -> void:
 	_agrupar_musica()
 	_aplicar_limites()
 
-	# Mismo diccionario para los dos. Primero la UI (crea los slots) y luego la
-	# resortera (emite inventario_cambiado y la UI se rellena).
+	# Primero la UI (crea los slots), luego la resortera (emite inventario_cambiado).
 	ui.configurar(slimes_nivel)
 	slingshoot.configurar(slimes_nivel)
 
-	# La cámara arranca ya sobre la resortera (sin paneo inicial).
 	camara.seguir(slingshoot, true)
 
 	_hud_tiempo = NivelHudTiempo.new(self)
 
-	# Mientras se lee el tablero no se puede pausar ni contar tiempo: el nivel
-	# empieza realmente cuando la cartilla emite su cierre.
 	pantalla.bloquear_pausa(true)
 
 
@@ -75,21 +61,13 @@ func _process(delta: float) -> void:
 	tiempo_transcurrido += delta
 	_hud_tiempo.mostrar(tiempo_transcurrido)
 
-# ---------------------------------------------------------------------------
-# Preparación del nivel (se llama desde _ready)
-# ---------------------------------------------------------------------------
 
 func _conectar_resortera() -> void:
-	# Resortera -> UI: cambió la munición o la selección.
 	slingshoot.inventario_cambiado.connect(ui.actualizar)
-	# UI -> Resortera: el jugador eligió otro tipo de slime.
 	ui.slime_elegido.connect(slingshoot.seleccionar)
-	# Resortera -> Nivel: ya no queda munición.
 	slingshoot.sin_municion.connect(_on_sin_municion)
-	# Resortera -> Cámara: sigue al slime en vuelo y vuelve a la resortera al recargar.
 	slingshoot.slime_lanzado.connect(_on_slime_lanzado)
 	slingshoot.slime_cargado.connect(_on_slime_cargado)
-	# Resortera -> Nivel: el tablero explicativo inicial ya se leyó por completo.
 	slingshoot.explicacion_completada.connect(_on_explicacion_completada)
 
 func _crear_pantalla_fin() -> void:
@@ -99,7 +77,6 @@ func _crear_pantalla_fin() -> void:
 		add_child(pantalla)
 	_configurar_progresion()
 
-## Meta(s) del nivel: cualquier nodo Meta en la escena se encuentra por su grupo.
 func _conectar_metas() -> void:
 	var metas := get_tree().get_nodes_in_group("meta")
 	if metas.is_empty():
@@ -107,7 +84,6 @@ func _conectar_metas() -> void:
 	for meta in metas:
 		meta.meta_alcanzada.connect(_on_meta_alcanzada)
 
-## La musica del nivel se agrupa para que la cartilla pueda pausarla.
 func _agrupar_musica() -> void:
 	var musicos := get_tree().get_nodes_in_group("musica_nivel")
 	if musicos.is_empty():
@@ -115,7 +91,6 @@ func _agrupar_musica() -> void:
 		for a in audio_nodes:
 			a.add_to_group("musica_nivel")
 
-## Límites: la cámara no sale del nivel y el slime rebota en sus bordes.
 func _aplicar_limites() -> void:
 	limites_globales = NivelLimites.calcular(self)
 	camara.aplicar_limites(limites_globales)
@@ -123,8 +98,6 @@ func _aplicar_limites() -> void:
 		print("%s límites: %s" % [name, limites_globales])
 		NivelLimites.crear_marco(self, limites_globales)
 
-## Le dice a la pantalla de fin qué viene después de este nivel según ORDEN_NIVELES.
-## Un nivel que no esté en la lista (por ejemplo Level_1) solo ofrece repetirse.
 func _configurar_progresion() -> void:
 	var posicion := ORDEN_NIVELES.find(scene_file_path)
 	if posicion < 0:
@@ -135,9 +108,6 @@ func _configurar_progresion() -> void:
 	else:
 		pantalla.es_final_del_juego = true
 
-# ---------------------------------------------------------------------------
-# Tiempo y estrellas
-# ---------------------------------------------------------------------------
 
 func _on_explicacion_completada() -> void:
 	if _explicacion_completada:
@@ -156,12 +126,8 @@ func _calcular_estrellas() -> int:
 		return 2
 	return 1
 
-# ---------------------------------------------------------------------------
-# Eventos del juego
-# ---------------------------------------------------------------------------
 
 func _on_slime_lanzado(slime: Node2D) -> void:
-	# El slime en vuelo rebota en los límites del nivel y la cámara lo sigue.
 	slime.set("limites", limites_globales)
 	camara.seguir(slime)
 
@@ -182,6 +148,5 @@ func _on_meta_alcanzada() -> void:
 	var mensaje := "Tiempo: %s\nSlimes sobrantes: %d" % [NivelHudTiempo.formatear(tiempo_transcurrido), _slimes_restantes()]
 	pantalla.mostrar_victoria.call_deferred(mensaje, _calcular_estrellas())
 
-## Slimes que aún no se han disparado (el que está volando ya se descontó).
 func _slimes_restantes() -> int:
 	return SlimeInventario.total(slingshoot.get_inventario())

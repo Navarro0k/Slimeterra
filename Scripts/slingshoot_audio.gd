@@ -1,12 +1,10 @@
 class_name SlingshootAudio
 extends RefCounted
 ## Sonidos de la resortera: estirar (inicio + loop) y lanzar.
-## Los reproductores se crean como hijos del nodo `padre` (la resortera).
 
 var _estirar: AudioStreamPlayer
 var _estirar_loop: AudioStreamPlayer
 var _lanzar: AudioStreamPlayer
-## El sonido de inicio suena una sola vez por estirón.
 var _inicio_sonado: bool = false
 var _variacion_tono: float
 

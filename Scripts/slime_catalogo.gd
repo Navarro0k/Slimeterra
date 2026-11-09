@@ -1,8 +1,6 @@
 class_name SlimeCatalogo
 extends RefCounted
-## Catálogo central de slimes: único lugar que conoce las escenas, iconos y nombres.
-## El resto del código (nivel, resortera, UI) solo maneja el enum Tipo.
-## Para añadir un slime nuevo: agregar el valor al enum y su entrada en DATOS.
+## Catálogo central de slimes: escenas, iconos y nombres.
 
 enum Tipo { BASE, FUEGO }
 

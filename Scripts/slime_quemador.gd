@@ -1,7 +1,6 @@
 class_name SlimeQuemador
 extends RefCounted
-## Poder del slime de fuego: quema (borra) los tiles marcados como "rompible_por_fuego"
-## que toca mientras vuela, con su efecto de partículas y sonido.
+## Poder del slime de fuego: quema los tiles "rompible_por_fuego" que toca.
 
 var _slime: RigidBody2D
 var _mascara: int
@@ -62,7 +61,6 @@ func _efecto_quemar(capa: TileMapLayer, celda: Vector2i) -> void:
 	SlimeSonidos.quemar(arbol)
 
 
-## Partículas de fuego en la posición del bloque quemado.
 func _particulas_fuego(arbol: SceneTree, centro_global: Vector2) -> void:
 	var escena := arbol.current_scene
 	if escena == null:
@@ -89,5 +87,4 @@ func _particulas_fuego(arbol: SceneTree, centro_global: Vector2) -> void:
 	degradado.colors = PackedColorArray([Color(1.0, 0.6, 0.2, 1.0), Color(1.0, 0.2, 0.0, 0.0)])
 	particulas.color_ramp = degradado
 	escena.add_child(particulas)
-	# Auto-limpiar.
 	arbol.create_timer(1.0).timeout.connect(particulas.queue_free)

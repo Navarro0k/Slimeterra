@@ -1,5 +1,6 @@
 class_name SolverNumerico
 extends RefCounted
+## Integrador RK4 y utilidades de trayectoria.
 
 
 ## Aceleración del sistema: a(p, v) = g - k*v
@@ -7,8 +8,7 @@ static func aceleracion(_pos: Vector2, vel: Vector2, gravedad: float, k: float) 
 	return Vector2(0.0, gravedad) - vel * k
 
 
-## Un solo paso de integración con Runge-Kutta 4 (orden 4).
-## Devuelve [nueva_pos, nueva_vel].
+## Un paso de Runge-Kutta 4. Devuelve [nueva_pos, nueva_vel].
 static func paso(pos: Vector2, vel: Vector2, dt: float, gravedad: float, k: float) -> Array:
 	var k1p: Vector2 = vel
 	var k1v: Vector2 = aceleracion(pos, vel, gravedad, k)
@@ -28,7 +28,7 @@ static func paso(pos: Vector2, vel: Vector2, dt: float, gravedad: float, k: floa
 	]
 
 
-## Calcula 'pasos' puntos de la trayectoria (sin incluir el punto inicial).
+## Calcula 'pasos' puntos de la trayectoria (sin incluir el inicial).
 static func trayectoria(
 		pos0: Vector2, vel0: Vector2, gravedad: float, k: float,
 		dt: float, pasos: int
@@ -52,7 +52,7 @@ static func solucion_exacta(pos0: Vector2, vel0: Vector2, gravedad: float, k: fl
 	return pos0 + vt * t + (vel0 - vt) * ((1.0 - exp(-k * t)) / k)
 
 
-## Error (en píxeles) de RK4 al tiempo t = dt * pasos, comparado con la solución exacta.
+## Error (px) de RK4 al tiempo t = dt * pasos frente a la solución exacta.
 static func error_en(
 		pos0: Vector2, vel0: Vector2, gravedad: float, k: float,
 		dt: float, pasos: int
@@ -62,20 +62,18 @@ static func error_en(
 	return puntos[pasos - 1].distance_to(exacta)
 
 
-## Aplica una matriz de rotación 2D a un vector de velocidad o posición 
-## usando un ángulo en radianes.
+## Aplica una matriz de rotación 2D usando un ángulo en radianes.
 static func aplicar_matriz_rotacion(vector: Vector2, angulo_radianes: float) -> Vector2:
 	var cos_a = cos(angulo_radianes)
 	var sin_a = sin(angulo_radianes)
-	
+
 	var x_rotado = vector.x * cos_a - vector.y * sin_a
 	var y_rotado = vector.x * sin_a + vector.y * cos_a
-	
+
 	return Vector2(x_rotado, y_rotado)
 
 
-## Ecuación parabólica y(x) = a x² + b x + c para tiro sin amortiguamiento (nivel 1).
-## Coordenadas de pantalla: Y positiva hacia abajo.
+## Ecuación parabólica y(x) = a x² + b x + c para tiro sin amortiguamiento.
 static func ecuacion_parabolica(posicion_inicial: Vector2, velocidad_inicial: Vector2, gravedad: float) -> Dictionary:
 	if absf(velocidad_inicial.x) < 0.0001:
 		return {"valida": false}

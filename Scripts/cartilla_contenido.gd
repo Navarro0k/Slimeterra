@@ -1,14 +1,7 @@
 class_name CartillaContenido
 extends RefCounted
-## Texto de las 4 páginas de la cartilla (tablero explicativo), con formato BBCode.
-## No conoce nodos ni navegación: cartilla.gd le pide titulo/subtitulo/contenido de una página.
-##
-## El contenido es breve y cambia según el nivel: parábola (nivel 1) o espacio de
-## estados con amortiguamiento (nivel 2). Las ecuaciones se destacan con un formato
-## propio para que no se confundan con el texto normal.
+## Texto BBCode de las 4 páginas de la cartilla.
 
-## Colores del bloque de ecuaciones: cada nivel tiene su propia tinta, de modo
-## que la explicación de parábola y la de matrices se distinguen de un vistazo.
 const EQ_TINTA_PARABOLA := "#245112"
 const EQ_FONDO_PARABOLA := "#DCEBC4"
 const EQ_TINTA_MATRICES := "#0B4A6F"
@@ -17,7 +10,6 @@ const EQ_FONDO_MATRICES := "#D3E6F2"
 ## "parabola" (nivel 1) o "matrices" (nivel 2).
 var modo_ecuacion: String = "parabola"
 
-# Condiciones reales del disparo actual, enviadas por ShotHUD.
 var _pos0: Vector2 = Vector2.ZERO
 var _vel0: Vector2 = Vector2.ZERO
 var _gravedad: float = 980.0
@@ -25,7 +17,6 @@ var _amortiguamiento: float = 0.0
 var _hay_modelo: bool = false
 
 
-## Condiciones iniciales y parámetros físicos reales del disparo actual.
 func poner_modelo(pos: Vector2, vel: Vector2, gravedad: float, amortiguamiento: float) -> void:
 	_pos0 = pos
 	_vel0 = vel
@@ -37,10 +28,6 @@ func poner_modelo(pos: Vector2, vel: Vector2, gravedad: float, amortiguamiento: 
 func es_matrices() -> bool:
 	return modo_ecuacion == "matrices"
 
-
-# ---------------------------------------------------------------------------
-# Textos por página
-# ---------------------------------------------------------------------------
 
 func titulo(pagina: int) -> String:
 	match pagina:
@@ -85,10 +72,6 @@ func contenido(pagina: int) -> String:
 		_:
 			return _pagina_listo()
 
-
-# ---------------------------------------------------------------------------
-# Páginas
-# ---------------------------------------------------------------------------
 
 func _pagina_modelo() -> String:
 	var s := _chip_nivel() + "\n"
@@ -219,11 +202,6 @@ func _pagina_listo() -> String:
 	return s
 
 
-# ---------------------------------------------------------------------------
-# Formato enriquecido
-# ---------------------------------------------------------------------------
-
-## Bloque de ecuación: centrado, monoespaciado, más grande y con resalte propio.
 func _eq(texto: String, tamano: int = 16) -> String:
 	var tinta := EQ_TINTA_MATRICES if es_matrices() else EQ_TINTA_PARABOLA
 	var fondo := EQ_FONDO_MATRICES if es_matrices() else EQ_FONDO_PARABOLA
@@ -232,7 +210,6 @@ func _eq(texto: String, tamano: int = 16) -> String:
 	return s
 
 
-## Distintivo del nivel: deja claro de un vistazo qué modelo se está explicando.
 func _chip_nivel() -> String:
 	if es_matrices():
 		return (

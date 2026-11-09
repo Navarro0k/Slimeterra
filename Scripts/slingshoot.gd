@@ -1,16 +1,11 @@
 extends Node2D
-## Resortera: carga el slime, deja apuntarlo (arrastre, dial o slider del HUD) y lo lanza.
-## Clases auxiliares:
-##   SlingshootBandas -> dibujo de las bandas elásticas
-##   SlingshootAudio  -> sonidos de estirar y lanzar
-##   FisicaDisparo    -> velocidad inicial y trayectoria (compartidas con el slime real)
-##   SlimeInventario  -> interpretación del inventario del nivel
+## Resortera: carga el slime, permite apuntarlo (arrastre, dial o slider) y lo lanza.
 
 signal inventario_cambiado(inventario: Array, indice_seleccionado: int)
 signal sin_municion
 signal slime_lanzado(slime: Node2D)
 signal slime_cargado(slime: Node2D)
-## El jugador terminó de leer el tablero explicativo inicial: el nivel puede arrancar.
+## La cartilla inicial se cerró: el nivel puede arrancar.
 signal explicacion_completada
 
 @export_group("Física y Tiro")
@@ -22,7 +17,7 @@ signal explicacion_completada
 @export_range(1, 8, 1) var puntos_trayectoria: int = 10
 @export var paso_tiempo: float = 0.08
 @export var angulo_desvio_grados: float = 0.0
-## Modo de ecuación que muestra el HUD: "parabola" (nivel 1) o "matrices" (nivel 2).
+## "parabola" (nivel 1) o "matrices" (nivel 2).
 @export var modo_ecuacion: String = "parabola"
 
 
@@ -54,11 +49,10 @@ var _esperando_turno: bool = false
 var _padre_original: Node
 var _hud: ShotHUD
 var _arrastrando_slime: bool = false
-## Solo se dibuja la trayectoria predictiva mientras se apunta (arrastrando o moviendo dial/slider).
+## Solo se dibuja la trayectoria predictiva mientras se apunta.
 var _mostrar_trayectoria: bool = false
 var _posicion_holder_reposo: Vector2 = Vector2.ZERO
 
-# --- Módulos auxiliares (se crean en _ready) ---------------------------------
 var _bandas: SlingshootBandas
 var _audio: SlingshootAudio
 
@@ -97,9 +91,6 @@ func _draw() -> void:
 	if _mostrar_trayectoria and is_instance_valid(slime_actual) and not _esperando_turno:
 		_dibujar_trayectoria()
 
-# ---------------------------------------------------------------------------
-# Entrada: arrastre con el mouse
-# ---------------------------------------------------------------------------
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _esperando_turno or not is_instance_valid(slime_actual):
@@ -112,8 +103,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		elif not event.pressed and _arrastrando_slime:
 			_soltar_arrastre()
 	elif event is InputEventMouseButton and not event.pressed:
-		# Fin de cualquier interacción de apuntado (dial/slider incluidos):
-		# ocultar honda y trayectoria hasta la próxima manipulación.
+		# Fin de cualquier interacción de apuntado: ocultar honda y trayectoria.
 		if _mostrar_trayectoria:
 			_mostrar_trayectoria = false
 			_actualizar_visibilidad(false)
@@ -156,7 +146,7 @@ func _actualizar_arrastre(mouse_global: Vector2) -> void:
 	_mostrar_trayectoria = true
 	var centro_global := center_marker.global_position
 	var desplazamiento := mouse_global - centro_global
-	# Arrastre libre en 360°: el slime puede estirarse en cualquier dirección.
+	# Arrastre libre en 360°.
 	if desplazamiento.length() > max_stretch:
 		desplazamiento = desplazamiento.normalized() * max_stretch
 	holder.global_position = centro_global + desplazamiento
@@ -171,9 +161,6 @@ func _actualizar_arrastre(mouse_global: Vector2) -> void:
 		_actualizar_modelo_hud()
 	queue_redraw()
 
-# ---------------------------------------------------------------------------
-# HUD
-# ---------------------------------------------------------------------------
 
 func _crear_hud() -> void:
 	_hud = ShotHUD.new()
@@ -216,9 +203,6 @@ func _actualizar_hud_estado() -> void:
 		_actualizar_modelo_hud()
 	queue_redraw()
 
-# ---------------------------------------------------------------------------
-# Inventario y selección de slime (API usada por el nivel y la UI)
-# ---------------------------------------------------------------------------
 
 func configurar(slimes: Dictionary) -> void:
 	_quitar_slime()
@@ -229,21 +213,16 @@ func configurar(slimes: Dictionary) -> void:
 	inventario_cambiado.emit(_inventario, _indice)
 
 func seleccionar(idx: int) -> void:
-	# Validar que el índice exista y tenga munición.
 	if idx < 0 or idx >= _inventario.size():
 		return
 	if _inventario[idx]["cantidad"] <= 0:
 		return
-	# Si ya está seleccionado, no hacer nada.
 	if idx == _indice:
 		return
-	# Actualizar el índice seleccionado.
 	_indice = idx
-	# Si hay un slime cargado, reemplazarlo.
 	if is_instance_valid(slime_actual):
 		_quitar_slime()
 		_instanciar_slime(_indice)
-	# Si no hay slime en vuelo, cargar el seleccionado.
 	elif not _esperando_turno:
 		_instanciar_slime(_indice)
 	_mostrar_trayectoria = false
@@ -257,9 +236,6 @@ func get_inventario() -> Array[Dictionary]:
 func get_indice_seleccionado() -> int:
 	return _indice
 
-# ---------------------------------------------------------------------------
-# Carga del slime
-# ---------------------------------------------------------------------------
 
 func _cargar_nuevo_slime() -> void:
 	_esperando_turno = false
@@ -303,9 +279,6 @@ func _aplicar_tension_slime(t: float, direccion_tiron: Vector2) -> void:
 	if is_instance_valid(slime_actual) and slime_actual.has_method("set_tension"):
 		slime_actual.set_tension(t, direccion_tiron)
 
-# ---------------------------------------------------------------------------
-# Disparo
-# ---------------------------------------------------------------------------
 
 func actualizar_aim(angulo: float, potencia: float) -> void:
 	angulo_objetivo = fposmod(angulo, 360.0)
@@ -319,12 +292,9 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	if is_instance_valid(_hud) and _hud.cartilla_activa:
 		return
 	actualizar_aim(angulo, potencia)
-	# Misma función que usa la vista previa: una sola fuente de verdad para la velocidad inicial.
 	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
 	if velocidad.length() <= 0.1:
 		return
-	# El slime sale desde donde está sujeto AHORA (el mismo punto donde la vista previa
-	# empieza a dibujar), no desde el punto de reposo de la honda.
 	var origen_global := holder.global_position
 	_esperando_turno = true
 	_volver_a_reposo()
@@ -334,8 +304,7 @@ func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	_actualizar_hud_estado()
 	queue_redraw()
 
-## velocidad_inicial: velocidad real en px/s (ya incluye multiplicador_fuerza).
-## origen_global: punto exacto de partida (el mismo que usa la vista previa).
+## velocidad_inicial: velocidad real (px/s). origen_global: punto de partida.
 func _ejecutar_disparo(velocidad_inicial: Vector2, origen_global: Vector2) -> void:
 	if not is_instance_valid(slime_actual):
 		return
@@ -357,13 +326,10 @@ func _ejecutar_disparo(velocidad_inicial: Vector2, origen_global: Vector2) -> vo
 		_indice = SlimeInventario.primer_con_stock(_inventario)
 	inventario_cambiado.emit(_inventario, _indice)
 
-## Velocidad inicial (px/s) para un ángulo/potencia, con los parámetros de esta resortera.
+## Velocidad inicial (px/s) para un ángulo/potencia.
 func _velocidad_inicial(angulo: float, potencia: float) -> Vector2:
 	return FisicaDisparo.velocidad_inicial(angulo, potencia, angulo_desvio_grados, max_stretch, multiplicador_fuerza)
 
-# ---------------------------------------------------------------------------
-# Después del disparo: el slime se pegó y la resortera se reubica sobre él
-# ---------------------------------------------------------------------------
 
 func _al_pegarse(pos: Vector2, plataforma: Node) -> void:
 	var punto_local: Vector2 = plataforma.to_local(pos) if is_instance_valid(plataforma) else Vector2.ZERO
@@ -379,9 +345,6 @@ func _mover_y_recargar(pos_global: Vector2, plataforma: Node, pos_local: Vector2
 		global_position = pos_global
 	_cargar_nuevo_slime.call_deferred()
 
-# ---------------------------------------------------------------------------
-# Visibilidad y bandas
-# ---------------------------------------------------------------------------
 
 func _actualizar_visibilidad(mostrar: bool) -> void:
 	slingshot_sprite.visible = mostrar
@@ -394,20 +357,15 @@ func actualizar_cuerdas(pos: Vector2) -> void:
 	holder.position = pos
 	_bandas.actualizar(pos, max_stretch, grosor_reposo, grosor_estirado, caida_reposo)
 
-# ---------------------------------------------------------------------------
-# Vista previa de la trayectoria
-# ---------------------------------------------------------------------------
 
 func _dibujar_trayectoria() -> void:
 	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
 	var total_puntos := mini(puntos_trayectoria, 10)
 
-	# Se simula en coordenadas GLOBALES, desde el mismo punto donde arrancará el slime
-	# (holder.global_position). Solo al dibujar se pasa a coordenadas locales de este nodo.
+	# Se simula en coordenadas globales desde el holder; se dibuja en locales.
 	var simulacion := FisicaDisparo.simular_trayectoria(slime_actual, holder.global_position, velocidad, total_puntos, paso_tiempo)
 	var posiciones_puntos: Array[Vector2] = simulacion["puntos"]
 
-	# Dibujar los puntos como pixeles (2x2 para visibilidad).
 	for i in range(posiciones_puntos.size()):
 		var pt := to_local(posiciones_puntos[i])
 		var alpha := 0.9 - i * 0.08
@@ -416,7 +374,7 @@ func _dibujar_trayectoria() -> void:
 
 	_dibujar_punto_final(simulacion["final"])
 
-## Punto final visible: el mismo sprite del slime, desvanecido.
+## Punto final visible: el sprite del slime, desvanecido.
 func _dibujar_punto_final(ultimo_punto: Vector2) -> void:
 	var textura: Texture2D = null
 	if is_instance_valid(slime_actual):

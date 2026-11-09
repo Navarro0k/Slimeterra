@@ -1,20 +1,13 @@
 class_name Meta
 extends Area2D
-## Bandera de meta. Cuando un slime la toca, el nivel se gana.
-## Se registra sola en el grupo "meta": el script del nivel (level.gd) la encuentra por ahí.
-##
-## Detecta al slime de DOS formas independientes (basta con que funcione una):
-##   1. La señal body_entered del Area2D (necesita que la capa/máscara de física coincidan).
-##   2. Un chequeo geométrico cada frame: ¿la posición del slime está dentro de la forma de
-##      colisión de la meta? No depende de capas, máscaras ni de cómo esté configurado el Area2D.
+## Bandera de meta: al tocarla un slime, el nivel se gana.
 
 signal meta_alcanzada
 
-## Capa de física en la que están los slimes (por defecto la 1, la misma de slime.tscn).
+## Capa de física de los slimes.
 @export_flags_2d_physics var mascara_slime: int = 1
-## Margen (px) extra alrededor de la forma de la meta para el chequeo geométrico (≈ radio del slime).
+## Margen (px) extra alrededor de la forma (~radio del slime).
 @export var margen: float = 6.0
-## Imprime en la consola de Godot qué hace la meta (útil para depurar).
 @export var depurar: bool = false
 
 var _alcanzada: bool = false
@@ -36,14 +29,14 @@ func _physics_process(_delta: float) -> void:
 	var escena := get_tree().current_scene
 	if escena == null:
 		return
-	# Los slimes lanzados cuelgan de la escena actual (la honda los reubica ahí al disparar).
+	# Los slimes lanzados cuelgan de la escena actual.
 	for nodo in escena.get_children():
 		if nodo is RigidBody2D and nodo.has_method("lanzar") and _toca(nodo):
 			_alcanzar("chequeo geométrico")
 			return
 
 func _on_body_entered(cuerpo: Node2D) -> void:
-	# Los tiles y las plataformas móviles también pueden entrar al área: solo cuentan los slimes.
+	# Solo cuentan los slimes, no tiles ni plataformas.
 	if cuerpo.has_method("lanzar"):
 		_alcanzar("body_entered")
 
@@ -62,10 +55,9 @@ func _formas() -> Array[CollisionShape2D]:
 			formas.append(hijo)
 	return formas
 
-## ¿El centro del slime (con margen) está dentro de alguna forma de la meta?
+## ¿El centro del slime (con margen) está dentro de alguna forma?
 func _toca(slime: Node2D) -> bool:
 	for forma_nodo in _formas():
-		# to_local tiene en cuenta posición, rotación y escala del nodo de la forma.
 		var p: Vector2 = forma_nodo.to_local(slime.global_position)
 		var forma: Shape2D = forma_nodo.shape
 		if forma is RectangleShape2D:

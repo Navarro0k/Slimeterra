@@ -1,6 +1,6 @@
 class_name PantallaFinEstrellas
 extends Control
-## Dibuja 3 estrellas; las `obtenidas` en dorado y el resto apagadas.
+## Dibuja 3 estrellas; las obtenidas en dorado y el resto apagadas.
 
 const TAM := 22.0
 const SEP := 8.0

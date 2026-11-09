@@ -4,8 +4,7 @@ extends RefCounted
 
 
 ## Devuelve { "pos": Vector2, "vel": Vector2, "perdido": bool }.
-## `perdido` es true si tras rebotar en el límite inferior sale con menos velocidad que
-## `velocidad_minima_suelo` (px/s): se da por perdido para no esperarlo rodando por el suelo.
+## `perdido` es true si rebota en el suelo y sale demasiado lento.
 static func rebotar(pos: Vector2, vel: Vector2, limites: Rect2, radio: float, rebote: float, velocidad_minima_suelo: float) -> Dictionary:
 	var izquierda := limites.position.x + radio
 	var derecha := limites.end.x - radio

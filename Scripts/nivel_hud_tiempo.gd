@@ -1,7 +1,6 @@
 class_name NivelHudTiempo
 extends RefCounted
-## Cronómetro en pantalla (arriba al centro). Vive en su propia CanvasLayer,
-## hija del nodo que se le pase (el nivel).
+## Cronómetro en pantalla, en su propia CanvasLayer.
 
 var _etiqueta: Label
 

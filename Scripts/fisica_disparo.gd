@@ -1,11 +1,9 @@
 class_name FisicaDisparo
 extends RefCounted
-## Parámetros físicos compartidos entre la vista previa de la resortera y el slime real.
-## Todo lo que influye en la trayectoria sale de AQUÍ, para que lo dibujado
-## y lo simulado por slime.gd no puedan divergir.
+## Parámetros físicos compartidos entre la vista previa y el slime real.
 
 
-## Velocidad inicial (px/s, coordenadas globales) para un ángulo/potencia dados.
+## Velocidad inicial (px/s) para un ángulo/potencia dados.
 static func velocidad_inicial(angulo: float, potencia: float, desvio_grados: float, max_stretch: float, multiplicador_fuerza: float) -> Vector2:
 	var theta := deg_to_rad(fposmod(angulo, 360.0) + desvio_grados)
 	var intensidad := clampf(potencia, 0.0, 100.0) / 100.0
@@ -13,11 +11,10 @@ static func velocidad_inicial(angulo: float, potencia: float, desvio_grados: flo
 
 
 static func gravedad() -> float:
-	# slime.gd integra con esta misma configuración (ignora gravity_scale).
 	return float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 
 
-## Amortiguamiento que realmente usa el slime (linear_damp + global, o solo el propio).
+## Amortiguamiento que usa el slime (propio + global, o solo el propio).
 static func arrastre(slime) -> float:
 	if is_instance_valid(slime):
 		var valor: Variant = slime.get("arrastre")
@@ -26,15 +23,12 @@ static func arrastre(slime) -> float:
 	return float(ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0))
 
 
-## Paso de simulación real del motor de física (el mismo que recibe slime.gd en state.step).
 static func paso_fisica() -> float:
 	return 1.0 / maxf(float(Engine.physics_ticks_per_second), 1.0)
 
 
-## Simula la trayectoria con el mismo integrador RK4 que usa el slime real
-## (con el amortiguamiento del `slime` dado, o el global si no es válido).
-## Devuelve { "puntos": Array[Vector2], "final": Vector2 } en coordenadas globales:
-## un punto cada `paso_tiempo` segundos, `total_puntos` en total.
+## Simula la trayectoria con el mismo RK4 del slime real.
+## Devuelve { "puntos": Array[Vector2], "final": Vector2 }.
 static func simular_trayectoria(slime, pos_inicial: Vector2, velocidad: Vector2, total_puntos: int, paso_tiempo: float) -> Dictionary:
 	var g := gravedad()
 	var k := arrastre(slime)
