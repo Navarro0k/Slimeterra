@@ -206,7 +206,7 @@ func _construir_overlay() -> void:
 func _construir_contenido(caja: VBoxContainer) -> void:
 	_titulo = Label.new()
 	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_titulo.add_theme_font_size_override("font_size", 17)
+	_titulo.add_theme_font_size_override("font_size", 16)
 	_titulo.add_theme_color_override("font_color", C_TINTA_FUERTE)
 	if _fuente != null:
 		_titulo.add_theme_font_override("font", _fuente)
@@ -223,7 +223,7 @@ func _construir_contenido(caja: VBoxContainer) -> void:
 	_mensaje = Label.new()
 	_mensaje.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_mensaje.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_mensaje.add_theme_font_size_override("font_size", 10)
+	_mensaje.add_theme_font_size_override("font_size", 8)
 	_mensaje.add_theme_color_override("font_color", C_TINTA_SUAVE)
 	if _fuente != null:
 		_mensaje.add_theme_font_override("font", _fuente)
@@ -249,7 +249,7 @@ func _crear_boton(texto: String, accion: Callable, primario: bool) -> Button:
 	var boton := Button.new()
 	boton.text = texto
 	boton.custom_minimum_size = Vector2(172, 26)
-	boton.add_theme_font_size_override("font_size", 11)
+	boton.add_theme_font_size_override("font_size", 8)
 	if _fuente != null:
 		boton.add_theme_font_override("font", _fuente)
 	_aplicar_estilo_boton(boton, primario)

@@ -13,7 +13,7 @@ func _init(padre: Node) -> void:
 	_etiqueta.text = "0:00.0"
 	_etiqueta.custom_minimum_size = Vector2(96, 0)
 	_etiqueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_etiqueta.add_theme_font_size_override("font_size", 18)
+	_etiqueta.add_theme_font_size_override("font_size", 16)
 	_etiqueta.add_theme_font_override("font", HudTema.fuente_pixel())
 	_etiqueta.add_theme_color_override("font_color", Color(1, 1, 1, 1))
 	_etiqueta.add_theme_color_override("font_outline_color", Color(0, 0, 0, 1))
