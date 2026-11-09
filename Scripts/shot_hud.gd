@@ -26,6 +26,7 @@ var _equation_visible := true
 var _launch_button: Button
 var _pause_button: Button
 var _fuente_ecuaciones: FontFile
+var _fuente_pixel: FontFile
 var _cartilla: Control
 var _modelo_pos: Vector2 = Vector2.ZERO
 var _modelo_vel: Vector2 = Vector2.ZERO
@@ -37,6 +38,7 @@ func _ready() -> void:
 	layer = 45
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_fuente_ecuaciones = load("res://Assets/fonts/JetBrainsMono-Regular.ttf") as FontFile
+	_fuente_pixel = HudTema.fuente_pixel()
 	_construir_interfaz()
 	_construir_cartilla()
 	_actualizar_lecturas()
@@ -56,14 +58,13 @@ func _construir_interfaz() -> void:
 	_construir_panel_potencia(root)
 
 func _construir_panel_ecuacion(root: Control) -> void:
-	_equation_panel = HudTema.panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91), Color(0, 0, 0, 0))
-	_equation_panel.add_theme_stylebox_override("panel", HudTema.estilo_transparente())
+	_equation_panel = HudTema.panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91))
 	var ecuacion_col := VBoxContainer.new()
 	ecuacion_col.position = Vector2(4, 18)
 	ecuacion_col.size = Vector2(150, 69)
 	ecuacion_col.add_theme_constant_override("separation", 1)
 	_equation_panel.add_child(ecuacion_col)
-	_equation_title = HudTema.etiqueta("TRAYECTORIA", _fuente_ecuaciones, 7)
+	_equation_title = HudTema.etiqueta("TRAYECTORIA", _fuente_ecuaciones, 7, HudTema.TINTA_SUAVE)
 	ecuacion_col.add_child(_equation_title)
 
 	_math_label = _crear_texto_ecuaciones()
@@ -87,9 +88,7 @@ func _crear_texto_ecuaciones() -> RichTextLabel:
 		texto.add_theme_font_override("normal_font", _fuente_ecuaciones)
 		texto.add_theme_font_override("bold_font", _fuente_ecuaciones)
 		texto.add_theme_font_override("mono_font", _fuente_ecuaciones)
-	texto.add_theme_color_override("default_color", Color("#F0F6FF"))
-	texto.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
-	texto.add_theme_constant_override("outline_size", 2)
+	texto.add_theme_color_override("default_color", HudTema.TINTA_FUERTE)
 	return texto
 
 func _crear_boton_ecuacion() -> Button:
@@ -99,13 +98,14 @@ func _crear_boton_ecuacion() -> Button:
 	boton.custom_minimum_size = Vector2(42, 12)
 	boton.text = "OCULTAR"
 	boton.add_theme_font_size_override("font_size", 5)
-	boton.add_theme_color_override("font_color", HudTema.RED)
-	boton.add_theme_color_override("font_outline_color", Color(0.01, 0.025, 0.06, 1.0))
-	boton.add_theme_constant_override("outline_size", 2)
+	boton.add_theme_color_override("font_color", HudTema.CREMA)
+	boton.add_theme_color_override("font_hover_color", HudTema.CREMA)
+	boton.add_theme_color_override("font_pressed_color", HudTema.CREMA)
 	if _fuente_ecuaciones != null:
 		boton.add_theme_font_override("font", _fuente_ecuaciones)
-	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(Color(0.09, 0.15, 0.23, 0.58)))
-	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(Color(0.14, 0.23, 0.33, 0.92)))
+	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(HudTema.TINTA))
+	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(HudTema.HOVER))
+	boton.add_theme_stylebox_override("pressed", HudTema.estilo_boton(HudTema.PRESSED))
 	boton.pressed.connect(_on_equation_toggle_pressed)
 	return boton
 
@@ -116,8 +116,9 @@ func _construir_dial(root: Control) -> void:
 	dial_col.size = Vector2(48, 61)
 	dial_col.add_theme_constant_override("separation", 0)
 	root.add_child(dial_col)
-	_angle_label = HudTema.etiqueta("45°", _fuente_ecuaciones, 9)
+	_angle_label = HudTema.etiqueta("45°", _fuente_pixel, 9)
 	_angle_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_angle_label.add_theme_stylebox_override("normal", HudTema.estilo_chip())
 	dial_col.add_child(_angle_label)
 	_angle_dial = preload("res://Scripts/shot_dial.gd").new()
 	_angle_dial.name = "AngleDial"
@@ -126,16 +127,16 @@ func _construir_dial(root: Control) -> void:
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
 func _construir_panel_potencia(root: Control) -> void:
-	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63), HudTema.PANEL)
+	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 202), Vector2(110, 63))
 	var power_col := VBoxContainer.new()
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(HudTema.etiqueta("VELOCIDAD INICIAL v0", _fuente_ecuaciones, 6))
-	_power_label = HudTema.etiqueta("65%", _fuente_ecuaciones, 8)
+	power_header.add_child(HudTema.etiqueta("VELOCIDAD INICIAL v0", _fuente_pixel, 6))
+	_power_label = HudTema.etiqueta("65%", _fuente_pixel, 8)
 	power_header.add_child(_power_label)
-	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_ecuaciones, 5, HudTema.TEXT))
+	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_pixel, 5, HudTema.TINTA_SUAVE))
 	_power_slider = _crear_slider_potencia()
 	power_col.add_child(_power_slider)
 	_launch_button = _crear_boton_disparo()
@@ -147,8 +148,13 @@ func _crear_slider_potencia() -> HSlider:
 	slider.max_value = 100
 	slider.step = 1
 	slider.value = power_percent
-	slider.custom_minimum_size = Vector2(94, 7)
+	slider.custom_minimum_size = Vector2(94, 9)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.add_theme_stylebox_override("slider", HudTema.estilo_slider_fondo())
+	slider.add_theme_stylebox_override("grabber_area", HudTema.estilo_slider_relleno())
+	slider.add_theme_stylebox_override("grabber_area_highlight", HudTema.estilo_slider_relleno())
+	slider.add_theme_icon_override("grabber", HudTema.icono_circulo(HudTema.TINTA, 9))
+	slider.add_theme_icon_override("grabber_highlight", HudTema.icono_circulo(HudTema.PROGRESO_RELLENO, 9))
 	slider.value_changed.connect(_on_power_changed)
 	return slider
 
@@ -157,12 +163,16 @@ func _crear_boton_disparo() -> Button:
 	boton.text = "DISPARAR ->"
 	boton.custom_minimum_size = Vector2(94, 14)
 	boton.add_theme_font_size_override("font_size", 7)
-	if _fuente_ecuaciones != null:
-		boton.add_theme_font_override("font", _fuente_ecuaciones)
-	boton.add_theme_color_override("font_color", Color("#102338"))
-	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(Color("#62D9C7")))
-	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(Color("#8AEBDD")))
-	boton.add_theme_stylebox_override("pressed", HudTema.estilo_boton(Color("#3CAFA6")))
+	if _fuente_pixel != null:
+		boton.add_theme_font_override("font", _fuente_pixel)
+	boton.add_theme_color_override("font_color", HudTema.CREMA)
+	boton.add_theme_color_override("font_hover_color", HudTema.CREMA)
+	boton.add_theme_color_override("font_pressed_color", HudTema.CREMA)
+	boton.add_theme_color_override("font_disabled_color", HudTema.DESHABILITADO_TEXTO)
+	boton.add_theme_stylebox_override("normal", HudTema.estilo_boton(HudTema.TINTA))
+	boton.add_theme_stylebox_override("hover", HudTema.estilo_boton(HudTema.HOVER))
+	boton.add_theme_stylebox_override("pressed", HudTema.estilo_boton(HudTema.PRESSED))
+	boton.add_theme_stylebox_override("disabled", HudTema.estilo_boton(HudTema.DESHABILITADO, HudTema.PAPEL_APAGADO))
 	boton.pressed.connect(_on_launch_pressed)
 	return boton
 

@@ -22,8 +22,12 @@ func poner(n: int) -> void:
 func _draw() -> void:
 	for i in 3:
 		var centro := Vector2(TAM * 0.5 + i * (TAM + SEP), TAM * 0.5)
-		var color := Color(1.0, 0.85, 0.2) if i < obtenidas else Color(0.25, 0.25, 0.32)
-		draw_colored_polygon(_puntos(centro, TAM * 0.5, TAM * 0.22), color)
+		var relleno := HudTema.PROGRESO_RELLENO if i < obtenidas else HudTema.PAPEL_APAGADO
+		var puntos := _puntos(centro, TAM * 0.5, TAM * 0.22)
+		draw_colored_polygon(puntos, relleno)
+		var contorno := PackedVector2Array(puntos)
+		contorno.append(puntos[0])
+		draw_polyline(contorno, HudTema.BORDE, 1.0, true)
 
 
 func _puntos(c: Vector2, r_ext: float, r_int: float) -> PackedVector2Array:

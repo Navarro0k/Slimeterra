@@ -4,24 +4,19 @@ extends CanvasLayer
 
 enum Modo { OCULTA, PAUSA, VICTORIA, DERROTA }
 
-const C_PANEL := Color("#17263B")
-const C_PANEL_CLARO := Color("#243B55")
-const C_PANEL_HOVER := Color("#2F4C6B")
-const C_PANEL_PRESS := Color("#1B2C42")
-const C_ACENTO := Color("#62D9C7")
-const C_ACENTO_HOVER := Color("#8AEBDD")
-const C_ACENTO_PRESS := Color("#3CAFA6")
-const C_TEXTO := Color("#F0F6FF")
-const C_TEXTO_OSCURO := Color("#102338")
-const C_BORDE := Color("#3C6680")
-const C_APAGADO := Color("#39506B")
-
 ## Paleta de la cartilla (cuaderno de papel).
-const C_PAPEL := Color(0.96, 0.92, 0.78)
-const C_PAPEL_HOVER := Color(0.99, 0.96, 0.85)
-const C_PAPEL_PRESS := Color(0.87, 0.81, 0.64)
-const C_TINTA_CUADERNO := Color(0.30, 0.20, 0.08)
-const C_BORDE_CUADERNO := Color(0.36, 0.27, 0.11)
+const C_PAPEL := HudTema.PAPEL
+const C_PAPEL_HOVER := HudTema.PAPEL_CLARO
+const C_PAPEL_PRESS := HudTema.PAPEL_OSCURO
+const C_TINTA_CUADERNO := HudTema.TINTA
+const C_TINTA_FUERTE := HudTema.TINTA_FUERTE
+const C_TINTA_SUAVE := HudTema.TINTA_SUAVE
+const C_CREMA := HudTema.CREMA
+const C_BORDE_CUADERNO := HudTema.BORDE
+const C_SEPARADOR := HudTema.SEPARADOR
+const C_DESHABILITADO := HudTema.DESHABILITADO
+const C_DESHABILITADO_TEXTO := HudTema.DESHABILITADO_TEXTO
+const C_SOMBRA := HudTema.SOMBRA
 
 var modo: Modo = Modo.OCULTA
 
@@ -41,6 +36,7 @@ var _btn_continuar: Button
 var _btn_reiniciar: Button
 var _btn_siguiente: Button
 var _btn_inicio: Button
+var _fuente: FontFile
 
 ## true mientras la pausa está bloqueada (por ejemplo, leyendo la cartilla).
 var pausa_bloqueada: bool = false
@@ -49,6 +45,7 @@ func _ready() -> void:
 	layer = 50
 	# Debe seguir funcionando con el árbol en pausa.
 	process_mode = Node.PROCESS_MODE_ALWAYS
+	_fuente = HudTema.fuente_pixel()
 	_construir()
 	_raiz.visible = false
 
@@ -134,7 +131,6 @@ func _construir() -> void:
 func _construir_boton_pausa() -> void:
 	_btn_pausa = Button.new()
 	_btn_pausa.text = ""
-	_btn_pausa.tooltip_text = "Pausa (Esc)"
 	_btn_pausa.custom_minimum_size = Vector2(34, 24)
 	_btn_pausa.focus_mode = Control.FOCUS_NONE
 	_btn_pausa.add_theme_stylebox_override("normal", _estilo_cuaderno(C_PAPEL))
@@ -181,7 +177,7 @@ func _construir_overlay() -> void:
 	add_child(_raiz)
 
 	var fondo := ColorRect.new()
-	fondo.color = Color(0.02, 0.04, 0.07, 0.72)
+	fondo.color = Color(0.02, 0.035, 0.06, 0.84)
 	fondo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	fondo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_raiz.add_child(fondo)
@@ -210,12 +206,14 @@ func _construir_overlay() -> void:
 func _construir_contenido(caja: VBoxContainer) -> void:
 	_titulo = Label.new()
 	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_titulo.add_theme_font_size_override("font_size", 22)
-	_titulo.add_theme_color_override("font_color", C_ACENTO)
+	_titulo.add_theme_font_size_override("font_size", 17)
+	_titulo.add_theme_color_override("font_color", C_TINTA_FUERTE)
+	if _fuente != null:
+		_titulo.add_theme_font_override("font", _fuente)
 	caja.add_child(_titulo)
 
 	var linea := ColorRect.new()
-	linea.color = Color(C_ACENTO, 0.5)
+	linea.color = C_SEPARADOR
 	linea.custom_minimum_size = Vector2(0, 1)
 	caja.add_child(linea)
 
@@ -224,8 +222,11 @@ func _construir_contenido(caja: VBoxContainer) -> void:
 
 	_mensaje = Label.new()
 	_mensaje.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_mensaje.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_mensaje.add_theme_font_size_override("font_size", 10)
-	_mensaje.add_theme_color_override("font_color", C_TEXTO)
+	_mensaje.add_theme_color_override("font_color", C_TINTA_SUAVE)
+	if _fuente != null:
+		_mensaje.add_theme_font_override("font", _fuente)
 	caja.add_child(_mensaje)
 
 	var espacio := Control.new()
@@ -249,25 +250,28 @@ func _crear_boton(texto: String, accion: Callable, primario: bool) -> Button:
 	boton.text = texto
 	boton.custom_minimum_size = Vector2(172, 26)
 	boton.add_theme_font_size_override("font_size", 11)
+	if _fuente != null:
+		boton.add_theme_font_override("font", _fuente)
 	_aplicar_estilo_boton(boton, primario)
 	boton.pressed.connect(accion)
 	return boton
 
 func _aplicar_estilo_boton(boton: Button, primario: bool) -> void:
-	var color_texto := C_TEXTO_OSCURO if primario else C_TEXTO
+	var color_texto := C_CREMA if primario else C_TINTA_CUADERNO
 	for estado in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		boton.add_theme_color_override(estado, color_texto)
+	boton.add_theme_color_override("font_disabled_color", C_DESHABILITADO_TEXTO)
 
 	if primario:
-		boton.add_theme_stylebox_override("normal", _estilo_base(C_ACENTO, C_ACENTO))
-		boton.add_theme_stylebox_override("hover", _estilo_base(C_ACENTO_HOVER, C_ACENTO_HOVER))
-		boton.add_theme_stylebox_override("pressed", _estilo_base(C_ACENTO_PRESS, C_ACENTO_PRESS))
+		boton.add_theme_stylebox_override("normal", _estilo_base(C_TINTA_CUADERNO, C_BORDE_CUADERNO))
+		boton.add_theme_stylebox_override("hover", _estilo_base(HudTema.HOVER, C_BORDE_CUADERNO))
+		boton.add_theme_stylebox_override("pressed", _estilo_base(HudTema.PRESSED, HudTema.BORDE_OSCURO))
 	else:
-		boton.add_theme_stylebox_override("normal", _estilo_base(C_PANEL_CLARO, C_BORDE))
-		boton.add_theme_stylebox_override("hover", _estilo_base(C_PANEL_HOVER, C_ACENTO))
-		boton.add_theme_stylebox_override("pressed", _estilo_base(C_PANEL_PRESS, C_ACENTO))
+		boton.add_theme_stylebox_override("normal", _estilo_base(C_PAPEL, C_BORDE_CUADERNO))
+		boton.add_theme_stylebox_override("hover", _estilo_base(C_PAPEL_HOVER, C_BORDE_CUADERNO))
+		boton.add_theme_stylebox_override("pressed", _estilo_base(C_PAPEL_PRESS, C_BORDE_CUADERNO))
 
-	boton.add_theme_stylebox_override("disabled", _estilo_base(C_PANEL, C_APAGADO))
+	boton.add_theme_stylebox_override("disabled", _estilo_base(C_DESHABILITADO, HudTema.PAPEL_APAGADO))
 	boton.add_theme_stylebox_override("focus", _estilo_focus())
 
 func _estilo_base(bg: Color, borde: Color) -> StyleBoxFlat:
@@ -275,7 +279,7 @@ func _estilo_base(bg: Color, borde: Color) -> StyleBoxFlat:
 	s.bg_color = bg
 	s.border_color = borde
 	s.set_border_width_all(1)
-	s.set_corner_radius_all(5)
+	s.set_corner_radius_all(3)
 	s.content_margin_left = 10
 	s.content_margin_right = 10
 	s.content_margin_top = 5
@@ -285,9 +289,9 @@ func _estilo_base(bg: Color, borde: Color) -> StyleBoxFlat:
 func _estilo_focus() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = Color(0, 0, 0, 0)
-	s.border_color = C_TEXTO
+	s.border_color = HudTema.AZUL
 	s.set_border_width_all(2)
-	s.set_corner_radius_all(6)
+	s.set_corner_radius_all(4)
 	s.expand_margin_left = 1
 	s.expand_margin_right = 1
 	s.expand_margin_top = 1
@@ -311,12 +315,12 @@ func _estilo_cuaderno(bg: Color) -> StyleBoxFlat:
 
 func _estilo_panel() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
-	s.bg_color = C_PANEL
-	s.border_color = C_BORDE
+	s.bg_color = C_PAPEL
+	s.border_color = C_BORDE_CUADERNO
 	s.set_border_width_all(2)
-	s.set_corner_radius_all(8)
-	s.shadow_color = Color(0, 0, 0, 0.35)
-	s.shadow_size = 8
+	s.set_corner_radius_all(4)
+	s.shadow_color = C_SOMBRA
+	s.shadow_size = 6
 	s.shadow_offset = Vector2(0, 3)
 	return s
 
