@@ -16,6 +16,13 @@ const C_TEXTO_OSCURO := Color("#102338")
 const C_BORDE := Color("#3C6680")
 const C_APAGADO := Color("#39506B")
 
+## Paleta de la cartilla (cuaderno de papel).
+const C_PAPEL := Color(0.96, 0.92, 0.78)
+const C_PAPEL_HOVER := Color(0.99, 0.96, 0.85)
+const C_PAPEL_PRESS := Color(0.87, 0.81, 0.64)
+const C_TINTA_CUADERNO := Color(0.30, 0.20, 0.08)
+const C_BORDE_CUADERNO := Color(0.36, 0.27, 0.11)
+
 var modo: Modo = Modo.OCULTA
 
 ## Ruta del siguiente nivel (res://...tscn). Lo asigna el nivel.
@@ -125,14 +132,47 @@ func _construir() -> void:
 	_construir_overlay()
 
 func _construir_boton_pausa() -> void:
-	_btn_pausa = _crear_boton("Ⅱ PAUSA", alternar_pausa, false)
-	_btn_pausa.custom_minimum_size = Vector2(74, 18)
-	_btn_pausa.add_theme_font_size_override("font_size", 9)
+	_btn_pausa = Button.new()
+	_btn_pausa.text = ""
+	_btn_pausa.tooltip_text = "Pausa (Esc)"
+	_btn_pausa.custom_minimum_size = Vector2(34, 24)
 	_btn_pausa.focus_mode = Control.FOCUS_NONE
+	_btn_pausa.add_theme_stylebox_override("normal", _estilo_cuaderno(C_PAPEL))
+	_btn_pausa.add_theme_stylebox_override("hover", _estilo_cuaderno(C_PAPEL_HOVER))
+	_btn_pausa.add_theme_stylebox_override("pressed", _estilo_cuaderno(C_PAPEL_PRESS))
+	_btn_pausa.pressed.connect(alternar_pausa)
 	add_child(_btn_pausa)
-	_btn_pausa.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_MINSIZE, 5)
-	_btn_pausa.offset_left -= 4
-	_btn_pausa.offset_top += 1
+	_btn_pausa.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_btn_pausa.offset_left = -40
+	_btn_pausa.offset_top = 6
+	_btn_pausa.offset_right = -6
+	_btn_pausa.offset_bottom = 30
+
+	# Filo de papel: línea clara bajo el borde superior.
+	var filo := ColorRect.new()
+	filo.color = Color(1.0, 1.0, 1.0, 0.45)
+	filo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	filo.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	filo.offset_left = 3
+	filo.offset_right = -3
+	filo.offset_top = 2
+	filo.offset_bottom = 3
+	_btn_pausa.add_child(filo)
+
+	# Icono | | dibujado: dos barras verticales centradas.
+	var barras := HBoxContainer.new()
+	barras.alignment = BoxContainer.ALIGNMENT_CENTER
+	barras.add_theme_constant_override("separation", 4)
+	barras.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	barras.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_btn_pausa.add_child(barras)
+	for i in 2:
+		var barra := ColorRect.new()
+		barra.color = C_TINTA_CUADERNO
+		barra.custom_minimum_size = Vector2(3, 11)
+		barra.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		barras.add_child(barra)
 
 func _construir_overlay() -> void:
 	_raiz = Control.new()
@@ -252,6 +292,21 @@ func _estilo_focus() -> StyleBoxFlat:
 	s.expand_margin_right = 1
 	s.expand_margin_top = 1
 	s.expand_margin_bottom = 1
+	return s
+
+func _estilo_cuaderno(bg: Color) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = bg
+	s.border_color = C_BORDE_CUADERNO
+	s.set_border_width_all(2)
+	s.set_corner_radius_all(4)
+	s.shadow_color = Color(0, 0, 0, 0.4)
+	s.shadow_size = 3
+	s.shadow_offset = Vector2(0, 2)
+	s.content_margin_left = 4
+	s.content_margin_right = 4
+	s.content_margin_top = 1
+	s.content_margin_bottom = 1
 	return s
 
 func _estilo_panel() -> StyleBoxFlat:
