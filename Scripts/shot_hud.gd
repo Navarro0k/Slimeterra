@@ -59,7 +59,9 @@ func _construir_interfaz() -> void:
 
 func _construir_panel_ecuacion(root: Control) -> void:
 	_equation_panel = HudTema.panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91))
+	_equation_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var ecuacion_col := VBoxContainer.new()
+	ecuacion_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ecuacion_col.position = Vector2(4, 18)
 	ecuacion_col.size = Vector2(150, 69)
 	ecuacion_col.add_theme_constant_override("separation", 1)
@@ -127,16 +129,18 @@ func _construir_dial(root: Control) -> void:
 	_angle_dial.angle_changed.connect(_on_angle_changed)
 
 func _construir_panel_potencia(root: Control) -> void:
-	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 228), Vector2(110, 42))
+	var power_panel := HudTema.panel_contenedor(root, "PowerPanel", Vector2(365, 216), Vector2(110, 54))
+	power_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var power_col := VBoxContainer.new()
+	power_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	power_col.add_theme_constant_override("separation", 0)
 	power_panel.add_child(power_col)
 	var power_header := HBoxContainer.new()
 	power_col.add_child(power_header)
-	power_header.add_child(HudTema.etiqueta("VELOCIDAD INICIAL v0", _fuente_pixel, 6))
-	_power_label = HudTema.etiqueta("65%", _fuente_pixel, 8)
+	power_header.add_child(HudTema.etiqueta("VELOCIDAD INICIAL v0", _fuente_pixel, 8))
+	_power_label = HudTema.etiqueta("65%", _fuente_pixel, 10)
 	power_header.add_child(_power_label)
-	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_pixel, 5, HudTema.TINTA_SUAVE))
+	power_col.add_child(HudTema.etiqueta("v0 modifica a y el alcance", _fuente_pixel, 7, HudTema.TINTA_SUAVE))
 	_power_slider = _crear_slider_potencia()
 	power_col.add_child(_power_slider)
 
@@ -148,8 +152,8 @@ func _crear_slider_potencia() -> HSlider:
 	slider.value = power_percent
 	slider.custom_minimum_size = Vector2(94, 9)
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	slider.editable = false
-	slider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	slider.editable = true
+	slider.mouse_filter = Control.MOUSE_FILTER_STOP
 	slider.add_theme_stylebox_override("slider", HudTema.estilo_slider_fondo())
 	slider.add_theme_stylebox_override("grabber_area", HudTema.estilo_slider_relleno())
 	slider.add_theme_stylebox_override("grabber_area_highlight", HudTema.estilo_slider_relleno())
