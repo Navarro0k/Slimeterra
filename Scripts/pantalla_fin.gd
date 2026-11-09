@@ -206,7 +206,7 @@ func _construir_overlay() -> void:
 func _construir_contenido(caja: VBoxContainer) -> void:
 	_titulo = Label.new()
 	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_titulo.add_theme_font_size_override("font_size", 16)
+	_titulo.add_theme_font_size_override("font_size", 12)
 	_titulo.add_theme_color_override("font_color", C_TINTA_FUERTE)
 	if _fuente != null:
 		_titulo.add_theme_font_override("font", _fuente)
