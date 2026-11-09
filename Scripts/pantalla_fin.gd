@@ -289,7 +289,7 @@ func _estilo_base(bg: Color, borde: Color) -> StyleBoxFlat:
 func _estilo_focus() -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
 	s.bg_color = Color(0, 0, 0, 0)
-	s.border_color = HudTema.AZUL
+	s.border_color = HudTema.BORDE
 	s.set_border_width_all(2)
 	s.set_corner_radius_all(4)
 	s.expand_margin_left = 1

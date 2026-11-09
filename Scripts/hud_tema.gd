@@ -28,7 +28,7 @@ const SOMBRA := Color(0, 0, 0, 0.45)
 
 
 static func fuente_pixel() -> FontFile:
-	return load("res://Assets/fonts/pirkkala.ttf") as FontFile
+	return load("res://Assets/fonts/PressStart2P-Regular.ttf") as FontFile
 
 
 static func estilo_panel(color: Color = PAPEL, borde: Color = BORDE) -> StyleBoxFlat:
