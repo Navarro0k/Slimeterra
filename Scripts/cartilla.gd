@@ -5,7 +5,7 @@ signal cerrada
 
 @export_enum("parabola", "matrices") var modo_ecuacion: String = "parabola"
 
-const TOTAL_PAGINAS: int = 4
+const TOTAL_PAGINAS: int = 3
 
 @onready var _lbl_modo: Label = $Panel/Margen/Contenido/Cabecera/Modo
 @onready var _lbl_pagina: Label = $Panel/Margen/Contenido/Cabecera/Pagina
@@ -22,8 +22,6 @@ var _contenido := CartillaContenido.new()
 
 var _pagina: int = 0
 var _leidas: Array[bool] = []
-var _leyendo: bool = false
-var _cargando_pagina: bool = false
 var _version_pagina: int = 0
 var _cerrando: bool = false
 
@@ -37,9 +35,6 @@ func _ready() -> void:
 
 	_configurar_cabecera_modo()
 
-	_texto.get_v_scroll_bar().value_changed.connect(_on_scroll)
-	_texto.resized.connect(_comprobar_lectura)
-
 	# Silenciar la música del nivel mientras se lee.
 	_pausar_musica_nivel(true)
 	if _musica.stream != null:
@@ -51,14 +46,14 @@ func _ready() -> void:
 
 func _configurar_cabecera_modo() -> void:
 	if _contenido.es_matrices():
-		_lbl_modo.text = "NIVEL 2 · MATRICES"
+		_lbl_modo.text = "NIVEL 2 · TIRO CON AIRE"
 		_lbl_modo.add_theme_color_override("font_color", HudTema.AZUL)
 	else:
-		_lbl_modo.text = "NIVEL 1 · PARÁBOLA"
+		_lbl_modo.text = "NIVEL 1 · TIRO IDEAL"
 		_lbl_modo.add_theme_color_override("font_color", HudTema.VERDE)
 
 
-## Condiciones iniciales y parámetros físicos del disparo actual.
+## Condiciones iniciales y parámetros físicos del disparo preparado.
 func set_model_values(pos: Vector2, vel: Vector2, gravedad: float, amortiguamiento: float) -> void:
 	_contenido.poner_modelo(pos, vel, gravedad, amortiguamiento)
 	if is_node_ready() and visible:
@@ -71,8 +66,8 @@ func _actualizar_pagina() -> void:
 
 	_version_pagina += 1
 	var version := _version_pagina
-	_cargando_pagina = true
-	_leyendo = _leidas[_pagina]
+	# Basta con visitar la página para poder avanzar.
+	_leidas[_pagina] = true
 
 	_lbl_pagina.text = str(_pagina + 1) + " / " + str(TOTAL_PAGINAS)
 	_lbl_titulo.text = _contenido.titulo(_pagina)
@@ -85,7 +80,7 @@ func _actualizar_pagina() -> void:
 	_btn_siguiente.text = (
 		"COMENZAR NIVEL  →" if _pagina == TOTAL_PAGINAS - 1 else "SIGUIENTE  →"
 	)
-	_btn_siguiente.disabled = not _leyendo
+	_btn_siguiente.disabled = false
 	_actualizar_estado_lectura()
 
 	# Esperar a que RichTextLabel calcule su altura antes de subir el scroll.
@@ -96,46 +91,14 @@ func _actualizar_pagina() -> void:
 	var barra := _texto.get_v_scroll_bar()
 	if barra != null:
 		barra.value = barra.min_value
-	await get_tree().process_frame
-	if version != _version_pagina or not is_inside_tree():
-		return
-	_cargando_pagina = false
-	_comprobar_lectura()
-
-
-func _on_scroll(_valor: float) -> void:
-	if _cargando_pagina:
-		return
-	_comprobar_lectura()
-
-
-## Una página se considera leída cuando el texto llega a su final.
-func _comprobar_lectura() -> void:
-	if _texto == null or _cargando_pagina:
-		return
-	var barra := _texto.get_v_scroll_bar()
-	if barra == null or barra.page <= 0.0 or barra.max_value <= 0.0:
-		return
-	var al_final := (
-		barra.max_value <= barra.page + 1.0
-		or barra.value >= barra.max_value - barra.page - 1.0
-	)
-	if not al_final:
-		return
-
-	_leidas[_pagina] = true
-	_leyendo = true
-	_btn_siguiente.disabled = false
-	_actualizar_estado_lectura()
 
 
 func _actualizar_estado_lectura() -> void:
-	if _leyendo:
-		_lbl_estado.text = "Página leída. Puedes continuar."
-		_lbl_estado.modulate = HudTema.VERDE
+	if _pagina == TOTAL_PAGINAS - 1:
+		_lbl_estado.text = "Revisa el resumen y pulsa COMENZAR NIVEL para jugar."
 	else:
-		_lbl_estado.text = "Desplázate hasta el final del texto para continuar."
-		_lbl_estado.modulate = HudTema.TINTA_SUAVE
+		_lbl_estado.text = "Página visitada. Pulsa SIGUIENTE para continuar."
+	_lbl_estado.modulate = HudTema.VERDE
 
 
 func _on_anterior() -> void:
