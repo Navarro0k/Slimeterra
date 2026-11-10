@@ -66,7 +66,10 @@ func _construir_panel_ecuacion(root: Control) -> void:
 	ecuacion_col.size = Vector2(150, 69)
 	ecuacion_col.add_theme_constant_override("separation", 1)
 	_equation_panel.add_child(ecuacion_col)
-	_equation_title = HudTema.etiqueta("TRAYECTORIA", _fuente_ecuaciones, 7, HudTema.TINTA_SUAVE)
+	_equation_title = HudTema.etiqueta(
+		"ESPACIO DE ESTADOS" if modo_ecuacion == "matrices" else "TIRO IDEAL",
+		_fuente_ecuaciones, 7, HudTema.TINTA_SUAVE
+	)
 	ecuacion_col.add_child(_equation_title)
 
 	_math_label = _crear_texto_ecuaciones()
