@@ -28,6 +28,7 @@ var _pause_button: Button
 var _fuente_ecuaciones: FontFile
 var _fuente_pixel: FontFile
 var _cartilla: Control
+var _icono_slime: Texture2D = null
 var _modelo_pos: Vector2 = Vector2.ZERO
 var _modelo_vel: Vector2 = Vector2.ZERO
 var _modelo_gravedad: float = 980.0
@@ -184,8 +185,19 @@ func _construir_cartilla() -> void:
 		_cartilla = null
 		return
 	add_child(_cartilla)
+	if _icono_slime != null and _cartilla.has_method("set_textura_slime"):
+		_cartilla.call("set_textura_slime", _icono_slime)
 	if _hay_modelo and _cartilla.has_method("set_model_values"):
 		_cartilla.call("set_model_values", _modelo_pos, _modelo_vel, _modelo_gravedad, _modelo_amortiguamiento)
+
+
+## Slime cargado en la resortera: la viñeta de la cartilla usa su sprite.
+func set_slime_icon(textura: Texture2D) -> void:
+	if textura == null:
+		return
+	_icono_slime = textura
+	if is_instance_valid(_cartilla) and _cartilla.has_method("set_textura_slime"):
+		_cartilla.call("set_textura_slime", textura)
 
 ## Sin cartilla el nivel no debe quedar bloqueado.
 func _omitir_cartilla() -> void:

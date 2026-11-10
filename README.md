@@ -13,6 +13,12 @@ La lógica se separa en:
 - `SlimeCatalogo` / `SlimeInventario` (tipos y cantidades de slimes).
 - `ShotHUD` (ángulo, potencia y ecuación del nivel).
 - `Cartilla` (tablero explicativo en escena propia: tres páginas; bloquea el inicio del nivel hasta visitarlas todas).
+- `VinetaDisparo` (viñeta animada de la cartilla: la honda dispara un slime en bucle como apoyo visual; no es interactiva).
+
+La cartilla combina la columna de lectura con una viñeta lateral que se reproduce
+en bucle y cambia de énfasis en cada página: condiciones iniciales (`p0`, `v0`, `g`,
+`k·v` cuando hay aire), comparación entre la curva ideal y la real, y ángulo/potencia
+del disparo. La viñeta solo usa símbolos y valores que ya aparecen en el texto.
 
 ## 🎮 Controles
 - Arrastrar el slime con el ratón para apuntar y soltar para disparar.

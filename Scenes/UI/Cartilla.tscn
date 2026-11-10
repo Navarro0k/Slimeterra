@@ -3,6 +3,7 @@
 [ext_resource type="Script" path="res://Scripts/cartilla.gd" id="1_cartilla"]
 [ext_resource type="FontFile" path="res://Assets/fonts/JetBrainsMono-Regular.ttf" id="2_font"]
 [ext_resource type="AudioStream" path="res://Assets/Audio/sound_effects/CartillaBg.mp3" id="3_musica"]
+[ext_resource type="PackedScene" path="res://Scenes/UI/VinetaDisparo.tscn" id="4_vineta"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
 bg_color = Color(0.96, 0.92, 0.78, 0.99)
@@ -18,6 +19,21 @@ corner_radius_bottom_left = 4
 shadow_color = Color(0, 0, 0, 0.45)
 shadow_size = 6
 shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_vineta"]
+bg_color = Color(0.99, 0.97, 0.89, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.45, 0.33, 0.14, 0.55)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+shadow_color = Color(0, 0, 0, 0.30)
+shadow_size = 2
+shadow_offset = Vector2(0, 1)
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
 bg_color = Color(0.30, 0.20, 0.08, 1)
@@ -83,20 +99,6 @@ content_margin_top = 3.0
 content_margin_right = 7.0
 content_margin_bottom = 3.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_progress_bg"]
-bg_color = Color(0.80, 0.74, 0.57, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_progress_fill"]
-bg_color = Color(0.55, 0.32, 0.08, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
-
 [node name="Cartilla" type="Control"]
 anchors_preset = 15
 anchor_right = 1.0
@@ -132,10 +134,10 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Margen" type="MarginContainer" parent="Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 12
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 12
-theme_override_constants/margin_bottom = 8
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 6
 
 [node name="Contenido" type="VBoxContainer" parent="Panel/Margen"]
 layout_mode = 2
@@ -169,34 +171,45 @@ theme_override_font_sizes/font_size = 7
 text = "1 / 3"
 horizontal_alignment = 2
 
-[node name="Titulo" type="Label" parent="Panel/Margen/Contenido"]
+[node name="Cuerpo" type="HBoxContainer" parent="Panel/Margen/Contenido"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 8
+
+[node name="Lectura" type="VBoxContainer" parent="Panel/Margen/Contenido/Cuerpo"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 2
+
+[node name="Titulo" type="Label" parent="Panel/Margen/Contenido/Cuerpo/Lectura"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.10, 0.06, 0.01, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 15
 text = "El modelo del nivel"
 
-[node name="Subtitulo" type="Label" parent="Panel/Margen/Contenido"]
+[node name="Subtitulo" type="Label" parent="Panel/Margen/Contenido/Cuerpo/Lectura"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.48, 0.30, 0.07, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 8
 text = "Gravedad, aire y condiciones iniciales"
 
-[node name="Separador" type="ColorRect" parent="Panel/Margen/Contenido"]
+[node name="Separador" type="ColorRect" parent="Panel/Margen/Contenido/Cuerpo/Lectura"]
 custom_minimum_size = Vector2(0, 1)
 layout_mode = 2
 mouse_filter = 2
 color = Color(0.45, 0.33, 0.14, 0.45)
 
-[node name="Texto" type="RichTextLabel" parent="Panel/Margen/Contenido"]
+[node name="Texto" type="RichTextLabel" parent="Panel/Margen/Contenido/Cuerpo/Lectura"]
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 focus_mode = 2
 mouse_filter = 0
 theme_override_colors/default_color = Color(0.12, 0.08, 0.02, 1)
-theme_override_constants/line_separation = 1
+theme_override_constants/line_separation = 0
 theme_override_font_sizes/normal_font_size = 10
 theme_override_font_sizes/bold_font_size = 10
 theme_override_font_sizes/italics_font_size = 10
@@ -215,15 +228,41 @@ scroll_following = false
 selection_enabled = false
 autowrap_mode = 3
 
-[node name="Progreso" type="ProgressBar" parent="Panel/Margen/Contenido"]
-custom_minimum_size = Vector2(0, 5)
+[node name="Vineta" type="PanelContainer" parent="Panel/Margen/Contenido/Cuerpo"]
+custom_minimum_size = Vector2(120, 0)
 layout_mode = 2
-mouse_filter = 2
-theme_override_styles/background = SubResource("StyleBoxFlat_progress_bg")
-theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
-max_value = 3.0
-value = 1.0
-show_percentage = false
+size_flags_vertical = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_vineta")
+
+[node name="MargenVineta" type="MarginContainer" parent="Panel/Margen/Contenido/Cuerpo/Vineta"]
+layout_mode = 2
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 4
+theme_override_constants/margin_bottom = 4
+
+[node name="ColumnaVineta" type="VBoxContainer" parent="Panel/Margen/Contenido/Cuerpo/Vineta/MargenVineta"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="Lienzo" parent="Panel/Margen/Contenido/Cuerpo/Vineta/MargenVineta/ColumnaVineta" instance=ExtResource("4_vineta")]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="Leyenda" type="Label" parent="Panel/Margen/Contenido/Cuerpo/Vineta/MargenVineta/ColumnaVineta"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.48, 0.30, 0.07, 1)
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 6
+text = "VIÑETA · EL MODELO"
+horizontal_alignment = 1
+clip_text = true
+
+[node name="Pips" type="HBoxContainer" parent="Panel/Margen/Contenido"]
+custom_minimum_size = Vector2(0, 4)
+layout_mode = 2
+theme_override_constants/separation = 4
 
 [node name="Pie" type="HBoxContainer" parent="Panel/Margen/Contenido"]
 layout_mode = 2

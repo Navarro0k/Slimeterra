@@ -193,6 +193,10 @@ func _actualizar_modelo_hud() -> void:
 		return
 	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
 	_hud.set_model_values(holder.global_position, velocidad, FisicaDisparo.gravedad(), FisicaDisparo.arrastre(slime_actual))
+	if _indice >= 0 and _indice < _inventario.size():
+		var tipo: int = _inventario[_indice]["tipo"]
+		if SlimeCatalogo.existe(tipo):
+			_hud.set_slime_icon(SlimeCatalogo.icono(tipo))
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):

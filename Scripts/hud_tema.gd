@@ -26,6 +26,12 @@ const VERDE := Color(0.18, 0.34, 0.10)
 const AZUL := Color(0.10, 0.30, 0.46)
 const SOMBRA := Color(0, 0, 0, 0.45)
 
+# Viñeta animada de la cartilla.
+const VINETA_FONDO := Color(0.99, 0.97, 0.89)
+const VINETA_CUADRICULA := Color(0.45, 0.33, 0.14, 0.10)
+const VINETA_TRAZO := Color(0.30, 0.20, 0.08, 0.85)
+const VINETA_IDEAL := Color(0.55, 0.32, 0.08, 0.50)
+
 
 static func fuente_pixel() -> FontFile:
 	return load("res://Assets/fonts/PressStart2P-Regular.ttf") as FontFile
@@ -95,6 +101,32 @@ static func estilo_slider_relleno() -> StyleBoxFlat:
 	s.set_corner_radius_all(2)
 	s.content_margin_top = 1
 	s.content_margin_bottom = 1
+	return s
+
+
+## Pastilla del indicador de páginas: actual, visitada o pendiente.
+static func estilo_pip(activo: bool, visto: bool) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = PROGRESO_RELLENO if activo else (VERDE if visto else PROGRESO_FONDO)
+	s.set_corner_radius_all(2)
+	return s
+
+
+## Canal del scrollbar de la cartilla.
+static func estilo_scroll_fondo() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = Color(0.45, 0.33, 0.14, 0.08)
+	s.set_corner_radius_all(2)
+	s.content_margin_left = 1
+	s.content_margin_right = 1
+	return s
+
+
+## Agarre del scrollbar de la cartilla.
+static func estilo_scroll_agarre(color: Color) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = color
+	s.set_corner_radius_all(2)
 	return s
 
 
