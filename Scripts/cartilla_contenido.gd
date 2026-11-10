@@ -1,6 +1,6 @@
 class_name CartillaContenido
 extends RefCounted
-## Texto BBCode de las 4 páginas de la cartilla.
+## Texto BBCode de las 3 páginas de la cartilla.
 
 const EQ_TINTA_PARABOLA := "#245112"
 const EQ_FONDO_PARABOLA := "#DCEBC4"
@@ -34,9 +34,7 @@ func titulo(pagina: int) -> String:
 		0:
 			return "El modelo del nivel"
 		1:
-			return "El sistema lineal" if es_matrices() else "La parábola del disparo"
-		2:
-			return "El método RK4"
+			return "El sistema lineal" if es_matrices() else "La curva del tiro ideal"
 		_:
 			return "Listo para disparar"
 
@@ -51,14 +49,12 @@ func subtitulo(pagina: int) -> String:
 			)
 		1:
 			return (
-				"Por qué ya no existe una sola parábola"
+				"Cómo cambia la curva cuando hay aire"
 				if es_matrices()
 				else "De las ecuaciones horarias a y(x)"
 			)
-		2:
-			return "Cuatro pendientes por paso de simulación"
 		_:
-			return "Tu disparo actual y cómo apuntar"
+			return "Ajusta ángulo y potencia antes de disparar"
 
 
 func contenido(pagina: int) -> String:
@@ -67,8 +63,6 @@ func contenido(pagina: int) -> String:
 			return _pagina_modelo()
 		1:
 			return _pagina_ecuacion()
-		2:
-			return _pagina_rk4()
 		_:
 			return _pagina_listo()
 
@@ -92,11 +86,13 @@ func _pagina_modelo() -> String:
 	)
 
 	if es_matrices():
-		s += "Con k > 0 la aceleración depende de la velocidad y la curva no es una "
-		s += "parábola: hace falta un sistema de estado."
+		s += "Con k > 0 la aceleración depende de la velocidad, así que la curva no es "
+		s += "una parábola: hace falta un sistema de estado para describirla."
 	else:
-		s += "El tablero usa el modelo ideal (k = 0): la aceleración es constante y "
-		s += "la curva es una parábola."
+		s += "Este nivel se presenta como un tiro ideal: sin aire, la aceleración es "
+		s += "constante y la curva es una parábola. El slime real no vuela en el vacío: "
+		s += "su amortiguamiento es el k de arriba, así que su trayectoria se separa poco "
+		s += "a poco de esa parábola."
 	return s
 
 
@@ -108,7 +104,7 @@ func _pagina_ecuacion() -> String:
 
 func _pagina_ecuacion_parabola() -> String:
 	var s := _chip_nivel() + "\n"
-	s += "Sin amortiguamiento, la posición en cada instante es:\n"
+	s += "Sin aire, la posición en cada instante es:\n"
 	s += _eq("x(t) = x0 + vx0·t\ny(t) = y0 + vy0·t + ½g·t²", 14)
 	s += "Despejando t de x(t) y sustituyéndolo en y(t) queda la parábola:\n"
 	s += _eq("y(x) = a·x² + b·x + c", 18)
@@ -129,8 +125,11 @@ func _pagina_ecuacion_parabola() -> String:
 		"a = " + _n(a, 4) + "      b = " + _n(b, 4) + "      c = " + _n(c, 2),
 		13
 	)
-	s += "a mide la curvatura, b la pendiente inicial y c la altura de salida. "
-	s += "El HUD recalcula estos valores al mover ángulo o potencia."
+	s += "a mide la curvatura; b y c fijan la posición de la curva dentro del nivel. "
+	s += "No deben leerse como el ángulo de salida ni como la altura del slime, "
+	s += "porque el disparo no parte de x = 0. El HUD recalcula estos valores al "
+	s += "mover ángulo o potencia."
+	s += _mencion_motor()
 	return s
 
 
@@ -152,34 +151,15 @@ func _pagina_ecuacion_matrices() -> String:
 		"k = " + _n(_amortiguamiento, 3) + " 1/s      g = " + _n(_gravedad, 0) + " px/s²",
 		13
 	)
-	s += "Como la aceleración cambia con v, no existe una única y(x): la curva se "
-	s += "obtiene integrando el sistema."
+	s += "Con aire la curva no es una parábola: se obtiene integrando el sistema "
+	s += "paso a paso."
+	s += _mencion_motor()
 	return s
 
 
-func _pagina_rk4() -> String:
-	var h := 1.0 / maxf(float(Engine.physics_ticks_per_second), 1.0)
-	var s := _chip_nivel() + "\n"
-	s += "RK4 avanza el estado en pasos h, evalúa la derivada cuatro veces y las "
-	s += "combina con pesos 1–2–2–1:\n"
-	s += _eq(
-		"k1 = f(t, s)\n"
-		+ "k2 = f(t + h/2, s + h·k1/2)\n"
-		+ "k3 = f(t + h/2, s + h·k2/2)\n"
-		+ "k4 = f(t + h,   s + h·k3)\n"
-		+ "s_next = s + h·(k1 + 2k2 + 2k3 + k4)/6",
-		13
-	)
-
-	if es_matrices():
-		s += "Aquí f(s) = A·s + b: RK4 integra el sistema amortiguado y la curva "
-		s += "dibujada es su solución numérica."
-	else:
-		s += "La parábola es la lectura ideal; el slime real se mueve integrando "
-		s += "a = g − k·v con este mismo método."
-
-	s += " El paso real es h = " + _n(h, 5) + " s, idéntico en la vista previa y en el slime."
-	return s
+## Única mención al integrador: no se explica el método.
+func _mencion_motor() -> String:
+	return "\n[i]Motor de simulación: RK4. La línea punteada y el slime usan el mismo cálculo.[/i]\n"
 
 
 func _pagina_listo() -> String:
@@ -187,6 +167,7 @@ func _pagina_listo() -> String:
 	if _hay_modelo:
 		var rapidez := _vel0.length()
 		var angulo := fposmod(rad_to_deg(atan2(-_vel0.y, _vel0.x)), 360.0)
+		s += "Estos son los valores con los que vas a disparar:\n"
 		s += _eq(
 			"|v0| = " + _n(rapidez, 1) + " px/s      ángulo = " + _n(angulo, 1) + "°\n"
 			+ "v0 = (" + _n(_vel0.x, 1) + ", " + _n(_vel0.y, 1) + ") px/s",
@@ -196,8 +177,12 @@ func _pagina_listo() -> String:
 		s += "[i]Esperando las condiciones del disparo...[/i]\n"
 
 	s += "• Más potencia → más rapidez y más alcance.\n"
-	s += "• Más ángulo → más altura; menos ángulo → más alcance horizontal.\n"
-	s += "• El amortiguamiento frena el slime y deforma la curva.\n\n"
+	s += "• Con la misma potencia, un ángulo cercano a 45° aprovecha mejor el alcance; "
+	s += "subir el ángulo gana altura.\n"
+	if es_matrices():
+		s += "• El aire frena el slime: cuanto más dura el vuelo, más se curva la trayectoria.\n\n"
+	else:
+		s += "• El aire frena el slime: cuanto más dura el vuelo, más se separa de la parábola ideal.\n\n"
 	s += "El cronómetro aún no corre: arranca al pulsar COMENZAR NIVEL."
 	return s
 
@@ -214,12 +199,12 @@ func _chip_nivel() -> String:
 	if es_matrices():
 		return (
 			"[center][color=#123A56][bgcolor=#CFE6F5][b]"
-			+ "  NIVEL 2 · MATRICES  "
+			+ "  NIVEL 2 · TIRO CON AIRE  "
 			+ "[/b][/bgcolor][/color][/center]\n"
 		)
 	return (
 		"[center][color=#24420F][bgcolor=#D8EBB0][b]"
-		+ "  NIVEL 1 · PARÁBOLA  "
+		+ "  NIVEL 1 · TIRO IDEAL  "
 		+ "[/b][/bgcolor][/color][/center]\n"
 	)
 

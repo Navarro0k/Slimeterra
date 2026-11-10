@@ -158,7 +158,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.18, 0.34, 0.10, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 7
-text = "NIVEL 1 · PARÁBOLA"
+text = "NIVEL 1 · TIRO IDEAL"
 horizontal_alignment = 1
 
 [node name="Pagina" type="Label" parent="Panel/Margen/Contenido/Cabecera"]
@@ -166,7 +166,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.40, 0.25, 0.06, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 7
-text = "1 / 4"
+text = "1 / 3"
 horizontal_alignment = 2
 
 [node name="Titulo" type="Label" parent="Panel/Margen/Contenido"]
@@ -174,14 +174,14 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.10, 0.06, 0.01, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 15
-text = "El problema físico"
+text = "El modelo del nivel"
 
 [node name="Subtitulo" type="Label" parent="Panel/Margen/Contenido"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.48, 0.30, 0.07, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 8
-text = "Modelo, coordenadas y fuerzas que actúan sobre el slime"
+text = "Gravedad, aire y condiciones iniciales"
 
 [node name="Separador" type="ColorRect" parent="Panel/Margen/Contenido"]
 custom_minimum_size = Vector2(0, 1)
@@ -221,7 +221,7 @@ layout_mode = 2
 mouse_filter = 2
 theme_override_styles/background = SubResource("StyleBoxFlat_progress_bg")
 theme_override_styles/fill = SubResource("StyleBoxFlat_progress_fill")
-max_value = 4.0
+max_value = 3.0
 value = 1.0
 show_percentage = false
 
@@ -249,7 +249,7 @@ size_flags_horizontal = 3
 theme_override_colors/font_color = Color(0.48, 0.32, 0.08, 1)
 theme_override_fonts/font = ExtResource("2_font")
 theme_override_font_sizes/font_size = 7
-text = "Desplázate hasta el final del texto para continuar."
+text = "Página visitada. Pulsa SIGUIENTE para continuar."
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
