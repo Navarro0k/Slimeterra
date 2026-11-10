@@ -52,10 +52,10 @@ func _ready() -> void:
 func _configurar_cabecera_modo() -> void:
 	if _contenido.es_matrices():
 		_lbl_modo.text = "NIVEL 2 · MATRICES"
-		_lbl_modo.add_theme_color_override("font_color", Color(0.10, 0.30, 0.46))
+		_lbl_modo.add_theme_color_override("font_color", HudTema.AZUL)
 	else:
 		_lbl_modo.text = "NIVEL 1 · PARÁBOLA"
-		_lbl_modo.add_theme_color_override("font_color", Color(0.18, 0.34, 0.10))
+		_lbl_modo.add_theme_color_override("font_color", HudTema.VERDE)
 
 
 ## Condiciones iniciales y parámetros físicos del disparo actual.
@@ -132,10 +132,10 @@ func _comprobar_lectura() -> void:
 func _actualizar_estado_lectura() -> void:
 	if _leyendo:
 		_lbl_estado.text = "Página leída. Puedes continuar."
-		_lbl_estado.modulate = Color(0.10, 0.38, 0.16, 1.0)
+		_lbl_estado.modulate = HudTema.VERDE
 	else:
 		_lbl_estado.text = "Desplázate hasta el final del texto para continuar."
-		_lbl_estado.modulate = Color(0.48, 0.32, 0.08, 1.0)
+		_lbl_estado.modulate = HudTema.TINTA_SUAVE
 
 
 func _on_anterior() -> void:

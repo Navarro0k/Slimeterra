@@ -12,11 +12,13 @@ signal slime_elegido(indice: int)
 
 ## Un diccionario por slot: { "boton": Button, "cantidad": Label }
 var _slots: Array[Dictionary] = []
+var _fuente: FontFile
 
 func _ready() -> void:
 	# El selector se dibuja por encima de los HUD creados dinámicamente.
 	layer = 40
 	follow_viewport_enabled = false
+	_fuente = HudTema.fuente_pixel()
 	var panel := get_node_or_null("Margen/Panel") as PanelContainer
 	if panel:
 		# Contenedor transparente: solo se ven los slots.
@@ -48,6 +50,9 @@ func actualizar(inventario: Array, indice_seleccionado: int) -> void:
 		boton.disabled = cantidad <= 0
 		boton.modulate.a = 1.0 if cantidad > 0 else 0.45
 		boton.set_pressed_no_signal(i == indice_seleccionado)
+		var anillo := boton.get_node_or_null("Anillo") as Control
+		if anillo:
+			anillo.visible = i == indice_seleccionado
 
 
 func _limpiar() -> void:
@@ -63,17 +68,39 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	boton.focus_mode = Control.FOCUS_NONE
 	boton.mouse_filter = Control.MOUSE_FILTER_STOP
 	boton.z_index = 5
-	boton.add_theme_color_override("font_color", Color("#EAF4FF"))
-	boton.add_theme_color_override("font_hover_color", Color("#FFFFFF"))
-	boton.add_theme_color_override("font_pressed_color", Color("#102338"))
+	boton.add_theme_color_override("font_color", HudTema.TINTA)
+	boton.add_theme_color_override("font_hover_color", HudTema.TINTA_FUERTE)
+	boton.add_theme_color_override("font_pressed_color", HudTema.CREMA)
+	boton.add_theme_color_override("font_disabled_color", HudTema.DESHABILITADO_TEXTO)
 	boton.add_theme_stylebox_override("normal", _slot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0)))
-	boton.add_theme_stylebox_override("hover", _slot_style(Color("#365978")))
-	boton.add_theme_stylebox_override("pressed", _slot_style(Color("#62D9C7")))
-	boton.add_theme_stylebox_override("focus", _slot_style(Color("#62D9C7")))
+	boton.add_theme_stylebox_override("hover", _slot_style(Color(0.0, 0.0, 0.0, 0.0), HudTema.BORDE))
+	boton.add_theme_stylebox_override("pressed", _slot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0)))
+	boton.add_theme_stylebox_override("focus", _slot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0)))
+	boton.add_theme_stylebox_override("disabled", _slot_style(Color(0.0, 0.0, 0.0, 0.0), Color(0.0, 0.0, 0.0, 0.0)))
 	boton.icon = SlimeCatalogo.icono(tipo)
 	boton.expand_icon = true
 	boton.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	boton.pressed.connect(_on_slot_pressed.bind(indice))
+
+	var anillo := Panel.new()
+	anillo.name = "Anillo"
+	anillo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	anillo.anchor_left = 0.5
+	anillo.anchor_top = 0.5
+	anillo.anchor_right = 0.5
+	anillo.anchor_bottom = 0.5
+	anillo.offset_left = -17
+	anillo.offset_top = -17
+	anillo.offset_right = 17
+	anillo.offset_bottom = 17
+	var estilo_anillo := StyleBoxFlat.new()
+	estilo_anillo.bg_color = Color(0, 0, 0, 0)
+	estilo_anillo.border_color = HudTema.BORDE
+	estilo_anillo.set_border_width_all(2)
+	estilo_anillo.set_corner_radius_all(4)
+	anillo.add_theme_stylebox_override("panel", estilo_anillo)
+	anillo.visible = false
+	boton.add_child(anillo)
 
 	var etiqueta := Label.new()
 	etiqueta.text = "x%d" % cantidad
@@ -84,16 +111,18 @@ func _crear_slot(indice: int, tipo: int, cantidad: int) -> void:
 	etiqueta.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	etiqueta.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	etiqueta.add_theme_font_size_override("font_size", tamano_fuente)
-	etiqueta.add_theme_color_override("font_color", Color("#F2F7FF"))
-	etiqueta.add_theme_color_override("font_outline_color", Color("#142338"))
+	etiqueta.add_theme_color_override("font_color", HudTema.CREMA)
+	etiqueta.add_theme_color_override("font_outline_color", HudTema.TINTA)
 	etiqueta.add_theme_constant_override("outline_size", 3)
+	if _fuente != null:
+		etiqueta.add_theme_font_override("font", _fuente)
 	boton.add_child(etiqueta)
 
 	_slots_box.add_child(boton)
 	_slots.append({"boton": boton, "cantidad": etiqueta})
 
 
-func _slot_style(color: Color, border: Color = Color("#62D9C7")) -> StyleBoxFlat:
+func _slot_style(color: Color, border: Color = HudTema.BORDE) -> StyleBoxFlat:
 	var estilo := StyleBoxFlat.new()
 	estilo.bg_color = color
 	estilo.border_color = border

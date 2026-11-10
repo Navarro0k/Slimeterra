@@ -11,10 +11,6 @@ signal angle_changed(value: float)
 		queue_redraw()
 
 var _dragging := false
-const ACCENT := Color("#62D9C7")
-const RING := Color("#4B6C91")
-const TEXT_COLOR := Color("#F0F6FF")
-const MUTED := Color("#A6B8D0")
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(44, 44)
@@ -44,12 +40,16 @@ func _actualizar_desde_punto(punto: Vector2) -> void:
 func _draw() -> void:
 	var centro := size * 0.5
 	var radio: float = minf(size.x, size.y) * 0.39
-	draw_arc(centro, radio, 0.0, TAU, 64, RING, 1.5, true)
+	# Disco de papel con borde de tinta.
+	draw_circle(centro + Vector2(0.0, 1.5), radio + 4.0, Color(0, 0, 0, 0.25))
+	draw_circle(centro, radio + 4.0, HudTema.BORDE)
+	draw_circle(centro, radio + 3.0, HudTema.PAPEL)
+	draw_arc(centro, radio, 0.0, TAU, 64, HudTema.BORDE, 1.2, true)
 	for grados in range(0, 360, 30):
 		var theta := deg_to_rad(float(grados))
 		var direccion := Vector2(cos(theta), -sin(theta))
-		draw_line(centro + direccion * (radio - 3.0), centro + direccion * (radio + 1.0), MUTED, 1.0, true)
+		draw_line(centro + direccion * (radio - 3.0), centro + direccion * (radio + 1.0), HudTema.TINTA_SUAVE, 1.0, true)
 	var theta_aguja := deg_to_rad(angle)
 	var direccion_aguja := Vector2(cos(theta_aguja), -sin(theta_aguja))
-	draw_line(centro, centro + direccion_aguja * (radio - 4.0), ACCENT, 1.8, true)
-	draw_circle(centro, 2.0, TEXT_COLOR)
+	draw_line(centro, centro + direccion_aguja * (radio - 4.0), HudTema.TINTA_FUERTE, 1.8, true)
+	draw_circle(centro, 2.0, HudTema.BORDE)
