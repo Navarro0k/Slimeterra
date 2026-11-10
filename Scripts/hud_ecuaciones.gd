@@ -20,7 +20,6 @@ static func _espacio_de_estados(posicion: Vector2, velocidad: Vector2, gravedad:
 	var suave := _c(HudTema.TINTA_SUAVE)
 	var valor := _c(HudTema.AZUL)
 	var texto := ""
-	texto += tinta + "[b]Espacio de estados[/b]" + _RESET + "\n"
 	texto += suave + "s  = [ x  y  vx  vy ]^T" + _RESET + "\n"
 	texto += valor + "s0 = [%.0f  %.0f  %.0f  %.0f]^T" % [posicion.x, posicion.y, velocidad.x, velocidad.y] + _RESET + "\n"
 	texto += tinta + "s' = A s + b" + _RESET + "\n"
