@@ -7,6 +7,11 @@ const EQ_FONDO_PARABOLA := "#DCEBC4"
 const EQ_TINTA_MATRICES := "#0B4A6F"
 const EQ_FONDO_MATRICES := "#D3E6F2"
 
+## Ancho útil de la columna de lectura (panel menos viñeta y scrollbar).
+const ANCHO_LECTURA: float = 296.0
+const TAMANO_EQ_MIN: int = 9
+const _FUENTE_EQ := preload("res://Assets/fonts/JetBrainsMono-Regular.ttf")
+
 ## "parabola" (nivel 1) o "matrices" (nivel 2).
 var modo_ecuacion: String = "parabola"
 
@@ -55,6 +60,17 @@ func subtitulo(pagina: int) -> String:
 			)
 		_:
 			return "Ajusta ángulo y potencia antes de disparar"
+
+
+## Rótulo de chrome de la viñeta (no añade información: nombra el apoyo visual).
+func etiqueta_vineta(pagina: int) -> String:
+	match pagina:
+		0:
+			return "VIÑETA · EL MODELO"
+		1:
+			return "VIÑETA · EL SISTEMA" if es_matrices() else "VIÑETA · LA CURVA"
+		_:
+			return "VIÑETA · EL DISPARO"
 
 
 func contenido(pagina: int) -> String:
@@ -190,9 +206,29 @@ func _pagina_listo() -> String:
 func _eq(texto: String, tamano: int = 16) -> String:
 	var tinta := EQ_TINTA_MATRICES if es_matrices() else EQ_TINTA_PARABOLA
 	var fondo := EQ_FONDO_MATRICES if es_matrices() else EQ_FONDO_PARABOLA
-	var s := "\n[center][font_size=" + str(tamano) + "][color=" + tinta + "]"
+	var tam := _tamano_ajustado(texto, tamano)
+	var s := "\n[center][font_size=" + str(tam) + "][color=" + tinta + "]"
 	s += "[bgcolor=" + fondo + "][b]" + texto + "[/b][/bgcolor][/color][/font_size][/center]\n"
 	return s
+
+
+## Reduce el tamaño solo lo necesario para que el bloque quepa en la columna.
+## Es un ajuste visual: no altera el texto ni los valores.
+func _tamano_ajustado(texto: String, tamano: int) -> int:
+	var tam := maxi(tamano, TAMANO_EQ_MIN)
+	while tam > TAMANO_EQ_MIN and not _cabe(texto, tam):
+		tam -= 1
+	return tam
+
+
+func _cabe(texto: String, tamano: int) -> bool:
+	for linea in texto.split("\n"):
+		var ancho := _FUENTE_EQ.get_string_size(
+			linea, HORIZONTAL_ALIGNMENT_LEFT, -1.0, tamano
+		).x
+		if ancho > ANCHO_LECTURA:
+			return false
+	return true
 
 
 func _chip_nivel() -> String:
