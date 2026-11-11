@@ -63,7 +63,7 @@ esos laterales con un fondo.
 ## 3. Decisiones y supuestos
 
 1. **“Primera vez” = por nivel**, no por partida. Primera vez que se juega un nivel
-   se abre la cartilla automáticamente tras la intro; a partir de ahí solo con `?`.
+   se abre la cartilla automáticamente **antes** de la intro; a partir de ahí solo con `?`.
    (Es lo que mejor encaja con “que no sean al inicio” + “la primera vez sale la
    información”. Si se quisiera *nunca* auto-abrir, basta con una constante en §5.3.)
 2. **Vista vertical objetivo ≈ 300 px** (hoy 160–176), configurable por export
@@ -133,11 +133,12 @@ var _estado: Estado = Estado.INTRO
 3. `slingshoot.interactivo = false`, `hud` oculto, `pantalla.bloquear_pausa(true)`.
 4. Esperar a que el HUD exista (hoy se añade con `call_deferred`): añadir señal
    `hud_listo` en `Slingshoot` y esperarla antes de continuar (o `await get_tree().process_frame`).
-5. `await camara.intro_terminada` tras `camara.reproducir_intro(limites_camara, ...)`.
-6. `camara.seguir(slingshoot, true)`; desvanecer HUD (`modulate:a` 0 → 1 en ~0.25 s).
-7. `pantalla.bloquear_pausa(false)`.
-8. Si `ProgresoTutorial.visto(scene_file_path)` → `_entrar_en_juego()`.
+5. Si `ProgresoTutorial.visto(scene_file_path)` → se salta al paso 7.
    Si no → `_estado = Estado.CARTILLA` y `hud.abrir_cartilla("inicial")`.
+6. Al cerrarse esa cartilla (`motivo == "inicial"`): marcar visto y lanzar la intro.
+7. `await camara.intro_terminada` tras `camara.reproducir_intro(limites_camara, ...)`;
+   después `camara.seguir(slingshoot, true)`, mostrar HUD y `pantalla.bloquear_pausa(false)`.
+8. `_entrar_en_juego()`.
 
 `_entrar_en_juego()`: `_estado = Estado.JUGANDO`, `slingshoot.interactivo = true`,
 `_hud_tiempo.mostrar(0)`, `tiempo_transcurrido = 0`.
@@ -389,7 +390,7 @@ CanvasLayer layer=50     → PantallaFin (pausa/resultado)
 | **1. Fondo y encuadre vertical** | `cobertura_vertical`, `NivelLimites.ampliar`, `FondoCamara` en ambos niveles, clear color. | `camara_seguimiento.gd`, `nivel_limites.gd`, `level.gd`, ambos `.tscn`, `project.godot` | No se ve gris en ningún punto; se ve ~300 px de alto; el slime rebota con los mismos límites de antes. |
 | **2. Intro de cámara** | Tween, `intro_terminada`, `saltar_intro`, secuencia en `level.gd`, `interactivo` en `slingshoot.gd`. | `camara_seguimiento.gd`, `level.gd`, `slingshoot.gd` | Al entrar se recorre el mapa, se puede saltar, y el juego no acepta disparos durante la intro. |
 | **3. Botón `?` y reapertura** | Botón, `abrir_cartilla()`, pausa del árbol, `set_motivo`, `Esc`. | `shot_hud.gd`, `cartilla.gd` | En cualquier momento de la partida `?` abre la cartilla, pausa el juego y al cerrarla el cronómetro continúa donde estaba. |
-| **4. Persistencia “primera vez”** | `ProgresoTutorial` + autoapertura/registro en `level.gd`. | `progreso_tutorial.gd`, `level.gd` | 1.ª partida del nivel: la cartilla se abre sola tras la intro. 2.ª: solo con `?`. |
+| **4. Persistencia “primera vez”** | `ProgresoTutorial` + autoapertura/registro en `level.gd`. | `progreso_tutorial.gd`, `level.gd` | 1.ª partida del nivel: la cartilla se abre sola antes de la intro. 2.ª: solo con `?`. |
 | **5. Pulido** | Fade del HUD, pausa visible, tooltip, colores de fondo por nivel, ajuste fino de `margen_camara_*`. | `level.gd`, `shot_hud.gd`, `.tscn` | La transición de intro al juego no da saltos ni parpadeos. |
 | **6. QA y cierre** | Pruebas en los 2 niveles + export HTML; `README.md`. | `README.md` | Checklist de §9 completa. |
 
