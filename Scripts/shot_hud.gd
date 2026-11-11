@@ -199,12 +199,13 @@ func _crear_slider_potencia() -> HSlider:
 	slider.value_changed.connect(_on_power_changed)
 	return slider
 
-func abrir_cartilla(motivo: String = "inicial") -> void:
+## Abre la cartilla. Devuelve false si no se pudo mostrar (escena ausente, etc.).
+func abrir_cartilla(motivo: String = "inicial") -> bool:
 	if is_instance_valid(_cartilla):
-		return
+		return false
 	var cartilla := _crear_cartilla(motivo)
 	if cartilla == null:
-		return
+		return false
 	_cartilla = cartilla
 	cartilla_activa = true
 	if is_instance_valid(_help_button):
@@ -212,6 +213,7 @@ func abrir_cartilla(motivo: String = "inicial") -> void:
 	# Congela física, cronómetro y animaciones mientras se lee.
 	get_tree().paused = true
 	cartilla_abierta.emit()
+	return true
 
 
 ## Instancia la cartilla y le pasa el estado actual. Null si no se puede crear.

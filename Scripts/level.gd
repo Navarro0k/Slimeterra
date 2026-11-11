@@ -55,6 +55,8 @@ var _hud_tiempo: NivelHudTiempo
 var _explicacion_completada: bool = false
 ## Evita relanzar el arranque si la cartilla vuelve a emitir el cierre.
 var _cartilla_inicial_cerrada: bool = false
+## true solo si la cartilla inicial llegó a mostrarse: entonces sí se marca como vista.
+var _cartilla_inicial_mostrada: bool = false
 ## "inicial" o "ayuda": motivo de la cartilla actualmente abierta.
 var _motivo_cartilla: String = ""
 ## true mientras la cinemática de entrada está en curso.
@@ -102,7 +104,7 @@ func _preparar_arranque() -> void:
 	if AUTOABRIR_PRIMERA_VEZ and not ProgresoTutorial.visto(scene_file_path):
 		_motivo_cartilla = "inicial"
 		slingshoot.mostrar_hud(true)
-		slingshoot.abrir_cartilla("inicial")
+		_cartilla_inicial_mostrada = slingshoot.abrir_cartilla("inicial")
 		return
 
 	# Ya conoce la explicación: no se vuelve a abrir sola.
@@ -227,7 +229,10 @@ func _on_explicacion_completada() -> void:
 	if _cartilla_inicial_cerrada:
 		return
 	_cartilla_inicial_cerrada = true
-	ProgresoTutorial.marcar_visto(scene_file_path)
+	# Solo cuenta como vista si de verdad se mostró; si falló, se reintenta al volver.
+	if _cartilla_inicial_mostrada:
+		ProgresoTutorial.marcar_visto(scene_file_path)
+	_cartilla_inicial_mostrada = false
 	_motivo_cartilla = ""
 	_iniciar_intro()
 
@@ -273,10 +278,12 @@ func _on_ayuda_solicitada() -> void:
 	if _motivo_cartilla == "ayuda":
 		return
 	_motivo_cartilla = "ayuda"
+	if not slingshoot.abrir_cartilla("ayuda"):
+		_motivo_cartilla = ""
+		return
 	slingshoot.set_interactivo(false)
 	if pantalla != null:
 		pantalla.bloquear_pausa(true)
-	slingshoot.abrir_cartilla("ayuda")
 
 
 ## Vuelve al juego tras cerrar una cartilla de ayuda.

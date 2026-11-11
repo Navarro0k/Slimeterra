@@ -227,9 +227,14 @@ static func marcar_visto(ruta_nivel: String) -> void
 - `level.gd` decide la autoapertura (§4.3) y marca visto **al cerrar** la cartilla
   inicial (`motivo == "inicial"`), no al abrirla, para que si el jugador sale a
   medias vuelva a verla la próxima vez.
+- Solo se marca si la cartilla **llegó a mostrarse**: `abrir_cartilla()` devuelve
+  `true/false` y el nivel guarda ese resultado. Si la escena no se pudo instanciar,
+  el nivel arranca igual (intro) pero no registra el nivel como visto.
 - Constante `AUTOABRIR_PRIMERA_VEZ := true` en `level.gd` para desactivarlo sin
   reescribir la lógica.
 - Funciona en la exportación web (Godot usa IndexedDB para `user://`).
+- Para repetir la prueba de “primera vez”, borra o renombra `user://tutorial.cfg`
+  (en Windows: `%APPDATA%\Godot\app_userdata\SlimeTerra\tutorial.cfg`).
 
 ### 5.4 Pausa y cronómetro
 
