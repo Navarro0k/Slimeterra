@@ -214,10 +214,11 @@ func mostrar_hud(visible_hud: bool) -> void:
 	if is_instance_valid(_hud):
 		_hud.visible = visible_hud
 
-## Abre la cartilla explicativa desde el nivel.
-func abrir_cartilla(motivo: String = "inicial") -> void:
+## Abre la cartilla explicativa desde el nivel. false si no se pudo mostrar.
+func abrir_cartilla(motivo: String = "inicial") -> bool:
 	if is_instance_valid(_hud):
-		_hud.abrir_cartilla(motivo)
+		return _hud.abrir_cartilla(motivo)
+	return false
 
 func _on_cartilla_cerrada() -> void:
 	_actualizar_hud_estado()

@@ -9,6 +9,13 @@ signal intro_terminada
 @export var desplazamiento: Vector2 = Vector2.ZERO
 @export var ajustar_zoom_a_limites: bool = true
 
+@export_group("Encuadre")
+## Alto del mundo visible, en píxeles. Más alto = se ve más mapa.
+@export_range(200.0, 500.0, 10.0) var cobertura_vertical: float = 250.0
+## Límites de seguridad para el zoom calculado.
+@export_range(0.25, 1.0, 0.05) var zoom_min: float = 0.5
+@export_range(1.0, 5.0, 0.25) var zoom_max: float = 3.0
+
 @export_group("Intro")
 ## Duración total del paneo (subida + pausa + bajada). Más segundos = más lento.
 @export_range(1.0, 15.0, 0.5) var duracion_intro: float = 5.5
@@ -40,10 +47,10 @@ func aplicar_limites(rect: Rect2) -> void:
 		return
 
 	var pantalla := get_viewport_rect().size
-	if ajustar_zoom_a_limites:
-		var necesario := maxf(pantalla.x / rect.size.x, pantalla.y / rect.size.y)
-		if zoom.x < necesario:
-			zoom = Vector2(necesario, necesario)
+	if ajustar_zoom_a_limites and cobertura_vertical > 0.0:
+		# Se encaja a la cobertura vertical: el ancho extra lo cubre el fondo.
+		var z := clampf(pantalla.y / cobertura_vertical, zoom_min, zoom_max)
+		zoom = Vector2(z, z)
 
 	limit_left = floori(rect.position.x)
 	limit_top = floori(rect.position.y)

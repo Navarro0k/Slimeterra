@@ -227,9 +227,14 @@ static func marcar_visto(ruta_nivel: String) -> void
 - `level.gd` decide la autoapertura (§4.3) y marca visto **al cerrar** la cartilla
   inicial (`motivo == "inicial"`), no al abrirla, para que si el jugador sale a
   medias vuelva a verla la próxima vez.
+- Solo se marca si la cartilla **llegó a mostrarse**: `abrir_cartilla()` devuelve
+  `true/false` y el nivel guarda ese resultado. Si la escena no se pudo instanciar,
+  el nivel arranca igual (intro) pero no registra el nivel como visto.
 - Constante `AUTOABRIR_PRIMERA_VEZ := true` en `level.gd` para desactivarlo sin
   reescribir la lógica.
 - Funciona en la exportación web (Godot usa IndexedDB para `user://`).
+- Para repetir la prueba de “primera vez”, borra o renombra `user://tutorial.cfg`
+  (en Windows: `%APPDATA%\Godot\app_userdata\SlimeTerra\tutorial.cfg`).
 
 ### 5.4 Pausa y cronómetro
 
@@ -257,7 +262,7 @@ static func marcar_visto(ruta_nivel: String) -> void
 En `CamaraSeguimiento`:
 
 ```gdscript
-@export_range(200.0, 500.0, 10.0) var cobertura_vertical: float = 300.0
+@export_range(200.0, 500.0, 10.0) var cobertura_vertical: float = 250.0
 @export var zoom_min: float = 0.5
 @export var zoom_max: float = 3.0
 
@@ -273,12 +278,12 @@ func aplicar_limites(rect: Rect2) -> void:
     limit_bottom = ceili(rect.end.y)
 ```
 
-Con `cobertura_vertical = 300`: `zoom = 270/300 = 0.90`.
+Con `cobertura_vertical = 250`: `zoom = 270/250 = 1.08`.
 
 | Nivel | zoom nuevo | Ancho visible | Sobra a los lados |
 |---|---|---|---|
-| Jungle | 0.90 | ≈ 533 px | ≈ 248 px (124 por lado) |
-| Ice | 0.90 | ≈ 533 px | ≈ 220 px (110 por lado) |
+| Jungle | 1.08 | ≈ 444 px | ≈ 158 px (79 por lado) |
+| Ice | 1.08 | ≈ 444 px | ≈ 131 px (65 por lado) |
 
 Se conserva `ajustar_zoom_a_limites` como interruptor de compatibilidad
 (`false` = no tocar el zoom).
@@ -287,11 +292,9 @@ Se conserva `ajustar_zoom_a_limites` como interruptor de compatibilidad
 
 No. Subir `limit_top`/`limit_bottom` solo deja que la cámara se desplace más allá
 del mapa; el mapa seguiría viéndose igual de pequeño. **El cambio que hace ver más
-mapa es bajar el zoom** (la fórmula de §6.1). Aun así, también se amplían los
-límites de cámara para:
-
-- dar aire arriba/abajo y evitar “tirones” de `clamp` al extremo del mapa;
-- permitir que el paneo de la intro llegue a los bordes con margen.
+mapa es el zoom** (la fórmula de §6.1). Los límites de cámara se amplían solo en
+horizontal; en vertical se mantienen en el mapa para que **nunca asome el fondo**
+por arriba ni por abajo.
 
 ### 6.3 Límites de cámara ≠ límites de juego
 
@@ -309,7 +312,7 @@ En `level.gd`:
 ```gdscript
 @export_group("Cámara")
 @export var margen_camara_h: float = 160.0
-@export var margen_camara_v: float = 48.0
+@export var margen_camara_v: float = 0.0
 
 func _aplicar_limites() -> void:
     limites_globales = NivelLimites.calcular(self)          # física: intacto
@@ -319,39 +322,32 @@ func _aplicar_limites() -> void:
 
 Los márgenes se eligen así:
 - **horizontal**: cubrir la mitad del ancho visible menos el mapa
-  (`(533 − 285)/2 ≈ 124`) + 36 de aire → **160 px**.
-- **vertical**: solo aire para el paneo → **48 px** (empezar; validar en editor).
+  (`(444 − 285)/2 ≈ 79`) con aire de sobra → **160 px**.
+- **vertical**: **0 px**, para que la cámara se detenga justo en los bordes del
+  mapa y no se vea fondo arriba ni abajo.
 
 ### 6.4 Fondo de nivel y color de limpieza
 
-Delante de nada y detrás de todo (evita el gris por defecto de Godot):
+Implementado como capa de pantalla fija respecto a la cámara:
 
-1. **Color de limpieza** (red de seguridad a un frame): en `level.gd:_ready()`:
-   ```gdscript
-   RenderingServer.set_default_clear_color(_color_cielo)   # @export por nivel
-   ```
-   Alternativa duradera: fijar `rendering/environment/defaults/default_clear_color`
-   en `project.godot`.
-2. **Backdrop tiled** detrás del mapa: nuevo `Parallax2D` `FondoCamara`
-   (`z_index = -100`) con un `Sprite2D` por cada capa, usando
-   `Assets/Tilemaps/background_2.png` (silueta) y `background_1.png` (silueta),
-   `texture_repeat = TEXTURE_REPEAT_ENABLED`, `repeat_size` igual al tamaño de la
-   textura escalada, y `scroll_scale` 0.15 / 0.30 para dar profundidad al paneo.
-   - Escala entera (2× o 3×) para respetar el filtro `nearest`.
-   - `mouse_filter = IGNORE` / `modulate` tenue para no competir con el mapa.
-3. **Color sólido de cielo** fuera del alcance del parallax: `Parallax2D` cubre al
-   hacer bucle, pero por si acaso se añade un `ColorRect` de pantalla completa en
-   una `CanvasLayer` de `layer = -100` con `mouse_filter = IGNORE`.
-
-Paleta propuesta (validar con capturas):
-- Jungle: cielo verde-azulado oscuro (`#12241c`) con `background_1`/`2` atenuadas.
-- Ice: cielo azul noche (`#142233`) con las mismas siluetas en tono frío.
+1. **Color de limpieza global** en `project.godot`
+   (`rendering/environment/defaults/default_clear_color`): red de seguridad de un
+   frame si algo falla al construir el fondo.
+2. **Cielo y siluetas** (`level.gd:_crear_fondo()`): `CanvasLayer` `FondoPantalla`
+   con `layer = -100` y `mouse_filter = IGNORE`, formada por:
+   - `ColorRect` a pantalla completa con `color_cielo` (export por nivel).
+   - `TextureRect` a pantalla completa con `textura_fondo`, filtro `nearest` y
+     `STRETCH_KEEP_ASPECT_COVERED`; `tinte_fondo` adapta la silueta a cada nivel.
+   Las imágenes `background_1.png` y `background_2.png` tienen transparencia en la
+   parte superior, así que el cielo se ve detrás de la línea de árboles.
+3. **Valores por nivel** (propiedades del nodo raíz de cada escena):
+   - Jungle: cielo `#10241C`, `background_1`, tinte verdoso.
+   - Ice: cielo `#142233`, `background_2`, tinte azulado.
 
 ### 6.5 Orden de capas resultante
 
 ```
-CanvasLayer layer=-100   → FondoPantalla (ColorRect/parallax de pantalla)
-Parallax2D z=-100        → FondoCamara (siluetas tiled)
+CanvasLayer layer=-100   → FondoPantalla (cielo + siluetas)
 TileMapLayer Fondo       → mapa (jungle) / Sprite2D (ice)        [sin cambios]
 TileMapLayer Plataformas → mundo jugable                          [sin cambios]
 ... Slingshoot, Meta ...
@@ -374,8 +370,8 @@ CanvasLayer layer=50     → PantallaFin (pausa/resultado)
 | `Scripts/shot_hud.gd` | Botón `?`, señal `ayuda_solicitada`, `abrir_cartilla()`, ciclo de vida reabrible, pausa del árbol. |
 | `Scripts/cartilla.gd` | `set_motivo()`, texto de cierre “VOLVER AL JUEGO”, `Esc` para cerrar. |
 | `Scripts/progreso_tutorial.gd` | **Nuevo.** `ConfigFile` `user://tutorial.cfg` (visto/marcar). |
-| `Scenes/Levels/jungleLevel.tscn` | Nodo `FondoCamara` (Parallax2D + siluetas). |
-| `Scenes/Levels/Level_Ice.tscn` | Nodo `FondoCamara` (Parallax2D + siluetas). |
+| `Scenes/Levels/jungleLevel.tscn` | Propiedades `color_cielo`, `textura_fondo` y `tinte_fondo` en el nodo raíz. |
+| `Scenes/Levels/Level_Ice.tscn` | Propiedades `color_cielo`, `textura_fondo` y `tinte_fondo` en el nodo raíz. |
 | `Scripts/hud_tema.gd` | (Opcional) estilo/color del botón `?` y del fondo. |
 | `project.godot` | (Opcional) `default_clear_color`. |
 | `README.md` | Documentar botón `?`, intro y nuevo encuadre. |

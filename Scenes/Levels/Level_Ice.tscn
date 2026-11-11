@@ -13,6 +13,7 @@
 [ext_resource type="Script" uid="uid://cwhjdnhouowt5" path="res://Scripts/camara_seguimiento.gd" id="11_hbc57"]
 [ext_resource type="AudioStream" uid="uid://t2gd5ws7ajl8" path="res://Assets/Audio/level_music/Newer Wave.mp3" id="13_44arf"]
 [ext_resource type="PackedScene" path="res://Scenes/Meta.tscn" id="14_meta"]
+[ext_resource type="Texture2D" uid="uid://bhq10ldpyjphw" path="res://Assets/Tilemaps/background_2.png" id="15_fondo"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_ybqp2"]
 texture = ExtResource("1_1yxr7")
@@ -3750,6 +3751,9 @@ size = Vector2(313.5, 838)
 
 [node name="LevelIce" type="Node2D" unique_id=539677101]
 script = ExtResource("1_6073x")
+color_cielo = Color(0.078, 0.133, 0.2, 1)
+textura_fondo = ExtResource("15_fondo")
+tinte_fondo = Color(0.8, 0.88, 1, 1)
 metadata/_edit_horizontal_guides_ = [-289.0]
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1202723040]
