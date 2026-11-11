@@ -7,6 +7,9 @@ signal cerrada
 
 const TOTAL_PAGINAS: int = 3
 
+## "inicial" al empezar el nivel o "ayuda" al reabrirla con el botón ?.
+var _motivo: String = "inicial"
+
 @onready var _lbl_modo: Label = $Panel/Margen/Contenido/Cabecera/Modo
 @onready var _lbl_pagina: Label = $Panel/Margen/Contenido/Cabecera/Pagina
 @onready var _cuerpo: HBoxContainer = $Panel/Margen/Contenido/Cuerpo
@@ -102,6 +105,13 @@ func set_textura_slime(textura: Texture2D) -> void:
 		_vineta.set_textura_slime(textura)
 
 
+## "inicial" o "ayuda": cambia el cierre y el texto de estado de la última página.
+func set_motivo(motivo: String) -> void:
+	_motivo = motivo
+	if is_node_ready():
+		_actualizar_pagina()
+
+
 func _actualizar_pagina() -> void:
 	if _texto == null:
 		return
@@ -121,7 +131,7 @@ func _actualizar_pagina() -> void:
 
 	_btn_anterior.disabled = _pagina == 0
 	_btn_siguiente.text = (
-		"COMENZAR NIVEL  →" if _pagina == TOTAL_PAGINAS - 1 else "SIGUIENTE  →"
+		_texto_cierre() if _pagina == TOTAL_PAGINAS - 1 else "SIGUIENTE  →"
 	)
 	_btn_siguiente.disabled = false
 	_actualizar_estado_lectura()
@@ -135,6 +145,10 @@ func _actualizar_pagina() -> void:
 	var barra := _texto.get_v_scroll_bar()
 	if barra != null:
 		barra.value = barra.min_value
+
+
+func _texto_cierre() -> String:
+	return "VOLVER AL JUEGO  →" if _motivo == "ayuda" else "COMENZAR NIVEL  →"
 
 
 func _construir_pips() -> void:
@@ -179,7 +193,10 @@ func _animar_entrada_pagina() -> void:
 
 func _actualizar_estado_lectura() -> void:
 	if _pagina == TOTAL_PAGINAS - 1:
-		_lbl_estado.text = "Revisa el resumen y pulsa COMENZAR NIVEL para jugar."
+		if _motivo == "ayuda":
+			_lbl_estado.text = "Revisa el resumen y pulsa VOLVER AL JUEGO."
+		else:
+			_lbl_estado.text = "Revisa el resumen y pulsa COMENZAR NIVEL para jugar."
 	else:
 		_lbl_estado.text = "Página visitada. Pulsa SIGUIENTE para continuar."
 	_lbl_estado.modulate = HudTema.VERDE
@@ -202,6 +219,17 @@ func _on_siguiente() -> void:
 		_cerrar()
 
 
+## Esc cierra solo cuando ya se visitaron las tres páginas.
+func _unhandled_input(event: InputEvent) -> void:
+	if _cerrando or _leidas.size() < TOTAL_PAGINAS:
+		return
+	if not _leidas[TOTAL_PAGINAS - 1]:
+		return
+	if event.is_action_pressed("ui_cancel"):
+		get_viewport().set_input_as_handled()
+		_cerrar()
+
+
 func _cerrar() -> void:
 	if _cerrando or not _leidas[TOTAL_PAGINAS - 1]:
 		return
@@ -211,6 +239,8 @@ func _cerrar() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_musica.stop()
 	_pausar_musica_nivel(false)
+	# Seguridad: nunca dejar el árbol pausado tras cerrar la cartilla.
+	get_tree().paused = false
 	cerrada.emit()
 	queue_free()
 

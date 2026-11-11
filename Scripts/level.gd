@@ -8,6 +8,9 @@ const ORDEN_NIVELES: Array[String] = [
 	"res://Scenes/Levels/Level_Ice.tscn",
 ]
 
+## Si es false, la explicación nunca se abre sola (solo con el botón ?).
+const AUTOABRIR_PRIMERA_VEZ: bool = true
+
 @export_group("Límites del nivel")
 @export var mostrar_limites: bool = false
 
@@ -36,6 +39,8 @@ var _hud_tiempo: NivelHudTiempo
 var _explicacion_completada: bool = false
 ## Evita relanzar el arranque si la cartilla vuelve a emitir el cierre.
 var _cartilla_inicial_cerrada: bool = false
+## "inicial" o "ayuda": motivo de la cartilla actualmente abierta.
+var _motivo_cartilla: String = ""
 ## true mientras la cinemática de entrada está en curso.
 var _en_intro: bool = false
 var _tiempo_intro: float = 0.0
@@ -65,19 +70,27 @@ func _ready() -> void:
 
 	pantalla.bloquear_pausa(true)
 
-	# Primero se lee la cartilla; al cerrarla arranca la intro y después el juego.
+	# Primero se lee la cartilla (solo la primera vez); luego va la intro.
 	slingshoot.set_interactivo(false)
 	slingshoot.mostrar_hud(false)
 	ui.visible = false
-	_mostrar_cartilla_inicial()
+	_preparar_arranque()
 
 
-## Espera al HUD y abre la cartilla explicativa antes de la cinemática.
-func _mostrar_cartilla_inicial() -> void:
+## Abre la cartilla si es la primera vez; si no, pasa directo a la intro.
+func _preparar_arranque() -> void:
 	if not slingshoot.esta_hud_listo():
 		await slingshoot.hud_listo
-	slingshoot.mostrar_hud(true)
-	slingshoot.abrir_cartilla("inicial")
+
+	if AUTOABRIR_PRIMERA_VEZ and not ProgresoTutorial.visto(scene_file_path):
+		_motivo_cartilla = "inicial"
+		slingshoot.mostrar_hud(true)
+		slingshoot.abrir_cartilla("inicial")
+		return
+
+	# Ya conoce la explicación: no se vuelve a abrir sola.
+	_cartilla_inicial_cerrada = true
+	_iniciar_intro()
 
 
 func _process(delta: float) -> void:
@@ -116,6 +129,7 @@ func _conectar_resortera() -> void:
 	slingshoot.slime_lanzado.connect(_on_slime_lanzado)
 	slingshoot.slime_cargado.connect(_on_slime_cargado)
 	slingshoot.explicacion_completada.connect(_on_explicacion_completada)
+	slingshoot.ayuda_solicitada.connect(_on_ayuda_solicitada)
 
 func _crear_pantalla_fin() -> void:
 	pantalla = get_node_or_null("PantallaFin") as PantallaFin
@@ -156,11 +170,18 @@ func _configurar_progresion() -> void:
 		pantalla.es_final_del_juego = true
 
 
-## La cartilla inicial se cerró: recién ahora se reproduce la intro.
+## Se cerró una cartilla: la inicial inicia la intro; la ayuda reanuda el juego.
 func _on_explicacion_completada() -> void:
+	if _motivo_cartilla == "ayuda":
+		_motivo_cartilla = ""
+		_reanudar_juego()
+		return
+
 	if _cartilla_inicial_cerrada:
 		return
 	_cartilla_inicial_cerrada = true
+	ProgresoTutorial.marcar_visto(scene_file_path)
+	_motivo_cartilla = ""
 	_iniciar_intro()
 
 
@@ -193,6 +214,32 @@ func _comenzar_juego() -> void:
 	if pantalla != null:
 		pantalla.bloquear_pausa(false)
 	slingshoot.set_interactivo(true)
+
+
+## El botón ? pide releer la explicación en mitad de la partida.
+func _on_ayuda_solicitada() -> void:
+	if _terminado or not _explicacion_completada or _en_intro:
+		return
+	# Nunca encimar la cartilla sobre la pausa o el resultado del nivel.
+	if pantalla != null and pantalla.modo != PantallaFin.Modo.OCULTA:
+		return
+	if _motivo_cartilla == "ayuda":
+		return
+	_motivo_cartilla = "ayuda"
+	slingshoot.set_interactivo(false)
+	if pantalla != null:
+		pantalla.bloquear_pausa(true)
+	slingshoot.abrir_cartilla("ayuda")
+
+
+## Vuelve al juego tras cerrar una cartilla de ayuda.
+func _reanudar_juego() -> void:
+	if _terminado:
+		return
+	slingshoot.set_interactivo(true)
+	if pantalla != null:
+		pantalla.bloquear_pausa(false)
+
 
 func _calcular_estrellas() -> int:
 	if tiempo_transcurrido <= tiempo_3_estrellas:

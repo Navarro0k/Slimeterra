@@ -9,6 +9,8 @@ signal slime_cargado(slime: Node2D)
 signal explicacion_completada
 ## El HUD terminó de construirse: sus nodos ya existen.
 signal hud_listo
+## El jugador pulsó el botón ? del HUD.
+signal ayuda_solicitada
 
 @export_group("Física y Tiro")
 @export var multiplicador_fuerza: float = 15.0
@@ -181,6 +183,7 @@ func _crear_hud() -> void:
 	_hud.aim_changed.connect(_on_aim_changed)
 	_hud.cartilla_abierta.connect(_actualizar_hud_estado)
 	_hud.cartilla_cerrada.connect(_on_cartilla_cerrada)
+	_hud.ayuda_solicitada.connect(_on_ayuda_solicitada)
 	_hud.set_launch_enabled(is_instance_valid(slime_actual))
 
 func _al_hud_listo() -> void:
@@ -219,6 +222,9 @@ func abrir_cartilla(motivo: String = "inicial") -> void:
 func _on_cartilla_cerrada() -> void:
 	_actualizar_hud_estado()
 	explicacion_completada.emit()
+
+func _on_ayuda_solicitada() -> void:
+	ayuda_solicitada.emit()
 
 func _on_aim_changed(angulo: float, potencia: float) -> void:
 	_mostrar_trayectoria = true

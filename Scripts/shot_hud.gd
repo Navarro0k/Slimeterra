@@ -6,6 +6,7 @@ signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
 signal cartilla_abierta()
 signal cartilla_cerrada()
+signal ayuda_solicitada()
 
 var angle_degrees: float = 45.0
 var power_percent: float = 65.0
@@ -24,6 +25,7 @@ var _equation_panel: PanelContainer
 var _equation_toggle: Button
 var _equation_title: Label
 var _equation_visible := true
+var _help_button: Button
 var _launch_button: Button
 var _pause_button: Button
 var _fuente_ecuaciones: FontFile
@@ -57,6 +59,7 @@ func _construir_interfaz() -> void:
 	_construir_panel_ecuacion(root)
 	_construir_dial(root)
 	_construir_panel_potencia(root)
+	_construir_boton_ayuda(root)
 
 func _construir_panel_ecuacion(root: Control) -> void:
 	_equation_panel = HudTema.panel_contenedor(root, "EquationPanel", Vector2(5, 20), Vector2(158, 91))
@@ -115,6 +118,35 @@ func _crear_boton_ecuacion() -> Button:
 	boton.pressed.connect(_on_equation_toggle_pressed)
 	return boton
 
+func _construir_boton_ayuda(root: Control) -> void:
+	_help_button = Button.new()
+	_help_button.name = "HelpButton"
+	_help_button.text = "?"
+	_help_button.tooltip_text = "Cómo jugar"
+	_help_button.focus_mode = Control.FOCUS_NONE
+	_help_button.custom_minimum_size = Vector2(30, 24)
+	_help_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_help_button.offset_left = -76
+	_help_button.offset_top = 6
+	_help_button.offset_right = -44
+	_help_button.offset_bottom = 30
+	_help_button.add_theme_font_size_override("font_size", 12)
+	_help_button.add_theme_color_override("font_color", HudTema.CREMA)
+	_help_button.add_theme_color_override("font_hover_color", HudTema.CREMA)
+	_help_button.add_theme_color_override("font_pressed_color", HudTema.CREMA)
+	if _fuente_pixel != null:
+		_help_button.add_theme_font_override("font", _fuente_pixel)
+	_help_button.add_theme_stylebox_override("normal", HudTema.estilo_boton(HudTema.TINTA))
+	_help_button.add_theme_stylebox_override("hover", HudTema.estilo_boton(HudTema.HOVER))
+	_help_button.add_theme_stylebox_override("pressed", HudTema.estilo_boton(HudTema.PRESSED))
+	_help_button.pressed.connect(_on_help_pressed)
+	root.add_child(_help_button)
+
+
+func _on_help_pressed() -> void:
+	ayuda_solicitada.emit()
+
+
 func _construir_dial(root: Control) -> void:
 	var dial_col := VBoxContainer.new()
 	dial_col.name = "AngleControls"
@@ -167,19 +199,23 @@ func _crear_slider_potencia() -> HSlider:
 	slider.value_changed.connect(_on_power_changed)
 	return slider
 
-func abrir_cartilla(_motivo: String = "inicial") -> void:
+func abrir_cartilla(motivo: String = "inicial") -> void:
 	if is_instance_valid(_cartilla):
 		return
-	var cartilla := _crear_cartilla()
+	var cartilla := _crear_cartilla(motivo)
 	if cartilla == null:
 		return
 	_cartilla = cartilla
 	cartilla_activa = true
+	if is_instance_valid(_help_button):
+		_help_button.visible = false
+	# Congela física, cronómetro y animaciones mientras se lee.
+	get_tree().paused = true
 	cartilla_abierta.emit()
 
 
 ## Instancia la cartilla y le pasa el estado actual. Null si no se puede crear.
-func _crear_cartilla() -> Control:
+func _crear_cartilla(motivo: String) -> Control:
 	var escena := load("res://Scenes/UI/Cartilla.tscn") as PackedScene
 	if escena == null:
 		_omitir_cartilla()
@@ -189,6 +225,8 @@ func _crear_cartilla() -> Control:
 		_omitir_cartilla()
 		return null
 	cartilla.set("modo_ecuacion", modo_ecuacion)
+	if cartilla.has_method("set_motivo"):
+		cartilla.call("set_motivo", motivo)
 	if not cartilla.has_signal("cerrada"):
 		cartilla.queue_free()
 		_omitir_cartilla()
@@ -224,6 +262,10 @@ func _emitir_cartilla_cerrada() -> void:
 func _on_cartilla_cerrada() -> void:
 	cartilla_activa = false
 	_cartilla = null
+	# Se despausa antes de avisar al nivel para que pueda reanudar o lanzar la intro.
+	get_tree().paused = false
+	if is_instance_valid(_help_button):
+		_help_button.visible = true
 	cartilla_cerrada.emit()
 
 
