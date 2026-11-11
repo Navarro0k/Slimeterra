@@ -4,6 +4,7 @@ class_name ShotHUD
 
 signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
+signal cartilla_abierta()
 signal cartilla_cerrada()
 
 var angle_degrees: float = 45.0
@@ -11,7 +12,7 @@ var power_percent: float = 65.0
 ## "parabola" (nivel 1) o "matrices" (nivel 2).
 var modo_ecuacion: String = "parabola"
 ## true mientras la cartilla está abierta: bloquea el juego.
-var cartilla_activa: bool = true
+var cartilla_activa: bool = false
 
 var _can_launch := true
 var _angle_dial: Control
@@ -41,7 +42,6 @@ func _ready() -> void:
 	_fuente_ecuaciones = load("res://Assets/fonts/JetBrainsMono-Regular.ttf") as FontFile
 	_fuente_pixel = HudTema.fuente_pixel()
 	_construir_interfaz()
-	_construir_cartilla()
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
 
@@ -167,28 +167,42 @@ func _crear_slider_potencia() -> HSlider:
 	slider.value_changed.connect(_on_power_changed)
 	return slider
 
-func _construir_cartilla() -> void:
+func abrir_cartilla(_motivo: String = "inicial") -> void:
+	if is_instance_valid(_cartilla):
+		return
+	var cartilla := _crear_cartilla()
+	if cartilla == null:
+		return
+	_cartilla = cartilla
+	cartilla_activa = true
+	cartilla_abierta.emit()
+
+
+## Instancia la cartilla y le pasa el estado actual. Null si no se puede crear.
+func _crear_cartilla() -> Control:
 	var escena := load("res://Scenes/UI/Cartilla.tscn") as PackedScene
 	if escena == null:
 		_omitir_cartilla()
-		return
-	_cartilla = escena.instantiate() as Control
-	if _cartilla == null:
+		return null
+	var cartilla := escena.instantiate() as Control
+	if cartilla == null:
 		_omitir_cartilla()
-		return
-	_cartilla.set("modo_ecuacion", modo_ecuacion)
-	if _cartilla.has_signal("cerrada"):
-		_cartilla.connect("cerrada", _on_cartilla_cerrada)
-	else:
+		return null
+	cartilla.set("modo_ecuacion", modo_ecuacion)
+	if not cartilla.has_signal("cerrada"):
+		cartilla.queue_free()
 		_omitir_cartilla()
-		_cartilla.queue_free()
-		_cartilla = null
-		return
-	add_child(_cartilla)
-	if _icono_slime != null and _cartilla.has_method("set_textura_slime"):
-		_cartilla.call("set_textura_slime", _icono_slime)
-	if _hay_modelo and _cartilla.has_method("set_model_values"):
-		_cartilla.call("set_model_values", _modelo_pos, _modelo_vel, _modelo_gravedad, _modelo_amortiguamiento)
+		return null
+	cartilla.connect("cerrada", _on_cartilla_cerrada)
+	add_child(cartilla)
+	if _icono_slime != null and cartilla.has_method("set_textura_slime"):
+		cartilla.call("set_textura_slime", _icono_slime)
+	if _hay_modelo and cartilla.has_method("set_model_values"):
+		cartilla.call(
+			"set_model_values", _modelo_pos, _modelo_vel,
+			_modelo_gravedad, _modelo_amortiguamiento
+		)
+	return cartilla
 
 
 ## Slime cargado en la resortera: la viñeta de la cartilla usa su sprite.

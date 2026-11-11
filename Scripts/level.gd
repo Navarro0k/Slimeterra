@@ -8,12 +8,6 @@ const ORDEN_NIVELES: Array[String] = [
 	"res://Scenes/Levels/Level_Ice.tscn",
 ]
 
-## Slimes disponibles: { tipo: cantidad }. Cada nivel concreto lo redefine.
-var slimes_nivel: Dictionary = {
-	SlimeCatalogo.Tipo.BASE: 3,
-	SlimeCatalogo.Tipo.FUEGO: 1,
-}
-
 @export_group("Límites del nivel")
 @export var mostrar_limites: bool = false
 
@@ -23,11 +17,28 @@ var slimes_nivel: Dictionary = {
 ## Tiempo (s) máximo para 2 estrellas.
 @export var tiempo_2_estrellas: float = 90.0
 
+@export_group("Intro")
+## Reproduce el paneo de entrada al cerrar la cartilla inicial.
+@export var intro_camara: bool = true
+## Tiempo mínimo antes de que un clic/tecla pueda saltar la intro.
+@export var espera_salto_intro: float = 0.3
+
+## Slimes disponibles: { tipo: cantidad }. Cada nivel concreto lo redefine.
+var slimes_nivel: Dictionary = {
+	SlimeCatalogo.Tipo.BASE: 3,
+	SlimeCatalogo.Tipo.FUEGO: 1,
+}
+
 var limites_globales: Rect2 = Rect2()
 var tiempo_transcurrido: float = 0.0
 var _hud_tiempo: NivelHudTiempo
-## false mientras la cartilla está abierta: el nivel aún no ha comenzado.
+## true solo cuando la cartilla inicial y la intro ya terminaron.
 var _explicacion_completada: bool = false
+## Evita relanzar el arranque si la cartilla vuelve a emitir el cierre.
+var _cartilla_inicial_cerrada: bool = false
+## true mientras la cinemática de entrada está en curso.
+var _en_intro: bool = false
+var _tiempo_intro: float = 0.0
 
 @onready var slingshoot: Node2D = $Slingshoot
 @onready var ui: SlimeSelectorUI = $SlimeSelectorUI
@@ -54,12 +65,48 @@ func _ready() -> void:
 
 	pantalla.bloquear_pausa(true)
 
+	# Primero se lee la cartilla; al cerrarla arranca la intro y después el juego.
+	slingshoot.set_interactivo(false)
+	slingshoot.mostrar_hud(false)
+	ui.visible = false
+	_mostrar_cartilla_inicial()
+
+
+## Espera al HUD y abre la cartilla explicativa antes de la cinemática.
+func _mostrar_cartilla_inicial() -> void:
+	if not slingshoot.esta_hud_listo():
+		await slingshoot.hud_listo
+	slingshoot.mostrar_hud(true)
+	slingshoot.abrir_cartilla("inicial")
+
 
 func _process(delta: float) -> void:
+	if _en_intro:
+		_tiempo_intro += delta
+		return
 	if _terminado or not _explicacion_completada or _hud_tiempo == null:
 		return
 	tiempo_transcurrido += delta
 	_hud_tiempo.mostrar(tiempo_transcurrido)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if not _en_intro or _tiempo_intro < espera_salto_intro:
+		return
+	var saltar := false
+	if event is InputEventMouseButton:
+		saltar = (event as InputEventMouseButton).pressed
+	elif event is InputEventScreenTouch:
+		saltar = (event as InputEventScreenTouch).pressed
+	elif event is InputEventJoypadButton:
+		saltar = (event as InputEventJoypadButton).pressed
+	elif event is InputEventKey:
+		var tecla := event as InputEventKey
+		saltar = tecla.pressed and not tecla.echo
+	if not saltar:
+		return
+	camara.saltar_intro()
+	get_viewport().set_input_as_handled()
 
 
 func _conectar_resortera() -> void:
@@ -109,15 +156,43 @@ func _configurar_progresion() -> void:
 		pantalla.es_final_del_juego = true
 
 
+## La cartilla inicial se cerró: recién ahora se reproduce la intro.
 func _on_explicacion_completada() -> void:
-	if _explicacion_completada:
+	if _cartilla_inicial_cerrada:
 		return
+	_cartilla_inicial_cerrada = true
+	_iniciar_intro()
+
+
+## Oculta el HUD, recorre el mapa y deja el nivel listo para jugar.
+func _iniciar_intro() -> void:
+	slingshoot.set_interactivo(false)
+	slingshoot.mostrar_hud(false)
+	ui.visible = false
+
+	if intro_camara:
+		_en_intro = true
+		_tiempo_intro = 0.0
+		camara.seguir(slingshoot, true)
+		camara.reproducir_intro(limites_globales)
+		await camara.intro_terminada
+		camara.seguir(slingshoot, true)
+		_en_intro = false
+
+	slingshoot.mostrar_hud(true)
+	ui.visible = true
+	_comenzar_juego()
+
+
+## Habilita el disparo, el cronómetro y la pausa tras la intro.
+func _comenzar_juego() -> void:
 	_explicacion_completada = true
 	tiempo_transcurrido = 0.0
 	if _hud_tiempo != null:
 		_hud_tiempo.mostrar(0.0)
 	if pantalla != null:
 		pantalla.bloquear_pausa(false)
+	slingshoot.set_interactivo(true)
 
 func _calcular_estrellas() -> int:
 	if tiempo_transcurrido <= tiempo_3_estrellas:
