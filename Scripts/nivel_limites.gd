@@ -33,6 +33,13 @@ static func calcular(nivel: Node) -> Rect2:
 	return Rect2(origen, tamano)
 
 
+## Rectángulo ampliado solo para la cámara. No modifica los límites de la física.
+static func ampliar(rect: Rect2, margen_h: float, margen_v: float) -> Rect2:
+	if not rect.has_area():
+		return rect
+	return rect.grow_individual(margen_h, margen_v, margen_h, margen_v)
+
+
 ## Dibuja un marco rojo con los límites (solo depuración).
 static func crear_marco(nivel: Node2D, limites: Rect2) -> void:
 	if not limites.has_area():

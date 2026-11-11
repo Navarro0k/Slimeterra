@@ -26,6 +26,20 @@ const AUTOABRIR_PRIMERA_VEZ: bool = true
 ## Tiempo mínimo antes de que un clic/tecla pueda saltar la intro.
 @export var espera_salto_intro: float = 0.3
 
+@export_group("Cámara")
+## Aire horizontal extra para la cámara. No cambia los rebotes del slime.
+@export var margen_camara_h: float = 160.0
+## Aire vertical extra. 0 = la cámara nunca muestra fondo arriba ni abajo.
+@export var margen_camara_v: float = 0.0
+
+@export_group("Fondo")
+## Color del cielo que se ve tras el mapa (evita el gris por defecto).
+@export var color_cielo: Color = Color(0.06, 0.13, 0.10)
+## Siluetas opcionales que se dibujan al pie de la pantalla.
+@export var textura_fondo: Texture2D
+## Tinte de las siluetas para adaptarlas a la paleta del nivel.
+@export var tinte_fondo: Color = Color(1, 1, 1)
+
 ## Slimes disponibles: { tipo: cantidad }. Cada nivel concreto lo redefine.
 var slimes_nivel: Dictionary = {
 	SlimeCatalogo.Tipo.BASE: 3,
@@ -33,6 +47,8 @@ var slimes_nivel: Dictionary = {
 }
 
 var limites_globales: Rect2 = Rect2()
+## Rect ampliado solo para la cámara: la física sigue usando limites_globales.
+var limites_camara: Rect2 = Rect2()
 var tiempo_transcurrido: float = 0.0
 var _hud_tiempo: NivelHudTiempo
 ## true solo cuando la cartilla inicial y la intro ya terminaron.
@@ -54,6 +70,7 @@ var pantalla: PantallaFin
 var _terminado: bool = false
 
 func _ready() -> void:
+	_crear_fondo()
 	_conectar_resortera()
 	_crear_pantalla_fin()
 	_conectar_metas()
@@ -154,10 +171,40 @@ func _agrupar_musica() -> void:
 
 func _aplicar_limites() -> void:
 	limites_globales = NivelLimites.calcular(self)
-	camara.aplicar_limites(limites_globales)
+	limites_camara = NivelLimites.ampliar(
+		limites_globales, margen_camara_h, margen_camara_v
+	)
+	camara.aplicar_limites(limites_camara)
 	if mostrar_limites:
 		print("%s límites: %s" % [name, limites_globales])
 		NivelLimites.crear_marco(self, limites_globales)
+
+## Cielo a pantalla completa y siluetas: nunca se ve el gris por defecto.
+func _crear_fondo() -> void:
+	var capa := CanvasLayer.new()
+	capa.name = "FondoPantalla"
+	capa.layer = -100
+	add_child(capa)
+
+	var cielo := ColorRect.new()
+	cielo.name = "Cielo"
+	cielo.color = color_cielo
+	cielo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capa.add_child(cielo)
+	cielo.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	if textura_fondo == null:
+		return
+	var siluetas := TextureRect.new()
+	siluetas.name = "Siluetas"
+	siluetas.texture = textura_fondo
+	siluetas.modulate = tinte_fondo
+	siluetas.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	siluetas.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	siluetas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	capa.add_child(siluetas)
+	siluetas.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
 
 func _configurar_progresion() -> void:
 	var posicion := ORDEN_NIVELES.find(scene_file_path)
@@ -195,7 +242,7 @@ func _iniciar_intro() -> void:
 		_en_intro = true
 		_tiempo_intro = 0.0
 		camara.seguir(slingshoot, true)
-		camara.reproducir_intro(limites_globales)
+		camara.reproducir_intro(limites_camara)
 		await camara.intro_terminada
 		camara.seguir(slingshoot, true)
 		_en_intro = false
