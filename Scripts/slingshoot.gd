@@ -7,6 +7,8 @@ signal slime_lanzado(slime: Node2D)
 signal slime_cargado(slime: Node2D)
 ## La cartilla inicial se cerró: el nivel puede arrancar.
 signal explicacion_completada
+## El HUD terminó de construirse: sus nodos ya existen.
+signal hud_listo
 
 @export_group("Física y Tiro")
 @export var multiplicador_fuerza: float = 15.0
@@ -43,11 +45,14 @@ signal explicacion_completada
 var slime_actual: RigidBody2D
 var angulo_objetivo: float = 45.0
 var potencia_objetivo: float = 65.0
+## false durante la intro o la cartilla: bloquea apuntado y disparo.
+var interactivo: bool = true
 var _inventario: Array[Dictionary] = []
 var _indice: int = -1
 var _esperando_turno: bool = false
 var _padre_original: Node
 var _hud: ShotHUD
+var _hud_listo: bool = false
 var _arrastrando_slime: bool = false
 ## Solo se dibuja la trayectoria predictiva mientras se apunta.
 var _mostrar_trayectoria: bool = false
@@ -93,6 +98,8 @@ func _draw() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if not interactivo:
+		return
 	if _esperando_turno or not is_instance_valid(slime_actual):
 		return
 	if is_instance_valid(_hud) and _hud.cartilla_activa:
@@ -166,17 +173,48 @@ func _crear_hud() -> void:
 	_hud = ShotHUD.new()
 	_hud.name = "ShotHUD"
 	_hud.modo_ecuacion = modo_ecuacion
+	# El nivel decide cuándo mostrarlo (después de la intro y sin parpadeos).
+	_hud.visible = false
 	get_tree().current_scene.call_deferred("add_child", _hud)
 	_hud.ready.connect(_al_hud_listo)
 	_hud.launch_requested.connect(disparar_con_parametros)
 	_hud.aim_changed.connect(_on_aim_changed)
+	_hud.cartilla_abierta.connect(_actualizar_hud_estado)
 	_hud.cartilla_cerrada.connect(_on_cartilla_cerrada)
 	_hud.set_launch_enabled(is_instance_valid(slime_actual))
 
 func _al_hud_listo() -> void:
-	# La cartilla se crea dentro de ShotHUD._ready; recién aquí existen sus nodos.
+	# Los nodos del HUD ya existen; la cartilla se abrirá desde el nivel.
+	_hud_listo = true
 	_actualizar_modelo_hud()
 	_actualizar_hud_estado()
+	if not interactivo:
+		_actualizar_visibilidad(false)
+	hud_listo.emit()
+
+## true cuando el HUD ya se añadió al árbol y sus nodos existen.
+func esta_hud_listo() -> bool:
+	return _hud_listo
+
+## Habilita o bloquea el disparo (intro y cartilla lo desactivan).
+func set_interactivo(valor: bool) -> void:
+	interactivo = valor
+	if not valor:
+		_arrastrando_slime = false
+		_mostrar_trayectoria = false
+		_actualizar_visibilidad(false)
+	_actualizar_hud_estado()
+	queue_redraw()
+
+## Muestra u oculta el HUD completo (CanvasLayer).
+func mostrar_hud(visible_hud: bool) -> void:
+	if is_instance_valid(_hud):
+		_hud.visible = visible_hud
+
+## Abre la cartilla explicativa desde el nivel.
+func abrir_cartilla(motivo: String = "inicial") -> void:
+	if is_instance_valid(_hud):
+		_hud.abrir_cartilla(motivo)
 
 func _on_cartilla_cerrada() -> void:
 	_actualizar_hud_estado()
@@ -200,7 +238,7 @@ func _actualizar_modelo_hud() -> void:
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
-		var puede := is_instance_valid(slime_actual) and not _esperando_turno
+		var puede := interactivo and is_instance_valid(slime_actual) and not _esperando_turno
 		if _hud.cartilla_activa:
 			puede = false
 		_hud.set_launch_enabled(puede)
@@ -291,6 +329,8 @@ func actualizar_aim(angulo: float, potencia: float) -> void:
 
 func disparar_con_parametros(angulo: float, potencia: float) -> void:
 	_arrastrando_slime = false
+	if not interactivo:
+		return
 	if _esperando_turno or not is_instance_valid(slime_actual) or potencia <= 0.0:
 		return
 	if is_instance_valid(_hud) and _hud.cartilla_activa:
