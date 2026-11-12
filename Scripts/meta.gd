@@ -11,6 +11,8 @@ signal meta_alcanzada
 @export var depurar: bool = false
 
 var _alcanzada: bool = false
+## Formas de colisión válidas, resueltas una sola vez al entrar al árbol.
+var _formas: Array[CollisionShape2D] = []
 
 func _ready() -> void:
 	add_to_group("meta")
@@ -18,10 +20,11 @@ func _ready() -> void:
 	collision_mask = mascara_slime
 	monitoring = true
 	body_entered.connect(_on_body_entered)
-	if _formas().is_empty():
+	_formas = _buscar_formas()
+	if _formas.is_empty():
 		push_warning("Meta '%s' no tiene ninguna CollisionShape2D con forma (Rectangle, Circle o Capsule): no detectará nada." % name)
 	if depurar:
-		print("[Meta] lista en ", global_position, " con ", _formas().size(), " forma(s)")
+		print("[Meta] lista en ", global_position, " con ", _formas.size(), " forma(s)")
 
 func _physics_process(_delta: float) -> void:
 	if _alcanzada:
@@ -48,7 +51,7 @@ func _alcanzar(origen: String) -> void:
 		print("[Meta] alcanzada (", origen, ")")
 	meta_alcanzada.emit()
 
-func _formas() -> Array[CollisionShape2D]:
+func _buscar_formas() -> Array[CollisionShape2D]:
 	var formas: Array[CollisionShape2D] = []
 	for hijo in get_children():
 		if hijo is CollisionShape2D and hijo.shape != null and not hijo.disabled:
@@ -57,7 +60,7 @@ func _formas() -> Array[CollisionShape2D]:
 
 ## ¿El centro del slime (con margen) está dentro de alguna forma?
 func _toca(slime: Node2D) -> bool:
-	for forma_nodo in _formas():
+	for forma_nodo in _formas:
 		var p: Vector2 = forma_nodo.to_local(slime.global_position)
 		var forma: Shape2D = forma_nodo.shape
 		if forma is RectangleShape2D:

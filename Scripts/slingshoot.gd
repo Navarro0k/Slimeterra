@@ -18,7 +18,7 @@ signal ayuda_solicitada
 @export var grosor_reposo: float = 2.0
 @export var grosor_estirado: float = 1.0
 @export var caida_reposo: float = 5.0
-@export_range(1, 8, 1) var puntos_trayectoria: int = 10
+@export_range(1, 10, 1) var puntos_trayectoria: int = 10
 @export var paso_tiempo: float = 0.08
 @export var angulo_desvio_grados: float = 0.0
 ## "parabola" (nivel 1) o "matrices" (nivel 2).
@@ -72,7 +72,6 @@ var _audio: SlingshootAudio
 @onready var slingshot_sprite: Sprite2D = $SlingshotSprite
 @onready var parche_sprite: Sprite2D = $Holder/Sprite2D
 @onready var collision_holder: CollisionShape2D = $Holder/CollisionShape2D
-@onready var label_angulo: Label = $LabelAngulo
 
 func _ready() -> void:
 	_padre_original = get_parent()
@@ -85,9 +84,6 @@ func _ready() -> void:
 	_actualizar_visibilidad(false)
 	_crear_hud()
 	queue_redraw()
-
-func _physics_process(_delta: float) -> void:
-	_fijar_slime_al_holder()
 
 func _process(_delta: float) -> void:
 	_fijar_slime_al_holder()
@@ -141,7 +137,9 @@ func _soltar_arrastre() -> void:
 	if potencia_objetivo > 1.0:
 		disparar_con_parametros(angulo_objetivo, potencia_objetivo)
 	else:
+		# Arrastre insuficiente: se cancela el tiro y se apaga el sonido del estirado.
 		_volver_a_reposo()
+		_audio.detener_estirado()
 		_aplicar_tension_slime(0.0, Vector2.ZERO)
 		queue_redraw()
 	get_viewport().set_input_as_handled()
@@ -162,12 +160,12 @@ func _actualizar_arrastre(mouse_global: Vector2) -> void:
 	actualizar_cuerdas(holder.position)
 	var vector_lanzamiento := centro_global - holder.global_position
 	if vector_lanzamiento.length() > 0.5:
-		angulo_objetivo = fposmod(rad_to_deg(atan2(-vector_lanzamiento.y, vector_lanzamiento.x)), 360.0)
+		angulo_objetivo = FisicaDisparo.angulo_grados(vector_lanzamiento)
 	potencia_objetivo = clampf(desplazamiento.length() / maxf(max_stretch, 0.001) * 100.0, 0.0, 100.0)
 	_aplicar_tension_slime(potencia_objetivo / 100.0, desplazamiento.normalized())
+	# set_aim_from_drag emite aim_changed, que ya refresca el modelo y la trayectoria.
 	if is_instance_valid(_hud):
 		_hud.set_aim_from_drag(angulo_objetivo, potencia_objetivo)
-		_actualizar_modelo_hud()
 	queue_redraw()
 
 
@@ -179,19 +177,17 @@ func _crear_hud() -> void:
 	_hud.visible = false
 	get_tree().current_scene.call_deferred("add_child", _hud)
 	_hud.ready.connect(_al_hud_listo)
-	_hud.launch_requested.connect(disparar_con_parametros)
 	_hud.aim_changed.connect(_on_aim_changed)
 	_hud.cartilla_abierta.connect(_actualizar_hud_estado)
 	_hud.cartilla_cerrada.connect(_on_cartilla_cerrada)
 	_hud.ayuda_solicitada.connect(_on_ayuda_solicitada)
-	_hud.set_launch_enabled(is_instance_valid(slime_actual))
 
 func _al_hud_listo() -> void:
 	# Los nodos del HUD ya existen; la cartilla se abrirá desde el nivel.
 	_hud_listo = true
-	_actualizar_modelo_hud()
 	_actualizar_hud_estado()
 	if not interactivo:
+		_mostrar_trayectoria = false
 		_actualizar_visibilidad(false)
 	hud_listo.emit()
 
@@ -205,6 +201,7 @@ func set_interactivo(valor: bool) -> void:
 	if not valor:
 		_arrastrando_slime = false
 		_mostrar_trayectoria = false
+		_audio.detener_estirado()
 		_actualizar_visibilidad(false)
 	_actualizar_hud_estado()
 	queue_redraw()
@@ -228,9 +225,11 @@ func _on_ayuda_solicitada() -> void:
 	ayuda_solicitada.emit()
 
 func _on_aim_changed(angulo: float, potencia: float) -> void:
-	_mostrar_trayectoria = true
-	_actualizar_visibilidad(true)
 	actualizar_aim(angulo, potencia)
+	# La vista previa solo se muestra si el jugador puede apuntar ahora mismo.
+	if interactivo and not _esperando_turno:
+		_mostrar_trayectoria = true
+		_actualizar_visibilidad(true)
 	_actualizar_modelo_hud()
 
 func _actualizar_modelo_hud() -> void:
@@ -245,10 +244,6 @@ func _actualizar_modelo_hud() -> void:
 
 func _actualizar_hud_estado() -> void:
 	if is_instance_valid(_hud):
-		var puede := interactivo and is_instance_valid(slime_actual) and not _esperando_turno
-		if _hud.cartilla_activa:
-			puede = false
-		_hud.set_launch_enabled(puede)
 		_actualizar_modelo_hud()
 	queue_redraw()
 
@@ -401,8 +396,6 @@ func _actualizar_visibilidad(mostrar: bool) -> void:
 	slingshot_sprite.visible = mostrar
 	_bandas.mostrar(mostrar)
 	parche_sprite.visible = mostrar
-	if is_instance_valid(label_angulo):
-		label_angulo.visible = false
 
 func actualizar_cuerdas(pos: Vector2) -> void:
 	holder.position = pos
@@ -411,15 +404,17 @@ func actualizar_cuerdas(pos: Vector2) -> void:
 
 func _dibujar_trayectoria() -> void:
 	var velocidad := _velocidad_inicial(angulo_objetivo, potencia_objetivo)
-	var total_puntos := mini(puntos_trayectoria, 10)
 
 	# Se simula en coordenadas globales desde el holder; se dibuja en locales.
-	var simulacion := FisicaDisparo.simular_trayectoria(slime_actual, holder.global_position, velocidad, total_puntos, paso_tiempo)
+	var simulacion := FisicaDisparo.simular_trayectoria(
+		slime_actual, holder.global_position, velocidad, puntos_trayectoria, paso_tiempo
+	)
 	var posiciones_puntos: Array[Vector2] = simulacion["puntos"]
+	var ultimo := maxf(float(posiciones_puntos.size() - 1), 1.0)
 
 	for i in range(posiciones_puntos.size()):
 		var pt := to_local(posiciones_puntos[i])
-		var alpha := 0.9 - i * 0.08
+		var alpha := lerpf(0.9, 0.2, float(i) / ultimo)
 		var color_px := Color(0.91, 1.0, 0.97, alpha)
 		draw_rect(Rect2(pt - Vector2(1, 1), Vector2(2, 2)), color_px)
 

@@ -113,7 +113,7 @@ func _calcular_radio() -> float:
 
 ## Amortiguamiento real: el propio + el global del proyecto (según el modo).
 func _calcular_arrastre() -> float:
-	var damp_global: float = ProjectSettings.get_setting("physics/2d/default_linear_damp")
+	var damp_global: float = ProjectSettings.get_setting("physics/2d/default_linear_damp", 0.0)
 	return linear_damp + damp_global if linear_damp_mode == DAMP_MODE_COMBINE else linear_damp
 
 
@@ -200,7 +200,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D):
 		return
 
 	var dt: float = state.step
-	var gravedad: float = ProjectSettings.get_setting("physics/2d/default_gravity")
+	var gravedad := FisicaDisparo.gravedad()
 
 	if state.linear_velocity.distance_to(v_motor) > 0.01:
 		vel_sim = state.linear_velocity

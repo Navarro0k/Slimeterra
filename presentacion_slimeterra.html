@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slimeterra - Métodos Numéricos</title>
+<style>
+  :root {
+    --bg: #0f1f17;
+    --bg2: #163024;
+    --card: #1d3b2d;
+    --accent: #6ee7a8;
+    --accent2: #38bdf8;
+    --warn: #fbbf24;
+    --text: #e8f5ec;
+    --muted: #a7c4b5;
+    --red: #fb7185;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; background: #0b1410; color: var(--text); }
+  .deck { width: 100%; }
+  .slide {
+    width: 1280px; height: 720px; margin: 20px auto; padding: 48px 64px;
+    background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 100%);
+    border: 1px solid #2b5742; border-radius: 12px; position: relative; overflow: hidden;
+    page-break-after: always; display: flex; flex-direction: column;
+  }
+  .slide::before { content: ""; position: absolute; right: -120px; top: -120px; width: 360px; height: 360px; background: radial-gradient(circle, rgba(110,231,168,0.12), transparent 70%); }
+  h1 { font-size: 56px; line-height: 1.1; color: var(--accent); margin-bottom: 16px; }
+  h2 { font-size: 40px; color: var(--accent); margin-bottom: 18px; border-bottom: 2px solid #2f6b4c; padding-bottom: 8px; }
+  h3 { font-size: 26px; color: var(--accent2); margin: 14px 0 8px; }
+  p, li { font-size: 24px; line-height: 1.4; }
+  ul { margin-left: 28px; }
+  li { margin: 8px 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 19px; }
+  .center { text-align: center; justify-content: center; align-items: center; }
+  .grid { display: grid; gap: 20px; flex: 1; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card { background: rgba(29,59,45,0.7); border: 1px solid #2f6b4c; border-radius: 10px; padding: 18px 20px; }
+  .tag { display: inline-block; background: #24513c; color: var(--accent); padding: 4px 10px; border-radius: 999px; font-size: 18px; margin-right: 8px; }
+  .formula { font-family: Consolas, "Courier New", monospace; background: #10261c; border-left: 4px solid var(--accent); padding: 12px 16px; border-radius: 6px; font-size: 22px; margin: 10px 0; color: #f0fff7; }
+  .kpi { font-size: 34px; color: var(--warn); font-weight: 700; }
+  .footer { position: absolute; bottom: 18px; left: 64px; right: 64px; display: flex; justify-content: space-between; font-size: 16px; color: var(--muted); }
+  .placeholder { border: 2px dashed #4b8a69; border-radius: 10px; height: 100%; min-height: 220px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 22px; text-align: center; padding: 16px; background: rgba(16,38,28,0.5); }
+  table { width: 100%; border-collapse: collapse; font-size: 22px; }
+  th, td { border: 1px solid #2f6b4c; padding: 10px 12px; text-align: left; }
+  th { background: #24513c; color: var(--accent); }
+  .flow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 10px; }
+  .step { background: #24513c; padding: 10px 14px; border-radius: 8px; font-size: 20px; }
+  .arrow { color: var(--accent); font-size: 26px; font-weight: 700; }
+  @media print { .slide { margin: 0; border: none; border-radius: 0; } body { background: white; } }
+</style>
+</head>
+<body>
+<div class="deck">
+
+  <!-- 1. Portada -->
+  <section class="slide center">
+    <p class="tag">Métodos Numéricos · Ingeniería de Sistemas</p>
+    <h1 style="font-size:72px; margin-top:18px;">SLIMETERRA</h1>
+    <p style="font-size:34px; max-width:900px;">Un videojuego donde aprendes métodos numéricos porque <span style="color:var(--accent)">tú resuelves la física</span></p>
+    <p style="margin-top:30px; font-size:26px;">David Navarro — 1600052 &nbsp;|&nbsp; Lucia Vega — 160005240</p>
+    <p class="muted" style="margin-top:10px; font-size:22px;">Godot 4 · GDScript · Integrador RK4 propio</p>
+    <div class="footer"><span>Slimeterra</span><span>1 / 12</span></div>
+  </section>
+
+  <!-- 2. Objetivos y agenda -->
+  <section class="slide">
+    <h2>Objetivo y agenda</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div class="card">
+        <h3>Objetivo</h3>
+        <p>Simular y visualizar en tiempo real la trayectoria de un proyectil resolviendo ecuaciones diferenciales ordinarias con un <b>integrador Runge-Kutta 4 (RK4) propio</b>.</p>
+        <h3 style="margin-top:16px;">Objetivos específicos</h3>
+        <ul>
+          <li>Modelar el lanzamiento con y sin amortiguamiento.</li>
+          <li>Implementar RK4 (no usar el motor de física para la trayectoria).</li>
+          <li>Mostrar la ecuación y el estado del disparo en el HUD.</li>
+          <li>Validar el método comparando con Euler y solución de referencia.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Agenda (10 min)</h3>
+        <ul>
+          <li>Propuesta y problema</li>
+          <li>Modelo matemático (Nivel 1 y 2)</li>
+          <li>Demo del juego</li>
+          <li>¿Por qué RK4? y validación</li>
+          <li>Arquitectura / algoritmo</li>
+          <li>Resultados, conclusiones y trabajo futuro</li>
+        </ul>
+        <p class="muted small" style="margin-top:14px;">Enfoque: hacer visible la matemática detrás de cada disparo.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Introducción</span><span>2 / 12</span></div>
+  </section>
+
+  <!-- 3. Propuesta -->
+  <section class="slide">
+    <h2>Propuesta</h2>
+    <div class="grid cols-3" style="flex:1;">
+      <div class="card">
+        <h3>Inspiración</h3>
+        <ul>
+          <li><b>Bajoterra</b>: biomas y poderes (selva / hielo).</li>
+          <li><b>Angry Birds</b>: mecánica de resortera.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Problema</h3>
+        <p>En los juegos, el motor de física suele ser una <b>“caja negra”</b>: el jugador no ve el modelo ni el error numérico, y no puede relacionar el disparo con la ecuación que lo describe.</p>
+      </div>
+      <div class="card">
+        <h3>Nuestra propuesta</h3>
+        <ul>
+          <li>Mostrar la <b>ecuación de cada disparo</b> en tiempo real (HUD/cartilla).</li>
+          <li>Calcular el vuelo con un <b>solver RK4 propio</b>, no con la física del motor.</li>
+          <li>Contrastar modelo ideal vs. trayectoria simulada.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer"><span>Contexto</span><span>3 / 12</span></div>
+  </section>
+
+  <!-- 4. Modelo Nivel 1 -->
+  <section class="slide">
+    <h2>Modelo matemático — Nivel 1 (sin amortiguamiento)</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div>
+        <p><b>Supuestos:</b> gravedad constante, sin resistencia del aire, escala en píxeles.</p>
+        <div class="formula">g = 980 px/s² &nbsp;&nbsp; (k = 0)</div>
+        <div class="formula">dv/dt = g &nbsp;&nbsp;,&nbsp;&nbsp; dx/dt = v</div>
+        <div class="formula">y(x) = a x² + b x + c</div>
+        <div class="formula">a = g / (2 · v₀ₓ²)</div>
+        <h3>Condiciones iniciales</h3>
+        <p>Posición y velocidad iniciales <span class="formula" style="display:inline; padding:4px 8px;">(x₀, y₀, v₀ₓ, v₀ᵧ)</span> definidas por ángulo y potencia del disparo.</p>
+      </div>
+      <div class="card">
+        <h3>Interpretación</h3>
+        <ul>
+          <li>La aceleración es <b>constante</b>.</li>
+          <li>La trayectoria ideal es una <b>parábola</b>.</li>
+          <li>Sirve como <b>referencia analítica</b> para comparar y validar el integrador numérico.</li>
+        </ul>
+        <p class="muted small" style="margin-top:16px;">Nota: en el juego, la parábola puede mostrarse como referencia ideal en el HUD mientras la simulación usa el paso numérico.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Modelo matemático</span><span>4 / 12</span></div>
+  </section>
+
+  <!-- 5. Modelo Nivel 2 -->
+  <section class="slide">
+    <h2>Modelo matemático — Nivel 2 (con amortiguamiento)</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div>
+        <p><b>Amortiguamiento lineal:</b> la resistencia es proporcional a la velocidad.</p>
+        <div class="formula">a = g − k·v &nbsp;&nbsp; (k &gt; 0)</div>
+        <p>Estado del sistema:</p>
+        <div class="formula">s = (x, y, vₓ, vᵧ)ᵀ</div>
+        <p>Sistema lineal en espacio de estados:</p>
+        <div class="formula">s' = A·s + b</div>
+        <div class="formula small">A con −k en las filas de velocidad &nbsp;|&nbsp; b = (0, 0, 0, g)ᵀ</div>
+      </div>
+      <div class="card">
+        <h3>¿Qué cambia respecto al Nivel 1?</h3>
+        <ul>
+          <li>La aceleración <b>depende de la velocidad</b> (no es constante).</li>
+          <li>La trayectoria <b>ya no es una única parábola</b>.</li>
+          <li>El sistema se integra numéricamente en cada paso: el jugador “resuelve” el estado en el tiempo.</li>
+        </ul>
+        <p class="muted small" style="margin-top:16px;">Este modelo permite observar cómo el parámetro <b>k</b> altera el alcance y la forma del vuelo.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Modelo matemático</span><span>5 / 12</span></div>
+  </section>
+
+  <!-- 6. Demo / Niveles -->
+  <section class="slide">
+    <h2>Demostración: niveles y HUD matemático</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div class="card" style="display:flex; flex-direction:column;">
+        <h3>Nivel 1 — Selva (referencia parabólica)</h3>
+        <div class="placeholder" style="flex:1;">[Insertar captura: nivel selva + HUD con ecuación/ángulo/potencia + trayectoria]</div>
+        <p class="small muted" style="margin-top:8px;">Mostrar: condiciones iniciales, parábola de referencia y resultado del disparo.</p>
+      </div>
+      <div class="card" style="display:flex; flex-direction:column;">
+        <h3>Nivel 2 — Hielo (sistema con amortiguamiento)</h3>
+        <div class="placeholder" style="flex:1;">[Insertar captura: nivel hielo + HUD con s' = A·s + b + trayectoria real]</div>
+        <p class="small muted" style="margin-top:8px;">Mostrar: efecto de k·v y diferencia frente a la parábola ideal.</p>
+      </div>
+    </div>
+    <p class="muted small" style="margin-top:10px;">Recomendación: apoyar esta diapositiva con demo en vivo o video corto de un disparo por nivel.</p>
+    <div class="footer"><span>Demostración</span><span>6 / 12</span></div>
+  </section>
+
+  <!-- 7. Por qué RK4 -->
+  <section class="slide">
+    <h2>¿Por qué Runge-Kutta 4 (RK4)?</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div>
+        <p>Para un paso <span class="formula" style="display:inline;padding:2px 8px;">h = 1/60 s</span> (tiempo real):</p>
+        <div class="formula">k₁ = f(sₙ)
+k₂ = f(sₙ + h·k₁/2)
+k₃ = f(sₙ + h·k₂/2)
+k₄ = f(sₙ + h·k₃)
+sₙ₊₁ = sₙ + (h/6)(k₁ + 2k₂ + 2k₃ + k₄)</div>
+        <ul>
+          <li><b>Error global:</b> O(h⁴) (RK4) vs O(h) (Euler).</li>
+          <li>Buen equilibrio entre <b>precisión y costo</b> para ejecución por frame.</li>
+          <li>Control total del método (pedagógico) frente a la “caja negra” del motor.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Comparación cualitativa</h3>
+        <table>
+          <tr><th>Método</th><th>Error global</th><th>Uso aquí</th></tr>
+          <tr><td>Euler</td><td>O(h)</td><td>Referencia: se desvía más rápido</td></tr>
+          <tr><td>RK4 (propio)</td><td>O(h⁴)</td><td>Elegido: estable y preciso a 60 FPS</td></tr>
+          <tr><td>Motor de física</td><td>No expuesto</td><td>Descartado: no muestra el método</td></tr>
+        </table>
+        <p class="muted small" style="margin-top:12px;">Al reducir h, el error de RK4 decrece mucho más rápido (orden 4), lo que se comprobó experimentalmente.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Método numérico</span><span>7 / 12</span></div>
+  </section>
+
+  <!-- 8. Validación -->
+  <section class="slide">
+    <h2>Validación del integrador</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div class="card">
+        <h3>Metodología</h3>
+        <ul>
+          <li>Comparar la trayectoria numérica con una <b>solución de referencia/exacta</b> (caso sin amortiguamiento).</li>
+          <li>Mismo escenario, condiciones iniciales y paso <b>h = 1/60 s</b>.</li>
+          <li>Medir error de posición y observar el comportamiento al variar el paso (orden del método).</li>
+        </ul>
+        <h3 style="margin-top:14px;">Resultado observado</h3>
+        <p class="kpi">RK4: ~10⁻⁶ px &nbsp;<span class="muted" style="font-size:22px;">vs</span>&nbsp; Euler: ~7 px</p>
+        <p class="muted small">Error aproximado en las condiciones de prueba; orden 4 coherente con la teoría.</p>
+      </div>
+      <div class="card">
+        <h3>Qué demuestra</h3>
+        <ul>
+          <li>El solver propio reproduce la dinámica con <b>alta precisión</b> en tiempo real.</li>
+          <li>La elección de RK4 se justifica frente a un método de orden 1 (Euler).</li>
+          <li>El modelo matemático no es decorativo: <b>gobierna el movimiento</b> que ve el jugador.</li>
+        </ul>
+        <div class="placeholder" style="min-height:160px; margin-top:12px;">[Opcional: gráfica/tabla de error vs. h o comparativa de trayectorias]</div>
+      </div>
+    </div>
+    <div class="footer"><span>Validación</span><span>8 / 12</span></div>
+  </section>
+
+  <!-- 9. Arquitectura -->
+  <section class="slide">
+    <h2>Arquitectura y algoritmo</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div class="card">
+        <h3>Tecnologías y módulos (Godot 4)</h3>
+        <ul>
+          <li><b>SolverNumerico</b>: integrador RK4.</li>
+          <li><b>Slingshoot / ShotHUD</b>: entrada (ángulo, potencia) y ecuación en HUD.</li>
+          <li><b>Slime</b>: proyectil y estados (cargado → saliendo → en vuelo → terminado).</li>
+          <li><b>Nivel / límites / meta</b>: reglas del nivel y cámara.</li>
+          <li><b>Cartilla</b>: explicación visual del modelo (p₀, v₀, g, k·v).</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Flujo de un disparo</h3>
+        <div class="flow">
+          <span class="step">Ángulo + potencia</span><span class="arrow">→</span>
+          <span class="step">Estado inicial s₀</span><span class="arrow">→</span>
+          <span class="step">Bucle por frame: RK4(s, h)</span><span class="arrow">→</span>
+          <span class="step">Actualizar posición</span><span class="arrow">→</span>
+          <span class="step">Colisión / meta / fin</span>
+        </div>
+        <h3 style="margin-top:16px;">Manejo de casos límite</h3>
+        <ul>
+          <li>Tiempo máximo de vuelo y salida de límites.</li>
+          <li>Validación de configuración/estado antes de simular.</li>
+          <li>Reinicio/terminación controlada del disparo.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer"><span>Implementación</span><span>9 / 12</span></div>
+  </section>
+
+  <!-- 10. Resultados y conclusiones -->
+  <section class="slide">
+    <h2>Resultados y conclusiones</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div class="card">
+        <h3>Resultados</h3>
+        <ul>
+          <li><b>Producto:</b> 2 niveles (selva, hielo), 2 slimes (base, fuego), estrellas por tiempo, versión web.</li>
+          <li><b>Técnico:</b> modelo visible en HUD (parábola / s' = A·s + b) y trayectoria calculada con RK4 propio.</li>
+          <li><b>Validación:</b> precisión muy superior a Euler en el escenario de prueba; comportamiento consistente con orden 4.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Conclusiones</h3>
+        <ul>
+          <li>Es posible integrar métodos numéricos en un juego haciendo la matemática <b>explícita y jugable</b>.</li>
+          <li>RK4 ofrece una aproximación adecuada para simulación en tiempo real con bajo costo.</li>
+          <li>El proyecto conecta teoría (EDO, espacio de estados, error) con una aplicación interactiva.</li>
+        </ul>
+        <p style="margin-top:16px; font-size:26px; color:var(--accent);"><b>“No solo juegas la física, la resuelves.”</b></p>
+      </div>
+    </div>
+    <div class="footer"><span>Cierre</span><span>10 / 12</span></div>
+  </section>
+
+  <!-- 11. Trabajo futuro -->
+  <section class="slide">
+    <h2>Trabajo futuro y lecciones aprendidas</h2>
+    <div class="grid cols-2" style="flex:1;">
+      <div class="card">
+        <h3>Trabajo futuro</h3>
+        <ul>
+          <li>Incorporar más fuerzas: viento, rebotes, amortiguamiento no lineal.</li>
+          <li>Más niveles, slimes y parámetros configurables (k, g, masa).</li>
+          <li>Comparador visual en vivo: Euler vs RK4 vs trayectoria real.</li>
+          <li>Calibración/medición de error interactiva dentro del juego.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Lecciones aprendidas</h3>
+        <ul>
+          <li>La elección del <b>paso h</b> y del modelo impacta directamente la estabilidad y precisión.</li>
+          <li>Separar <b>solver, lógica y visualización</b> facilita probar y explicar el método.</li>
+          <li>Mostrar el estado/matemática al usuario exige validar y comunicar bien los supuestos.</li>
+        </ul>
+        <h3 style="margin-top:14px;">Referencias</h3>
+        <p class="small muted">Métodos numéricos para EDO (Runge-Kutta). Documentación de Godot 4 / GDScript. Modelo de proyectil con resistencia proporcional a la velocidad.</p>
+      </div>
+    </div>
+    <div class="footer"><span>Proyección</span><span>11 / 12</span></div>
+  </section>
+
+  <!-- 12. Gracias -->
+  <section class="slide center">
+    <h1 style="font-size:72px;">¡Gracias!</h1>
+    <p style="font-size:40px; color:var(--accent2); margin-top:8px;">¿Preguntas?</p>
+    <div class="card" style="margin-top:30px; text-align:left; max-width:900px;">
+      <h3>Posibles preguntas</h3>
+      <ul>
+        <li>¿Por qué RK4 y no Euler/Verlet o el motor físico de Godot?</li>
+        <li>¿Cómo se validó el error y el “orden 4”?</li>
+        <li>¿Qué cambia en la jugabilidad al pasar de k = 0 a k &gt; 0?</li>
+      </ul>
+    </div>
+    <p class="muted" style="margin-top:24px;">Slimeterra — David Navarro &amp; Lucia Vega</p>
+    <div class="footer"><span>Slimeterra</span><span>12 / 12</span></div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -36,41 +36,12 @@ static func trayectoria(
 	var puntos := PackedVector2Array()
 	var pos := pos0
 	var vel := vel0
-	for i in range(pasos):
+	for _i in range(maxi(pasos, 0)):
 		var r: Array = paso(pos, vel, dt, gravedad, k)
 		pos = r[0]
 		vel = r[1]
 		puntos.append(pos)
 	return puntos
-
-
-static func solucion_exacta(pos0: Vector2, vel0: Vector2, gravedad: float, k: float, t: float) -> Vector2:
-	var g := Vector2(0.0, gravedad)
-	if k < 0.00001:
-		return pos0 + vel0 * t + g * (0.5 * t * t)
-	var vt: Vector2 = g / k
-	return pos0 + vt * t + (vel0 - vt) * ((1.0 - exp(-k * t)) / k)
-
-
-## Error (px) de RK4 al tiempo t = dt * pasos frente a la solución exacta.
-static func error_en(
-		pos0: Vector2, vel0: Vector2, gravedad: float, k: float,
-		dt: float, pasos: int
-) -> float:
-	var puntos := trayectoria(pos0, vel0, gravedad, k, dt, pasos)
-	var exacta := solucion_exacta(pos0, vel0, gravedad, k, dt * pasos)
-	return puntos[pasos - 1].distance_to(exacta)
-
-
-## Aplica una matriz de rotación 2D usando un ángulo en radianes.
-static func aplicar_matriz_rotacion(vector: Vector2, angulo_radianes: float) -> Vector2:
-	var cos_a = cos(angulo_radianes)
-	var sin_a = sin(angulo_radianes)
-
-	var x_rotado = vector.x * cos_a - vector.y * sin_a
-	var y_rotado = vector.x * sin_a + vector.y * cos_a
-
-	return Vector2(x_rotado, y_rotado)
 
 
 ## Ecuación parabólica y(x) = a x² + b x + c para tiro sin amortiguamiento.

@@ -3,8 +3,6 @@ extends Control
 
 signal angle_changed(value: float)
 
-@export_range(0.0, 359.0, 1.0) var min_angle: float = 0.0
-@export_range(1.0, 360.0, 1.0) var max_angle: float = 360.0
 @export_range(0.0, 359.0, 1.0) var angle: float = 45.0:
 	set(value):
 		angle = fposmod(value, 360.0)

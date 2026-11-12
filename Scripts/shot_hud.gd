@@ -2,7 +2,6 @@ extends CanvasLayer
 class_name ShotHUD
 ## HUD compacto (480x270) con ecuaciones, dial de ángulo, potencia y cartilla.
 
-signal launch_requested(angle_degrees: float, power_percent: float)
 signal aim_changed(angle_degrees: float, power_percent: float)
 signal cartilla_abierta()
 signal cartilla_cerrada()
@@ -15,7 +14,6 @@ var modo_ecuacion: String = "parabola"
 ## true mientras la cartilla está abierta: bloquea el juego.
 var cartilla_activa: bool = false
 
-var _can_launch := true
 var _angle_dial: Control
 var _power_slider: HSlider
 var _angle_label: Label
@@ -26,8 +24,6 @@ var _equation_toggle: Button
 var _equation_title: Label
 var _equation_visible := true
 var _help_button: Button
-var _launch_button: Button
-var _pause_button: Button
 var _fuente_ecuaciones: FontFile
 var _fuente_pixel: FontFile
 var _cartilla: Control
@@ -297,12 +293,6 @@ func set_aim_from_drag(angulo: float, potencia: float) -> void:
 	_actualizar_lecturas()
 	aim_changed.emit(angle_degrees, power_percent)
 
-func set_launch_enabled(enabled: bool) -> void:
-	_can_launch = enabled
-	if is_instance_valid(_launch_button):
-		_launch_button.disabled = not enabled or power_percent <= 0.0
-		_launch_button.text = "CLIC PARA DISPARAR" if enabled else "ESPERANDO SLIME..."
-
 func set_model_values(position_initial: Vector2, velocity_initial: Vector2, gravity: float, damping: float) -> void:
 	_modelo_pos = position_initial
 	_modelo_vel = velocity_initial
@@ -320,5 +310,3 @@ func _actualizar_lecturas() -> void:
 		_angle_label.text = "%d°" % roundi(angle_degrees)
 	if is_instance_valid(_power_label):
 		_power_label.text = "%d%%" % roundi(power_percent)
-	if is_instance_valid(_launch_button):
-		_launch_button.disabled = not _can_launch or power_percent <= 0.0

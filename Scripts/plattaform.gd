@@ -1,4 +1,5 @@
 extends AnimatableBody2D
+## Plataforma móvil que oscila de forma senoidal alrededor de su posición inicial.
 
 enum Axis { HORIZONTAL, VERTICAL }
 
@@ -12,19 +13,17 @@ var start_position: Vector2
 var direction: Vector2 = Vector2.ZERO
 var current_time: float = 0.0
 
+var _periodo: float = 1.0
+
+
 func _ready() -> void:
 	start_position = global_position
-	if movement_axis == Axis.HORIZONTAL:
-		direction = Vector2.RIGHT
-	else:
-		direction = Vector2.DOWN
+	direction = Vector2.RIGHT if movement_axis == Axis.HORIZONTAL else Vector2.DOWN
+	# Un recorrido de ida y vuelta por ciclo; nunca se permite un periodo nulo.
+	_periodo = maxf(travel_time, 0.1) * 2.0
 
-	if travel_time <= 0.0:
-		travel_time = 0.1
 
 func _physics_process(delta: float) -> void:
 	current_time += delta
-	var period = travel_time * 2.0
-	var sine_val = sin((current_time * TAU) / period)
-
-	global_position = start_position + (direction * (sine_val * distance))
+	var desplazamiento := sin((current_time * TAU) / _periodo)
+	global_position = start_position + direction * (desplazamiento * distance)

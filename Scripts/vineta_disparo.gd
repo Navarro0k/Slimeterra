@@ -124,7 +124,7 @@ func detener() -> void:
 ## ---------------------------------------------------------------------------
 
 func _actualizar_lecturas() -> void:
-	_angulo_grados = fposmod(rad_to_deg(atan2(-_vel0.y, _vel0.x)), 360.0)
+	_angulo_grados = FisicaDisparo.angulo_grados(_vel0)
 	_angulo_visual = atan2(_vel0.y, _vel0.x)
 	_potencia = clampf(_vel0.length() / RAPIDEZ_REF, 0.0, 1.0)
 

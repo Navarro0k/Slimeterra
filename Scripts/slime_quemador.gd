@@ -3,12 +3,21 @@ extends RefCounted
 ## Poder del slime de fuego: quema los tiles "rompible_por_fuego" que toca.
 
 var _slime: RigidBody2D
-var _mascara: int
+## Forma y consulta reutilizadas: quemar corre en cada paso de física.
+var _forma: CircleShape2D
+var _consulta: PhysicsShapeQueryParameters2D
 
 
 func _init(slime: RigidBody2D, mascara_colision: int) -> void:
 	_slime = slime
-	_mascara = mascara_colision
+	_forma = CircleShape2D.new()
+	_consulta = PhysicsShapeQueryParameters2D.new()
+	_consulta.shape = _forma
+	_consulta.collision_mask = mascara_colision
+	_consulta.collide_with_bodies = true
+	_consulta.collide_with_areas = false
+	var excluidos: Array[RID] = [_slime.get_rid()]
+	_consulta.exclude = excluidos
 
 
 ## Quema lo que toca el slime ahora y lo que tocará en este paso de física.
@@ -18,17 +27,9 @@ func quemar(posicion: Vector2, v_motor: Vector2, delta: float, radio: float) -> 
 
 
 func _quemar_en(centro: Vector2, radio: float) -> void:
-	var forma := CircleShape2D.new()
-	forma.radius = radio
-	var consulta := PhysicsShapeQueryParameters2D.new()
-	consulta.shape = forma
-	consulta.transform = Transform2D(0.0, centro)
-	consulta.collision_mask = _mascara
-	consulta.collide_with_bodies = true
-	consulta.collide_with_areas = false
-	var excluidos: Array[RID] = [_slime.get_rid()]
-	consulta.exclude = excluidos
-	for choque in _slime.get_world_2d().direct_space_state.intersect_shape(consulta, 8):
+	_forma.radius = radio
+	_consulta.transform = Transform2D(0.0, centro)
+	for choque in _slime.get_world_2d().direct_space_state.intersect_shape(_consulta, 8):
 		var capa = choque["collider"]
 		if capa is TileMapLayer:
 			_quemar_celdas(capa, centro, radio)

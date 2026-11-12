@@ -182,7 +182,7 @@ func _pagina_listo() -> String:
 	var s := _chip_nivel() + "\n"
 	if _hay_modelo:
 		var rapidez := _vel0.length()
-		var angulo := fposmod(rad_to_deg(atan2(-_vel0.y, _vel0.x)), 360.0)
+		var angulo := FisicaDisparo.angulo_grados(_vel0)
 		s += "Estos son los valores con los que vas a disparar:\n"
 		s += _eq(
 			"|v0| = " + _n(rapidez, 1) + " px/s      ángulo = " + _n(angulo, 1) + "°\n"
@@ -204,8 +204,9 @@ func _pagina_listo() -> String:
 
 
 func _eq(texto: String, tamano: int = 16) -> String:
-	var tinta := EQ_TINTA_MATRICES if es_matrices() else EQ_TINTA_PARABOLA
-	var fondo := EQ_FONDO_MATRICES if es_matrices() else EQ_FONDO_PARABOLA
+	var matrices := es_matrices()
+	var tinta := EQ_TINTA_MATRICES if matrices else EQ_TINTA_PARABOLA
+	var fondo := EQ_FONDO_MATRICES if matrices else EQ_FONDO_PARABOLA
 	var tam := _tamano_ajustado(texto, tamano)
 	var s := "\n[center][font_size=" + str(tam) + "][color=" + tinta + "]"
 	s += "[bgcolor=" + fondo + "][b]" + texto + "[/b][/bgcolor][/color][/font_size][/center]\n"

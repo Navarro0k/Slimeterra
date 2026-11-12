@@ -44,7 +44,8 @@ func buscar_pegado(state: PhysicsDirectBodyState2D, v_motor: Vector2, umbral_imp
 
 func _tile_pegajoso_en(capa: TileMapLayer, punto: Vector2, hacia_contacto: Vector2) -> bool:
 	# Proyección directa un poco más profunda.
-	for profundidad in [2.0, 5.0]:
+	var profundidades: Array[float] = [2.0, 5.0]
+	for profundidad in profundidades:
 		var celda := capa.local_to_map(capa.to_local(punto + hacia_contacto * profundidad))
 		var datos := capa.get_cell_tile_data(celda)
 		if datos != null and datos.get_custom_data("es_pegajoso"):
@@ -52,12 +53,12 @@ func _tile_pegajoso_en(capa: TileMapLayer, punto: Vector2, hacia_contacto: Vecto
 
 	# Escáner de vecinos para esquinas y horizontales.
 	var celda_impacto := capa.local_to_map(capa.to_local(punto))
-	var vecinos = [
+	var vecinos: Array[Vector2i] = [
 		celda_impacto,
 		celda_impacto + Vector2i(0, 1), celda_impacto + Vector2i(0, -1),
 		celda_impacto + Vector2i(1, 0), celda_impacto + Vector2i(-1, 0),
 		celda_impacto + Vector2i(1, 1), celda_impacto + Vector2i(-1, -1),
-		celda_impacto + Vector2i(1, -1), celda_impacto + Vector2i(-1, 1)
+		celda_impacto + Vector2i(1, -1), celda_impacto + Vector2i(-1, 1),
 	]
 
 	for vecino in vecinos:

@@ -10,6 +10,11 @@ static func velocidad_inicial(angulo: float, potencia: float, desvio_grados: flo
 	return Vector2(cos(theta), -sin(theta)) * max_stretch * intensidad * multiplicador_fuerza
 
 
+## Ángulo de salida (0..360) de un vector de velocidad, en coordenadas de pantalla.
+static func angulo_grados(velocidad: Vector2) -> float:
+	return fposmod(rad_to_deg(atan2(-velocidad.y, velocidad.x)), 360.0)
+
+
 static func gravedad() -> float:
 	return float(ProjectSettings.get_setting("physics/2d/default_gravity", 980.0))
 
@@ -27,30 +32,16 @@ static func paso_fisica() -> float:
 	return 1.0 / maxf(float(Engine.physics_ticks_per_second), 1.0)
 
 
-## Pasos de RK4 con dt fijo (sin incluir la posición inicial).
-## Compartido por la vista previa y por la viñeta de la cartilla.
-static func simular(pos0: Vector2, vel0: Vector2, gravedad: float, k: float, dt: float, pasos: int) -> PackedVector2Array:
-	var pos := pos0
-	var vel := vel0
-	var puntos := PackedVector2Array()
-	for _i in range(maxi(pasos, 0)):
-		var r: Array = SolverNumerico.paso(pos, vel, dt, gravedad, k)
-		pos = r[0]
-		vel = r[1]
-		puntos.append(pos)
-	return puntos
-
-
 ## Simula la trayectoria con el mismo RK4 del slime real.
 ## Devuelve { "puntos": Array[Vector2], "final": Vector2 }.
 static func simular_trayectoria(slime, pos_inicial: Vector2, velocidad: Vector2, total_puntos: int, paso_tiempo: float) -> Dictionary:
-	var g := gravedad()
-	var k := arrastre(slime)
 	var dt := paso_fisica()
 	var pasos_por_punto := maxi(1, roundi(paso_tiempo / dt))
-	var pasos_totales := pasos_por_punto * total_puntos
+	var pasos_totales := pasos_por_punto * maxi(total_puntos, 0)
 
-	var todos := simular(pos_inicial, velocidad, g, k, dt, pasos_totales)
+	var todos := SolverNumerico.trayectoria(
+		pos_inicial, velocidad, gravedad(), arrastre(slime), dt, pasos_totales
+	)
 	var puntos: Array[Vector2] = []
 	for paso in range(todos.size()):
 		if (paso + 1) % pasos_por_punto == 0:
